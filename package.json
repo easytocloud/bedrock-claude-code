@@ -1,0 +1,73 @@
+{
+  "name": "bedrock-claude-code",
+  "displayName": "Claude Code Bedrock Settings",
+  "description": "Settings panel for Claude Code on AWS Bedrock — profiles, models, MCP servers, and allowed directories",
+  "version": "0.1.0",
+  "publisher": "easytocloud",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/easytocloud/bedrock-claude-code"
+  },
+  "homepage": "https://github.com/easytocloud/bedrock-claude-code#readme",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "aws",
+    "bedrock",
+    "anthropic",
+    "ai",
+    "mcp"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "bedrock-claude-code.openSettings",
+        "title": "Open Claude Code Bedrock Settings",
+        "category": "Claude Code Bedrock",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "bedrock-claude-code.openSettingsFile",
+        "title": "Open ~/.claude/settings.json",
+        "category": "Claude Code Bedrock",
+        "icon": "$(file-code)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "bedrock-claude-code.openSettings" },
+        { "command": "bedrock-claude-code.openSettingsFile" }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.6.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}
