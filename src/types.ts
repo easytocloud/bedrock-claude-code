@@ -1,66 +1,113 @@
-// Types shared across the extension
+// ---------------------------------------------------------------------------
+// Core data model for the composable preset-based settings UI
+// ---------------------------------------------------------------------------
 
-export type LlmProvider = 'bedrock' | 'local';
+// ─── Provider Types ──────────────────────────────────────────────────
 
-export interface BedrockConfig {
-  /** Which LLM backend to use */
-  provider: LlmProvider;
-  /** Bedrock: sets CLAUDE_CODE_USE_BEDROCK=1 */
-  enabled: boolean;
-  awsProfile: string;
-  awsRegion: string;
-  awsAuthRefresh: string;
-  disableLoginPrompt: boolean;
-  /** Local: base URL (ANTHROPIC_BASE_URL) */
-  localBaseUrl: string;
-  /** Local: API key (ANTHROPIC_API_KEY) */
-  localApiKey: string;
+export type ProviderType = 'anthropic' | 'bedrock' | 'proxy';
+
+export interface ProviderProfile {
+  id: string;
+  name: string;
+  type: ProviderType;
+
+  // Bedrock-specific
+  awsProfile?: string;
+  awsRegion?: string;
+  awsAuthRefresh?: string;
+
+  // Anthropic-specific
+  anthropicApiKey?: string;
+
+  // Proxy-specific
+  proxyBaseUrl?: string;
+  proxyApiKey?: string;
+
+  // Model assignments (all provider types)
+  primaryModel: string;
+  smallFastModel: string;
+  opusModel: string;
+  disablePromptCaching?: boolean;
+
+  // Behavioral
+  disableLoginPrompt?: boolean;
 }
 
-export interface ModelConfig {
-  primaryModel: string;   // ANTHROPIC_DEFAULT_SONNET_MODEL
-  smallFastModel: string; // ANTHROPIC_DEFAULT_HAIKU_MODEL
-  opusModel: string;      // ANTHROPIC_DEFAULT_OPUS_MODEL
-  disablePromptCaching: boolean;
-}
+// ─── MCP Server Group ────────────────────────────────────────────────
 
-export interface McpServer {
+export interface McpServerEntry {
   name: string;
   type: 'http' | 'sse' | 'stdio';
-  /** URL for http/sse transports */
   url?: string;
-  /** Command for stdio transport */
   command?: string;
-  /** Arguments for stdio transport */
   args?: string[];
-  /** Optional env vars passed to the MCP server process */
   env?: Record<string, string>;
 }
 
-/** Shape of a single mcpServers entry (sans name key) */
-export type McpServerConfig = Omit<McpServer, 'name'>;
+/** Shape of a single mcpServers entry (sans name key) — for writing to .claude.json / .mcp.json */
+export type McpServerConfig = Omit<McpServerEntry, 'name'>;
 
-/** Shape of ~/.claude/settings.json */
+export interface McpServerGroup {
+  id: string;
+  name: string;
+  servers: McpServerEntry[];
+}
+
+// ─── Directory Group ─────────────────────────────────────────────────
+
+export interface DirectoryGroup {
+  id: string;
+  name: string;
+  directories: string[];
+}
+
+// ─── Presets ─────────────────────────────────────────────────────────
+
+export interface Preset {
+  id: string;
+  name: string;
+  providerId: string;
+  mcpGroupIds: string[];
+  directoryGroupIds: string[];
+}
+
+// ─── Scope Assignments ──────────────────────────────────────────────
+
+export type ScopeMode = 'preset' | 'manual' | 'inherit';
+
+export interface ScopeAssignment {
+  mode: ScopeMode;
+  presetId?: string;
+}
+
+// ─── Top-level Profile Store ─────────────────────────────────────────
+
+export interface ProfileStore {
+  version: 1;
+  providers: ProviderProfile[];
+  mcpGroups: McpServerGroup[];
+  directoryGroups: DirectoryGroup[];
+  presets: Preset[];
+  globalScope: ScopeAssignment;
+  projectScopes: Record<string, ScopeAssignment>;
+}
+
+// ─── Panel State (extension ↔ webview) ───────────────────────────────
+
+export interface PanelState {
+  store: ProfileStore;
+  awsProfiles: string[];
+  hasWorkspace: boolean;
+  workspacePath?: string;
+  workspaceName?: string;
+}
+
+// ─── Claude Code's own file format (kept for I/O) ───────────────────
+
 export interface ClaudeCodeSettings {
   $schema?: string;
   env?: Record<string, string>;
   allowedDirectories?: string[];
-  /** Command run to refresh AWS credentials (e.g. aws sso login) */
   awsAuthRefresh?: string;
-  /** Command that silently outputs JSON credentials */
   awsCredentialExport?: string;
-}
-
-/** Full state passed between extension and webview */
-export interface PanelState {
-  bedrockConfig: BedrockConfig;
-  modelConfig: ModelConfig;
-  /** MCP servers from ~/.claude.json (user scope) */
-  userMcpServers: McpServer[];
-  /** MCP servers from {workspace}/.mcp.json (project scope) */
-  projectMcpServers: McpServer[];
-  allowedDirectories: string[];
-  awsProfiles: string[];
-  /** Whether a workspace folder is open (required for project-scope operations) */
-  hasWorkspace: boolean;
 }

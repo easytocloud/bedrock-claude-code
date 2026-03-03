@@ -1,0 +1,267 @@
+import * as fs from 'fs';
+import {
+  ProfileStore,
+  ProviderProfile,
+  McpServerConfig,
+  McpServerGroup,
+  ScopeAssignment,
+  ClaudeCodeSettings,
+} from './types';
+import { MANAGED_ENV_KEYS } from './models';
+import {
+  readClaudeSettings,
+  writeClaudeSettings,
+  readProjectSettings,
+  writeProjectSettings,
+  getProjectSettingsPath,
+} from './claudeSettings';
+import { writeUserMcpServers } from './claudeJson';
+import { writeProjectMcpServers } from './mcpJson';
+
+// ---------------------------------------------------------------------------
+// Resolved configuration — the flat representation written to Claude Code files
+// ---------------------------------------------------------------------------
+
+export interface ResolvedConfig {
+  env: Record<string, string>;
+  allowedDirectories: string[];
+  awsAuthRefresh?: string;
+  mcpServers: Record<string, McpServerConfig>;
+}
+
+// ---------------------------------------------------------------------------
+// Resolution: Preset → flat config
+// ---------------------------------------------------------------------------
+
+/** Resolve a preset ID into flat env vars, MCP servers, and directories. */
+export function resolvePreset(
+  store: ProfileStore,
+  presetId: string
+): ResolvedConfig | null {
+  const preset = store.presets.find(p => p.id === presetId);
+  if (!preset) { return null; }
+
+  const provider = store.providers.find(p => p.id === preset.providerId);
+  const env: Record<string, string> = {};
+  let awsAuthRefresh: string | undefined;
+
+  if (provider) {
+    // Provider-specific env vars
+    switch (provider.type) {
+      case 'bedrock':
+        env['CLAUDE_CODE_USE_BEDROCK'] = '1';
+        if (provider.awsProfile) { env['AWS_PROFILE'] = provider.awsProfile; }
+        if (provider.awsRegion) { env['AWS_REGION'] = provider.awsRegion; }
+        if (provider.awsAuthRefresh) { awsAuthRefresh = provider.awsAuthRefresh; }
+        break;
+      case 'anthropic':
+        if (provider.anthropicApiKey) { env['ANTHROPIC_API_KEY'] = provider.anthropicApiKey; }
+        break;
+      case 'proxy':
+        if (provider.proxyBaseUrl) { env['ANTHROPIC_BASE_URL'] = provider.proxyBaseUrl; }
+        if (provider.proxyApiKey) { env['ANTHROPIC_API_KEY'] = provider.proxyApiKey; }
+        break;
+    }
+
+    // Model env vars (all provider types)
+    if (provider.primaryModel) { env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = provider.primaryModel; }
+    if (provider.smallFastModel) { env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = provider.smallFastModel; }
+    if (provider.opusModel) { env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel; }
+    if (provider.disablePromptCaching) { env['DISABLE_PROMPT_CACHING'] = '1'; }
+  }
+
+  // Merge MCP servers from all selected groups
+  const mcpServers: Record<string, McpServerConfig> = {};
+  for (const groupId of preset.mcpGroupIds) {
+    const group = store.mcpGroups.find(g => g.id === groupId);
+    if (group) {
+      for (const server of group.servers) {
+        const config: McpServerConfig = { type: server.type };
+        if (server.url) { config.url = server.url; }
+        if (server.command) { config.command = server.command; }
+        if (server.args?.length) { config.args = server.args; }
+        if (server.env && Object.keys(server.env).length) { config.env = server.env; }
+        mcpServers[server.name] = config;
+      }
+    }
+  }
+
+  // Merge directories from all selected groups
+  const allowedDirectories: string[] = [];
+  for (const groupId of preset.directoryGroupIds) {
+    const group = store.directoryGroups.find(g => g.id === groupId);
+    if (group) {
+      for (const dir of group.directories) {
+        if (!allowedDirectories.includes(dir)) {
+          allowedDirectories.push(dir);
+        }
+      }
+    }
+  }
+
+  return { env, allowedDirectories, awsAuthRefresh, mcpServers };
+}
+
+// ---------------------------------------------------------------------------
+// Apply resolved config to Claude Code's actual files
+// ---------------------------------------------------------------------------
+
+/**
+ * Apply a resolved config to the global scope:
+ * - env vars → ~/.claude/settings.json
+ * - MCP servers → ~/.claude.json
+ */
+export function applyGlobalConfig(resolved: ResolvedConfig): void {
+  const settings = readClaudeSettings();
+  const existingEnv = settings.env ?? {};
+
+  // Preserve env vars not managed by us
+  const preservedEnv: Record<string, string> = {};
+  for (const [key, value] of Object.entries(existingEnv)) {
+    if (!MANAGED_ENV_KEYS.has(key)) {
+      preservedEnv[key] = value;
+    }
+  }
+
+  const newSettings: ClaudeCodeSettings = {
+    ...settings,
+    env: { ...preservedEnv, ...resolved.env },
+  };
+
+  // Set or clear allowedDirectories
+  if (resolved.allowedDirectories.length > 0) {
+    newSettings.allowedDirectories = resolved.allowedDirectories;
+  } else {
+    delete newSettings.allowedDirectories;
+  }
+
+  // Set or clear awsAuthRefresh
+  if (resolved.awsAuthRefresh) {
+    newSettings.awsAuthRefresh = resolved.awsAuthRefresh;
+  } else {
+    delete newSettings.awsAuthRefresh;
+  }
+
+  // Clear deprecated env var keys
+  if (newSettings.env) {
+    delete newSettings.env['ANTHROPIC_MODEL'];
+    delete newSettings.env['ANTHROPIC_SMALL_FAST_MODEL'];
+    delete newSettings.env['ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION'];
+  }
+
+  writeClaudeSettings(newSettings);
+  writeUserMcpServers(resolved.mcpServers);
+}
+
+/**
+ * Remove managed env keys, allowedDirectories, and awsAuthRefresh from
+ * {workspace}/.claude/settings.json so the project inherits from global.
+ * Preserves any non-managed keys the user may have set.
+ */
+export function cleanProjectConfig(workspaceRoot: string): void {
+  const settings = readProjectSettings(workspaceRoot);
+  if (Object.keys(settings).length === 0) { return; } // nothing to clean
+
+  // Remove managed env keys
+  if (settings.env) {
+    for (const key of MANAGED_ENV_KEYS) {
+      delete settings.env[key];
+    }
+    if (Object.keys(settings.env).length === 0) {
+      delete settings.env;
+    }
+  }
+
+  // Remove fields we manage
+  delete settings.allowedDirectories;
+  delete settings.awsAuthRefresh;
+
+  // Only write back if there's still content beyond $schema; otherwise leave file alone
+  const remaining = Object.keys(settings).filter(k => k !== '$schema');
+  if (remaining.length > 0) {
+    writeProjectSettings(workspaceRoot, settings);
+  } else {
+    // File only has $schema (or nothing) — remove it to keep the project clean
+    const filePath = getProjectSettingsPath(workspaceRoot);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+}
+
+/**
+ * Apply a resolved config to the project scope:
+ * - env vars + directories → {workspace}/.claude/settings.json
+ * - MCP servers → {workspace}/.mcp.json
+ */
+export function applyProjectConfig(
+  resolved: ResolvedConfig,
+  workspaceRoot: string
+): void {
+  // Write env vars and directories to project-level settings
+  const settings = readProjectSettings(workspaceRoot);
+  const existingEnv = settings.env ?? {};
+
+  // Preserve env vars not managed by us
+  const preservedEnv: Record<string, string> = {};
+  for (const [key, value] of Object.entries(existingEnv)) {
+    if (!MANAGED_ENV_KEYS.has(key)) {
+      preservedEnv[key] = value;
+    }
+  }
+
+  const newSettings: ClaudeCodeSettings = {
+    ...settings,
+    env: { ...preservedEnv, ...resolved.env },
+  };
+
+  if (resolved.allowedDirectories.length > 0) {
+    newSettings.allowedDirectories = resolved.allowedDirectories;
+  } else {
+    delete newSettings.allowedDirectories;
+  }
+
+  if (resolved.awsAuthRefresh) {
+    newSettings.awsAuthRefresh = resolved.awsAuthRefresh;
+  } else {
+    delete newSettings.awsAuthRefresh;
+  }
+
+  writeProjectSettings(workspaceRoot, newSettings);
+
+  // Write MCP servers to .mcp.json
+  writeProjectMcpServers(workspaceRoot, resolved.mcpServers);
+}
+
+/**
+ * Resolve and apply the active scope assignments from the store.
+ */
+export function applyAllScopes(
+  store: ProfileStore,
+  workspaceRoot: string | undefined
+): void {
+  // Global scope
+  if (store.globalScope.mode === 'preset' && store.globalScope.presetId) {
+    const resolved = resolvePreset(store, store.globalScope.presetId);
+    if (resolved) {
+      applyGlobalConfig(resolved);
+    }
+  }
+
+  // Project scope
+  if (workspaceRoot) {
+    const projectScope = store.projectScopes[workspaceRoot];
+    if (projectScope) {
+      if (projectScope.mode === 'preset' && projectScope.presetId) {
+        const resolved = resolvePreset(store, projectScope.presetId);
+        if (resolved) {
+          applyProjectConfig(resolved, workspaceRoot);
+        }
+      }
+      if (projectScope.mode === 'inherit') {
+        cleanProjectConfig(workspaceRoot);
+      }
+      // 'manual' mode: user manages files themselves
+    }
+  }
+}

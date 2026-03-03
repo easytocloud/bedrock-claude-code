@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "providers": [
+    {
+      "id": "__default_anthropic__",
+      "name": "Anthropic",
+      "type": "anthropic",
+      "primaryModel": "claude-sonnet-4-6-20250514",
+      "smallFastModel": "claude-haiku-4-5-20251001",
+      "opusModel": "claude-opus-4-6-20250514"
+    },
+    {
+      "id": "bedrock-eu",
+      "name": "Bedrock EU",
+      "type": "bedrock",
+      "awsProfile": "my-company-sso",
+      "awsRegion": "eu-west-1",
+      "primaryModel": "eu.anthropic.claude-sonnet-4-6",
+      "smallFastModel": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "opusModel": "eu.anthropic.claude-opus-4-6-v1"
+    },
+    {
+      "id": "bedrock-us",
+      "name": "Bedrock US",
+      "type": "bedrock",
+      "awsProfile": "my-company-sso",
+      "awsRegion": "us-east-1",
+      "awsAuthRefresh": "aws sso login --profile my-company-sso",
+      "primaryModel": "us.anthropic.claude-sonnet-4-6",
+      "smallFastModel": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "opusModel": "us.anthropic.claude-opus-4-6-v1"
+    },
+    {
+      "id": "ollama-local",
+      "name": "Ollama Local",
+      "type": "proxy",
+      "proxyBaseUrl": "http://localhost:11434",
+      "primaryModel": "qwen2.5-coder:32b",
+      "smallFastModel": "qwen2.5-coder:7b",
+      "opusModel": "qwen2.5-coder:32b",
+      "disableLoginPrompt": true
+    },
+    {
+      "id": "litellm-gateway",
+      "name": "LiteLLM Gateway",
+      "type": "proxy",
+      "proxyBaseUrl": "https://litellm.internal.example.com",
+      "proxyApiKey": "sk-REPLACE_ME",
+      "primaryModel": "claude-sonnet-4-6",
+      "smallFastModel": "claude-haiku-4-5",
+      "opusModel": "claude-opus-4-6",
+      "disableLoginPrompt": true
+    }
+  ],
+  "mcpGroups": [
+    {
+      "id": "mcp-dev-tools",
+      "name": "Dev Tools",
+      "servers": [
+        {
+          "name": "github",
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-github"],
+          "env": {
+            "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_REPLACE_ME"
+          }
+        },
+        {
+          "name": "postgres",
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost:5432/mydb"]
+        }
+      ]
+    },
+    {
+      "id": "mcp-web",
+      "name": "Web & Search",
+      "servers": [
+        {
+          "name": "brave-search",
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+          "env": {
+            "BRAVE_API_KEY": "REPLACE_ME"
+          }
+        },
+        {
+          "name": "fetch",
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-fetch"]
+        }
+      ]
+    },
+    {
+      "id": "mcp-context7",
+      "name": "Context7",
+      "servers": [
+        {
+          "name": "context7",
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp@latest"]
+        }
+      ]
+    }
+  ],
+  "directoryGroups": [
+    {
+      "id": "dir-home-projects",
+      "name": "Home Projects",
+      "directories": [
+        "/Users/demo/projects",
+        "/Users/demo/notes"
+      ]
+    },
+    {
+      "id": "dir-shared-libs",
+      "name": "Shared Libraries",
+      "directories": [
+        "/opt/shared/libs",
+        "/opt/shared/configs"
+      ]
+    },
+    {
+      "id": "dir-remote-data",
+      "name": "Remote Data Lake",
+      "directories": [
+        "/mnt/remote-server/datasets",
+        "/mnt/remote-server/models"
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "id": "__default__",
+      "name": "Default",
+      "providerId": "__default_anthropic__",
+      "mcpGroupIds": [],
+      "directoryGroupIds": []
+    },
+    {
+      "id": "preset-work-eu",
+      "name": "Work (EU Bedrock)",
+      "providerId": "bedrock-eu",
+      "mcpGroupIds": ["mcp-dev-tools", "mcp-context7"],
+      "directoryGroupIds": ["dir-shared-libs"]
+    },
+    {
+      "id": "preset-work-us",
+      "name": "Work (US Bedrock)",
+      "providerId": "bedrock-us",
+      "mcpGroupIds": ["mcp-dev-tools", "mcp-web"],
+      "directoryGroupIds": ["dir-shared-libs"]
+    },
+    {
+      "id": "preset-offline",
+      "name": "Offline (Ollama)",
+      "providerId": "ollama-local",
+      "mcpGroupIds": [],
+      "directoryGroupIds": ["dir-home-projects"]
+    },
+    {
+      "id": "preset-research",
+      "name": "Research",
+      "providerId": "litellm-gateway",
+      "mcpGroupIds": ["mcp-web", "mcp-context7"],
+      "directoryGroupIds": ["dir-remote-data", "dir-home-projects"]
+    }
+  ],
+  "globalScope": {
+    "mode": "preset",
+    "presetId": "preset-work-eu"
+  },
+  "projectScopes": {
+    "/Users/demo/projects/ml-pipeline": {
+      "mode": "preset",
+      "presetId": "preset-research"
+    },
+    "/Users/demo/projects/web-app": {
+      "mode": "inherit"
+    }
+  }
+}
