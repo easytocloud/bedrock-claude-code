@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#111120"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-10%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="256" height="256" rx="40" fill="url(#bg)"/>
+
+  <!-- Green (Directories) — bottom, largest. hw=84, hh=38, thickness=4 -->
+  <g filter="url(#shadow)" opacity="0.78">
+    <path d="M128,184 L46,148.8 Q44,148 44,146 L44,144 L128,180 Z" fill="#3ba85a"/>
+    <path d="M128,184 L210,148.8 Q212,148 212,146 L212,144 L128,180 Z" fill="#2d9049"/>
+    <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7"
+          fill="#4ec970"
+          transform="matrix(0.84,0.38,-0.84,0.38,128,144)"/>
+  </g>
+
+  <!-- Purple (MCP Servers) — middle. hw=72, hh=32, thickness=4 -->
+  <g filter="url(#shadow)" opacity="0.78">
+    <path d="M128,148 L58,118.4 Q56,117.6 56,116 L56,114 L128,144 Z" fill="#9a72c0"/>
+    <path d="M128,148 L198,118.4 Q200,117.6 200,116 L200,114 L128,144 Z" fill="#8660ab"/>
+    <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7"
+          fill="#b48eda"
+          transform="matrix(0.72,0.32,-0.72,0.32,128,114)"/>
+  </g>
+
+  <!-- Orange (Providers) — upper. hw=60, hh=27, thickness=4 -->
+  <g filter="url(#shadow)" opacity="0.82">
+    <path d="M128,114 L70,89.6 Q68,88.8 68,87 L68,86 L128,111 Z" fill="#cc7e2e"/>
+    <path d="M128,114 L186,89.6 Q188,88.8 188,87 L188,86 L128,111 Z" fill="#b56c22"/>
+    <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7"
+          fill="#e8973e"
+          transform="matrix(0.60,0.27,-0.60,0.27,128,86)"/>
+  </g>
+
+  <!-- Terracotta (Presets) — top, smallest. hw=40, hh=18, thickness=3 -->
+  <g filter="url(#shadow)" opacity="0.88">
+    <path d="M128,81 L89.5,63.6 Q88,63 88,61.5 L88,60 L128,78 Z" fill="#bf6545"/>
+    <path d="M128,81 L166.5,63.6 Q168,63 168,61.5 L168,60 L128,78 Z" fill="#a85538"/>
+    <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7"
+          fill="#d97857"
+          transform="matrix(0.40,0.18,-0.40,0.18,128,60)"/>
+  </g>
+</svg>

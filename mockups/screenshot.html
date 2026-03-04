@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>Claude Code Personae — Screenshot</title>
+<style>
+/* ─── Custom Properties ─────────────────────────────────────────── */
+:root {
+  --bg: #1e1e1e;
+  --bg-raised: #252526;
+  --bg-surface: #2d2d2d;
+  --bg-hover: #363636;
+  --bg-active: #3e3e3e;
+
+  --fg: #cccccc;
+  --fg-dim: #999999;
+  --fg-muted: #666666;
+  --fg-bright: #e8e8e8;
+
+  --blue: #3b9eff;
+  --blue-dim: rgba(59,158,255,0.10);
+  --blue-mid: rgba(59,158,255,0.20);
+
+  --orange: #e8973e;
+  --orange-dim: rgba(232,151,62,0.10);
+  --orange-mid: rgba(232,151,62,0.20);
+
+  --green: #4ec970;
+  --green-dim: rgba(78,201,112,0.10);
+  --green-mid: rgba(78,201,112,0.20);
+
+  --purple: #b48eda;
+  --purple-dim: rgba(180,142,218,0.10);
+  --purple-mid: rgba(180,142,218,0.20);
+
+  --red: #e05a5a;
+  --red-dim: rgba(224,90,90,0.10);
+  --red-mid: rgba(224,90,90,0.20);
+
+  --border: #3e3e3e;
+  --input-bg: #333333;
+  --input-border: #4a4a4a;
+  --input-fg: #cccccc;
+  --input-focus: var(--blue);
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --radius-lg: 12px;
+  --radius-pill: 100px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --transition: 0.18s ease;
+}
+
+/* ─── Reset & Base ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ─── Layout ────────────────────────────────────────────────────── */
+.app { max-width: 860px; margin: 0 auto; padding: 16px 20px 60px; }
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.header-logo h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fg-bright);
+}
+
+/* ─── Buttons ───────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--fg-dim);
+  border-color: var(--border);
+}
+
+/* ─── Scope Cards ───────────────────────────────────────────────── */
+.scope-section { margin-bottom: 8px; }
+.scope-section > .scope-card + .scope-card { margin-top: 8px; }
+
+.scope-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.scope-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.scope-indicator {
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.scope-indicator.global { background: var(--blue); }
+.scope-indicator.project { background: var(--orange); }
+
+.scope-title-area { flex: 1; }
+.scope-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fg-bright);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.scope-subtitle { font-size: 11px; color: var(--fg-dim); margin-top: 2px; }
+
+.scope-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+}
+.scope-badge.blue { background: var(--blue-dim); color: var(--blue); }
+.scope-badge.orange { background: var(--orange-dim); color: var(--orange); }
+
+.scope-chevron {
+  color: var(--fg-muted);
+  font-size: 22px;
+}
+.scope-card.collapsed .scope-chevron { transform: rotate(-90deg); }
+.scope-card.collapsed .scope-body { display: none; }
+
+.scope-body {
+  padding: 12px 18px 18px;
+}
+
+.scope-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.scope-preset-row label {
+  font-size: 12px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+/* ─── Panel Sections ──────────────────────────────────────────── */
+.panel-section {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+}
+.panel-indicator {
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.panel-indicator.red { background: var(--red); }
+.panel-indicator.orange { background: var(--orange); }
+.panel-indicator.purple { background: var(--purple); }
+.panel-indicator.green { background: var(--green); }
+.panel-title-area { flex: 1; }
+.panel-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fg-bright);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-subtitle { font-size: 11px; color: var(--fg-dim); margin-top: 2px; }
+.panel-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+}
+.panel-badge.red { background: var(--red-dim); color: var(--red); }
+.panel-badge.orange { background: var(--orange-dim); color: var(--orange); }
+.panel-badge.purple { background: var(--purple-dim); color: var(--purple); }
+.panel-badge.green { background: var(--green-dim); color: var(--green); }
+.panel-chevron {
+  color: var(--fg-muted);
+  font-size: 22px;
+}
+.panel-section.collapsed .panel-chevron { transform: rotate(-90deg); }
+.panel-section.collapsed .panel-body { display: none; }
+.panel-body {
+  padding: 0 18px 18px;
+}
+
+/* ─── Canvas Headings ──────────────────────────────────────────── */
+.canvas-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-top: 20px;
+  margin-bottom: 2px;
+}
+.canvas-hint {
+  font-size: 12px;
+  color: var(--fg-dim);
+  margin-bottom: 4px;
+}
+
+/* ─── Preset Grid ───────────────────────────────────────────────── */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.preset-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+}
+.preset-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.preset-card-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg-bright);
+  flex: 1;
+}
+.preset-card-default {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--fg-muted);
+  color: var(--bg);
+}
+.preset-card-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.preset-card-section:last-child { margin-bottom: 0; }
+.preset-tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.preset-tag.orange { background: var(--orange-dim); color: var(--orange); }
+.preset-tag.purple { background: var(--purple-dim); color: var(--purple); }
+.preset-tag.green { background: var(--green-dim); color: var(--green); }
+
+.preset-card-new {
+  border-style: dashed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--fg-dim);
+  font-size: 13px;
+  min-height: 100px;
+}
+
+/* ─── Building Block Chips ─────────────────────────────────────── */
+.bb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bb-chips-inherited {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  opacity: 0.45;
+  pointer-events: none;
+}
+.bb-chip {
+  display: flex;
+  padding: 8px 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-width: 160px;
+  max-width: 280px;
+}
+.bb-chip.orange { border-left-color: var(--orange); }
+.bb-chip.purple { border-left-color: var(--purple); }
+.bb-chip.green { border-left-color: var(--green); }
+.bb-chip-text { min-width: 0; }
+.bb-chip-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bb-chip-detail {
+  display: block;
+  font-size: 11px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bb-chip-spacer { margin-top: 6px; }
+.bb-chip-new {
+  border-style: dashed;
+  color: var(--fg-dim);
+  justify-content: center;
+  min-width: 120px;
+}
+
+/* ─── Select styling ──────────────────────────────────────────── */
+select {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  color: var(--input-fg);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-active); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">
+      <h1>Claude Code Personae</h1>
+    </div>
+    <button class="btn btn-secondary">Save All</button>
+  </div>
+
+  <!-- ═══ Scope Section ═══ -->
+  <div class="scope-section">
+
+    <!-- Global Scope -->
+    <div class="scope-card" data-scope="global">
+      <div class="scope-header">
+        <div class="scope-indicator global"></div>
+        <div class="scope-title-area">
+          <div class="scope-title">
+            Global Scope
+            <span class="scope-badge blue">Work (EU Bedrock)</span>
+          </div>
+          <div class="scope-subtitle">~/.claude/settings.json</div>
+        </div>
+        <span class="scope-chevron">&#9662;</span>
+      </div>
+      <div class="scope-body">
+        <div class="scope-preset-row">
+          <label>Preset:</label>
+          <select>
+            <option>Work (EU Bedrock)</option>
+          </select>
+        </div>
+        <div class="bb-chips">
+          <!-- Provider chip -->
+          <div class="bb-chip orange">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">Bedrock EU</span>
+              <span class="bb-chip-detail">bedrock &middot; my-company-sso</span>
+              <span class="bb-chip-detail bb-chip-spacer">eu.anthropic.claude-haiku-4-5-20251001-v1:0</span>
+              <span class="bb-chip-detail">eu.anthropic.claude-sonnet-4-6</span>
+              <span class="bb-chip-detail">eu.anthropic.claude-opus-4-6-v1</span>
+            </div>
+          </div>
+          <!-- MCP chips -->
+          <div class="bb-chip purple">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">Dev Tools</span>
+              <span class="bb-chip-detail">github</span>
+              <span class="bb-chip-detail">postgres</span>
+            </div>
+          </div>
+          <div class="bb-chip purple">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">Context7</span>
+              <span class="bb-chip-detail">context7</span>
+            </div>
+          </div>
+          <!-- Directory chip -->
+          <div class="bb-chip green">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">Shared Libraries</span>
+              <span class="bb-chip-detail">/opt/shared/libs</span>
+              <span class="bb-chip-detail">/opt/shared/configs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Scope -->
+    <div class="scope-card" data-scope="project">
+      <div class="scope-header">
+        <div class="scope-indicator project"></div>
+        <div class="scope-title-area">
+          <div class="scope-title">
+            Project Scope
+            <span class="scope-badge orange">Research</span>
+          </div>
+          <div class="scope-subtitle">ml-pipeline &middot; .claude/settings.json</div>
+        </div>
+        <span class="scope-chevron">&#9662;</span>
+      </div>
+      <div class="scope-body">
+        <div class="scope-preset-row">
+          <label>Preset:</label>
+          <select>
+            <option>Research</option>
+          </select>
+        </div>
+        <div class="bb-chips">
+          <!-- Provider chip -->
+          <div class="bb-chip orange">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">LiteLLM Gateway</span>
+              <span class="bb-chip-detail">https://litellm.internal.example.com</span>
+              <span class="bb-chip-detail bb-chip-spacer">claude-haiku-4-5</span>
+              <span class="bb-chip-detail">claude-sonnet-4-6</span>
+              <span class="bb-chip-detail">claude-opus-4-6</span>
+            </div>
+          </div>
+          <!-- MCP chips -->
+          <div class="bb-chip purple">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">Web &amp; Search</span>
+              <span class="bb-chip-detail">brave-search</span>
+              <span class="bb-chip-detail">fetch</span>
+            </div>
+          </div>
+          <div class="bb-chip purple">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">Context7</span>
+              <span class="bb-chip-detail">context7</span>
+            </div>
+          </div>
+          <!-- Directory chips -->
+          <div class="bb-chip green">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">Remote Data Lake</span>
+              <span class="bb-chip-detail">/mnt/remote-server/datasets</span>
+              <span class="bb-chip-detail">/mnt/remote-server/models</span>
+            </div>
+          </div>
+          <div class="bb-chip green">
+            <div class="bb-chip-text">
+              <span class="bb-chip-name">Home Projects</span>
+              <span class="bb-chip-detail">/Users/demo/projects</span>
+              <span class="bb-chip-detail">/Users/demo/notes</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ Presets Panel ═══ -->
+  <div class="panel-section" data-panel="presets">
+    <div class="panel-header">
+      <div class="panel-indicator red"></div>
+      <div class="panel-title-area">
+        <div class="panel-title">
+          Presets
+          <span class="panel-badge red">5</span>
+        </div>
+        <div class="panel-subtitle">A preset bundles a provider, MCP servers, and directories into a reusable configuration.</div>
+      </div>
+      <span class="panel-chevron">&#9662;</span>
+    </div>
+    <div class="panel-body">
+      <div class="preset-grid">
+
+        <!-- Default -->
+        <div class="preset-card">
+          <div class="preset-card-header">
+            <span class="preset-card-name">Default</span>
+            <span class="preset-card-default">Default</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag orange">anthropic &middot; Anthropic</span>
+          </div>
+        </div>
+
+        <!-- Work (EU Bedrock) -->
+        <div class="preset-card">
+          <div class="preset-card-header">
+            <span class="preset-card-name">Work (EU Bedrock)</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag orange">bedrock &middot; Bedrock EU</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag purple">Dev Tools</span>
+            <span class="preset-tag purple">Context7</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag green">Shared Libraries</span>
+          </div>
+        </div>
+
+        <!-- Work (US Bedrock) -->
+        <div class="preset-card">
+          <div class="preset-card-header">
+            <span class="preset-card-name">Work (US Bedrock)</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag orange">bedrock &middot; Bedrock US</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag purple">Dev Tools</span>
+            <span class="preset-tag purple">Web &amp; Search</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag green">Shared Libraries</span>
+          </div>
+        </div>
+
+        <!-- Offline (Ollama) -->
+        <div class="preset-card">
+          <div class="preset-card-header">
+            <span class="preset-card-name">Offline (Ollama)</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag orange">proxy &middot; Ollama Local</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag green">Home Projects</span>
+          </div>
+        </div>
+
+        <!-- Research -->
+        <div class="preset-card">
+          <div class="preset-card-header">
+            <span class="preset-card-name">Research</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag orange">proxy &middot; LiteLLM Gateway</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag purple">Web &amp; Search</span>
+            <span class="preset-tag purple">Context7</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag green">Remote Data Lake</span>
+            <span class="preset-tag green">Home Projects</span>
+          </div>
+        </div>
+
+        <!-- + New Preset -->
+        <div class="preset-card preset-card-new">+ New Preset</div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Building Blocks ═══ -->
+  <div class="canvas-heading">Building Blocks</div>
+  <div class="canvas-hint">Create and manage providers, MCP server groups, and directory groups. Use them in presets above.</div>
+
+  <!-- Providers -->
+  <div class="panel-section" data-panel="providers">
+    <div class="panel-header">
+      <div class="panel-indicator orange"></div>
+      <div class="panel-title-area">
+        <div class="panel-title">
+          Providers
+          <span class="panel-badge orange">5</span>
+        </div>
+        <div class="panel-subtitle">API backends — Anthropic, AWS Bedrock, or custom proxy endpoints.</div>
+      </div>
+      <span class="panel-chevron">&#9662;</span>
+    </div>
+    <div class="panel-body">
+      <div class="bb-chips">
+        <div class="bb-chip orange">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Anthropic</span>
+            <span class="bb-chip-detail">anthropic</span>
+            <span class="bb-chip-detail bb-chip-spacer">claude-haiku-4-5-20251001</span>
+            <span class="bb-chip-detail">claude-sonnet-4-6-20250514</span>
+            <span class="bb-chip-detail">claude-opus-4-6-20250514</span>
+          </div>
+        </div>
+        <div class="bb-chip orange">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Bedrock EU</span>
+            <span class="bb-chip-detail">bedrock &middot; my-company-sso</span>
+            <span class="bb-chip-detail bb-chip-spacer">eu.anthropic.claude-haiku-4-5-20251001-v1:0</span>
+            <span class="bb-chip-detail">eu.anthropic.claude-sonnet-4-6</span>
+            <span class="bb-chip-detail">eu.anthropic.claude-opus-4-6-v1</span>
+          </div>
+        </div>
+        <div class="bb-chip orange">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Bedrock US</span>
+            <span class="bb-chip-detail">bedrock &middot; my-company-sso</span>
+            <span class="bb-chip-detail bb-chip-spacer">us.anthropic.claude-haiku-4-5-20251001-v1:0</span>
+            <span class="bb-chip-detail">us.anthropic.claude-sonnet-4-6</span>
+            <span class="bb-chip-detail">us.anthropic.claude-opus-4-6-v1</span>
+          </div>
+        </div>
+        <div class="bb-chip orange">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Ollama Local</span>
+            <span class="bb-chip-detail">http://localhost:11434</span>
+            <span class="bb-chip-detail bb-chip-spacer">qwen2.5-coder:7b</span>
+            <span class="bb-chip-detail">qwen2.5-coder:32b</span>
+            <span class="bb-chip-detail">qwen2.5-coder:32b</span>
+          </div>
+        </div>
+        <div class="bb-chip orange">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">LiteLLM Gateway</span>
+            <span class="bb-chip-detail">https://litellm.internal.example.com</span>
+            <span class="bb-chip-detail bb-chip-spacer">claude-haiku-4-5</span>
+            <span class="bb-chip-detail">claude-sonnet-4-6</span>
+            <span class="bb-chip-detail">claude-opus-4-6</span>
+          </div>
+        </div>
+        <div class="bb-chip bb-chip-new">+ New Provider</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCP Server Groups -->
+  <div class="panel-section" data-panel="mcp-groups">
+    <div class="panel-header">
+      <div class="panel-indicator purple"></div>
+      <div class="panel-title-area">
+        <div class="panel-title">
+          MCP Server Groups
+          <span class="panel-badge purple">3</span>
+        </div>
+        <div class="panel-subtitle">Named collections of MCP servers to attach to presets.</div>
+      </div>
+      <span class="panel-chevron">&#9662;</span>
+    </div>
+    <div class="panel-body">
+      <div class="bb-chips">
+        <div class="bb-chip purple">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Dev Tools</span>
+            <span class="bb-chip-detail">github</span>
+            <span class="bb-chip-detail">postgres</span>
+          </div>
+        </div>
+        <div class="bb-chip purple">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Web &amp; Search</span>
+            <span class="bb-chip-detail">brave-search</span>
+            <span class="bb-chip-detail">fetch</span>
+          </div>
+        </div>
+        <div class="bb-chip purple">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Context7</span>
+            <span class="bb-chip-detail">context7</span>
+          </div>
+        </div>
+        <div class="bb-chip bb-chip-new">+ New Group</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Directory Groups -->
+  <div class="panel-section" data-panel="dir-groups">
+    <div class="panel-header">
+      <div class="panel-indicator green"></div>
+      <div class="panel-title-area">
+        <div class="panel-title">
+          Directory Groups
+          <span class="panel-badge green">3</span>
+        </div>
+        <div class="panel-subtitle">Additional directories Claude Code is allowed to access.</div>
+      </div>
+      <span class="panel-chevron">&#9662;</span>
+    </div>
+    <div class="panel-body">
+      <div class="bb-chips">
+        <div class="bb-chip green">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Home Projects</span>
+            <span class="bb-chip-detail">/Users/demo/projects</span>
+            <span class="bb-chip-detail">/Users/demo/notes</span>
+          </div>
+        </div>
+        <div class="bb-chip green">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Shared Libraries</span>
+            <span class="bb-chip-detail">/opt/shared/libs</span>
+            <span class="bb-chip-detail">/opt/shared/configs</span>
+          </div>
+        </div>
+        <div class="bb-chip green">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">Remote Data Lake</span>
+            <span class="bb-chip-detail">/mnt/remote-server/datasets</span>
+            <span class="bb-chip-detail">/mnt/remote-server/models</span>
+          </div>
+        </div>
+        <div class="bb-chip bb-chip-new">+ New Group</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
