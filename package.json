@@ -1,8 +1,8 @@
 {
   "name": "bedrock-claude-code",
-  "displayName": "Claude Code Bedrock Settings",
-  "description": "Settings panel for Claude Code on AWS Bedrock — profiles, models, MCP servers, and allowed directories",
-  "version": "0.1.0",
+  "displayName": "Claude Code Personae",
+  "description": "Composable preset-based settings for Claude Code — switch between Anthropic, AWS Bedrock, and proxy providers with reusable MCP server and directory groups",
+  "version": "0.2.0",
   "publisher": "easytocloud",
   "license": "MIT",
   "repository": {
@@ -10,6 +10,9 @@
     "url": "https://github.com/easytocloud/bedrock-claude-code"
   },
   "homepage": "https://github.com/easytocloud/bedrock-claude-code#readme",
+  "bugs": {
+    "url": "https://github.com/easytocloud/bedrock-claude-code/issues"
+  },
   "icon": "images/icon.png",
   "galleryBanner": {
     "color": "#1a1a2e",
@@ -19,6 +22,7 @@
     "vscode": "^1.98.0"
   },
   "categories": [
+    "Machine Learning",
     "Other"
   ],
   "keywords": [
@@ -28,7 +32,10 @@
     "bedrock",
     "anthropic",
     "ai",
-    "mcp"
+    "mcp",
+    "presets",
+    "proxy",
+    "ollama"
   ],
   "activationEvents": [],
   "main": "./out/extension.js",
@@ -36,14 +43,14 @@
     "commands": [
       {
         "command": "bedrock-claude-code.openSettings",
-        "title": "Open Claude Code Bedrock Settings",
-        "category": "Claude Code Bedrock",
+        "title": "Open Claude Code Personae",
+        "category": "Claude Code",
         "icon": "$(settings-gear)"
       },
       {
         "command": "bedrock-claude-code.openSettingsFile",
         "title": "Open ~/.claude/settings.json",
-        "category": "Claude Code Bedrock",
+        "category": "Claude Code",
         "icon": "$(file-code)"
       }
     ],

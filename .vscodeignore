@@ -1,11 +1,15 @@
 .vscode/
 .vscode-test/
+.claude/
 src/
-out/maps/
 node_modules/
+mockups/
+examples/
 .gitignore
+.mcp.json
 eslint.config.js
 tsconfig.json
-**/*.map
 **/*.ts
+*.vsix
 !out/**
+out/**/*.map
