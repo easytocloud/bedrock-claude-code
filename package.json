@@ -2,7 +2,7 @@
   "name": "bedrock-claude-code",
   "displayName": "Claude Code Personae",
   "description": "Composable preset-based settings for Claude Code — switch between Anthropic, AWS Bedrock, and proxy providers with reusable MCP server and directory groups",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "easytocloud",
   "license": "MIT",
   "repository": {
@@ -56,8 +56,12 @@
     ],
     "menus": {
       "commandPalette": [
-        { "command": "bedrock-claude-code.openSettings" },
-        { "command": "bedrock-claude-code.openSettingsFile" }
+        {
+          "command": "bedrock-claude-code.openSettings"
+        },
+        {
+          "command": "bedrock-claude-code.openSettingsFile"
+        }
       ]
     }
   },

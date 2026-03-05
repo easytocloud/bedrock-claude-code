@@ -2,6 +2,12 @@
 
 All notable changes to this extension will be documented here.
 
+## [0.2.2] — 2026-03-05
+
+### Fixed
+- Adding servers/directories to not-yet-saved groups no longer silently loses items
+- Migration from v0.2.0 `projectScopes` key to `workspaceScopes` preserves existing scope assignments
+
 ## [0.2.1] — 2026-03-05
 
 ### Changed
@@ -12,8 +18,6 @@ All notable changes to this extension will be documented here.
 ### Fixed
 - Drawer save buttons now show validation errors (red toast) instead of failing silently when required fields are missing
 - Validation covers: names, provider type-specific fields (AWS profile, proxy URL), MCP server URLs/commands
-- Adding servers/directories to not-yet-saved groups no longer silently loses items
-- Migration from v0.2.0 `projectScopes` key to `workspaceScopes` preserves existing scope assignments
 
 ## [0.2.0] — 2026-03-04
 
