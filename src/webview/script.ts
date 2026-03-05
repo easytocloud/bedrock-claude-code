@@ -40,6 +40,10 @@ export function buildScript(nonce: string): string {
   let editingMcpServerIndex = -1;  // index within group, -1 = new
   let editingDirGroupId = null;
 
+  // Temp storage for items added to not-yet-saved groups
+  let pendingServers = [];  // servers for a new MCP group (before first save)
+  let pendingDirs = [];     // directories for a new directory group (before first save)
+
   // ─── Helpers ───────────────────────────────────────────────────
   function escHtml(s) {
     if (!s) return '';
@@ -495,11 +499,12 @@ export function buildScript(nonce: string): string {
     const group = isNew ? null : store.mcpGroups.find(g => g.id === groupId);
 
     editingMcpGroupId = isNew ? null : groupId;
+    if (isNew) pendingServers = [];
 
     document.getElementById('mcp-group-drawer-title').textContent = isNew ? 'New MCP Server Group' : escHtml(group.name);
     document.getElementById('mcp-group-name').value = group ? group.name : '';
 
-    renderMcpServerList(group ? group.servers : []);
+    renderMcpServerList(group ? group.servers : pendingServers);
 
     const deleteBtn = document.querySelector('[data-action="delete-mcp-group"]');
     if (deleteBtn) deleteBtn.style.display = isNew ? 'none' : '';
@@ -587,11 +592,12 @@ export function buildScript(nonce: string): string {
     const group = isNew ? null : store.directoryGroups.find(g => g.id === groupId);
 
     editingDirGroupId = isNew ? null : groupId;
+    if (isNew) pendingDirs = [];
 
     document.getElementById('dir-group-drawer-title').textContent = isNew ? 'New Directory Group' : escHtml(group.name);
     document.getElementById('dir-group-name').value = group ? group.name : '';
 
-    renderDirectoryList(group ? group.directories : []);
+    renderDirectoryList(group ? group.directories : pendingDirs);
 
     const deleteBtn = document.querySelector('[data-action="delete-dir-group"]');
     if (deleteBtn) deleteBtn.style.display = isNew ? 'none' : '';
@@ -758,11 +764,10 @@ export function buildScript(nonce: string): string {
   }
 
   function collectMcpServersFromDOM() {
-    // Servers are stored as data attributes on .item-row elements
     const group = editingMcpGroupId
       ? state.store.mcpGroups.find(g => g.id === editingMcpGroupId)
       : null;
-    return group ? [...group.servers] : [];
+    return group ? [...group.servers] : [...pendingServers];
   }
 
   function saveMcpServerFromDrawer() {
@@ -801,28 +806,21 @@ export function buildScript(nonce: string): string {
       env: collectMcpEnvFromDOM(),
     };
 
-    // Find the group we're editing servers for
+    // Find the group we're editing servers for (or use pending list for new groups)
     const group = editingMcpGroupId
       ? state.store.mcpGroups.find(g => g.id === editingMcpGroupId)
       : null;
+    const serverList = group ? group.servers : pendingServers;
 
-    if (group) {
-      if (editingMcpServerIndex >= 0 && editingMcpServerIndex < group.servers.length) {
-        group.servers[editingMcpServerIndex] = server;
-      } else {
-        group.servers.push(server);
-      }
-      markDirty();
+    if (editingMcpServerIndex >= 0 && editingMcpServerIndex < serverList.length) {
+      serverList[editingMcpServerIndex] = server;
     } else {
-      // New group that doesn't exist yet — create a temp group
-      // This handles the case where we're adding a server to a new group
+      serverList.push(server);
     }
+    if (group) markDirty();
 
     closeTopDrawer();
-    // Re-render the MCP group drawer's server list
-    if (group) {
-      renderMcpServerList(group.servers);
-    }
+    renderMcpServerList(serverList);
   }
 
   function collectMcpEnvFromDOM() {
@@ -865,11 +863,9 @@ export function buildScript(nonce: string): string {
 
   function collectDirsFromDOM() {
     const dirs = [];
-    document.querySelectorAll('[data-dir-index]').forEach(row => {
-      const detail = row.querySelector('.item-row-detail');
-      if (detail && detail.textContent) {
-        dirs.push(detail.textContent);
-      }
+    document.querySelectorAll('.dir-path-input').forEach(input => {
+      const val = input.value.trim();
+      if (val) dirs.push(val);
     });
     return dirs;
   }
@@ -1229,19 +1225,19 @@ export function buildScript(nonce: string): string {
       case 'edit-mcp-server-item': {
         const idx = parseInt(target.dataset.index, 10);
         const group = editingMcpGroupId ? state.store.mcpGroups.find(g => g.id === editingMcpGroupId) : null;
-        if (group && group.servers[idx]) {
-          openMcpServerDrawer(group.servers[idx], idx);
+        const srvList = group ? group.servers : pendingServers;
+        if (srvList[idx]) {
+          openMcpServerDrawer(srvList[idx], idx);
         }
         break;
       }
       case 'remove-mcp-server-item': {
         const idx = parseInt(target.dataset.index, 10);
         const group = editingMcpGroupId ? state.store.mcpGroups.find(g => g.id === editingMcpGroupId) : null;
-        if (group) {
-          group.servers.splice(idx, 1);
-          renderMcpServerList(group.servers);
-          markDirty();
-        }
+        const srvList = group ? group.servers : pendingServers;
+        srvList.splice(idx, 1);
+        renderMcpServerList(srvList);
+        if (group) markDirty();
         break;
       }
       case 'save-mcp-server':
@@ -1264,13 +1260,11 @@ export function buildScript(nonce: string): string {
         duplicateDirGroup();
         break;
       case 'add-directory': {
-        // Add an empty directory row for manual entry or browsing
         const group = editingDirGroupId ? state.store.directoryGroups.find(g => g.id === editingDirGroupId) : null;
-        if (group) {
-          group.directories.push('');
-          renderDirectoryList(group.directories);
-          markDirty();
-        }
+        const dirList = group ? group.directories : pendingDirs;
+        dirList.push('');
+        renderDirectoryList(dirList);
+        if (group) markDirty();
         break;
       }
       case 'browse-directory': {
@@ -1281,11 +1275,10 @@ export function buildScript(nonce: string): string {
       case 'remove-directory': {
         const idx = parseInt(target.dataset.index, 10);
         const group = editingDirGroupId ? state.store.directoryGroups.find(g => g.id === editingDirGroupId) : null;
-        if (group) {
-          group.directories.splice(idx, 1);
-          renderDirectoryList(group.directories);
-          markDirty();
-        }
+        const dirList = group ? group.directories : pendingDirs;
+        dirList.splice(idx, 1);
+        renderDirectoryList(dirList);
+        if (group) markDirty();
         break;
       }
       case 'add-mcp-env-var': {
@@ -1341,9 +1334,10 @@ export function buildScript(nonce: string): string {
     if (target.dataset.dirPath !== undefined) {
       const idx = parseInt(target.dataset.dirPath, 10);
       const group = editingDirGroupId ? state.store.directoryGroups.find(g => g.id === editingDirGroupId) : null;
-      if (group && idx < group.directories.length) {
-        group.directories[idx] = target.value;
-        markDirty();
+      const dirList = group ? group.directories : pendingDirs;
+      if (idx < dirList.length) {
+        dirList[idx] = target.value;
+        if (group) markDirty();
       }
     }
   });
@@ -1418,18 +1412,15 @@ export function buildScript(nonce: string): string {
 
       case 'directoryPicked': {
         const { groupId, index, path } = msg;
-        if (groupId) {
-          const group = state.store.directoryGroups.find(g => g.id === groupId);
-          if (group && index < group.directories.length) {
-            group.directories[index] = path;
-            renderDirectoryList(group.directories);
-            markDirty();
-          } else if (group) {
-            group.directories.push(path);
-            renderDirectoryList(group.directories);
-            markDirty();
-          }
+        const group = groupId ? state.store.directoryGroups.find(g => g.id === groupId) : null;
+        const dirList = group ? group.directories : pendingDirs;
+        if (index < dirList.length) {
+          dirList[index] = path;
+        } else {
+          dirList.push(path);
         }
+        renderDirectoryList(dirList);
+        if (group) markDirty();
         break;
       }
 

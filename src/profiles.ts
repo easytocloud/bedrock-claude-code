@@ -100,6 +100,15 @@ export function readProfileStore(): ProfileStore {
     const parsed = JSON.parse(raw) as unknown;
     if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
       const store = parsed as ProfileStore;
+      // Migrate v0.2.0 projectScopes → workspaceScopes
+      const obj = parsed as Record<string, unknown>;
+      if (obj['projectScopes'] && !store.workspaceScopes) {
+        store.workspaceScopes = obj['projectScopes'] as Record<string, import('./types').ScopeAssignment>;
+        delete obj['projectScopes'];
+      }
+      if (!store.workspaceScopes) {
+        store.workspaceScopes = {};
+      }
       if (store.version === 1) {
         return ensureDefaults(store);
       }
