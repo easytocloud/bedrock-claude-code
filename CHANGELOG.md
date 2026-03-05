@@ -2,6 +2,11 @@
 
 All notable changes to this extension will be documented here.
 
+## [0.2.3] — 2026-03-05
+
+### Fixed
+- MCP server command auto-split was splitting on the letter "s" instead of whitespace (regex escape lost in template literal)
+
 ## [0.2.2] — 2026-03-05
 
 ### Fixed

@@ -789,10 +789,10 @@ export function buildScript(nonce: string): string {
     let args;
     if (type === 'stdio') {
       const rawCmd = document.getElementById('mcp-server-command').value.trim();
-      const parts = rawCmd.split(/\s+/);
+      const parts = rawCmd.split(/\\s+/);
       command = parts[0] || rawCmd;
       const extraArgs = parts.slice(1);
-      const textareaArgs = document.getElementById('mcp-server-args').value.split('\\n').filter(Boolean);
+      const textareaArgs = document.getElementById('mcp-server-args').value.split('\\n').map(s => s.trim()).filter(Boolean);
       args = [...extraArgs, ...textareaArgs];
       if (args.length === 0) args = undefined;
     }
