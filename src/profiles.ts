@@ -83,7 +83,7 @@ export function createEmptyStore(): ProfileStore {
     directoryGroups: [],
     presets: [],
     globalScope: { mode: 'preset', presetId: DEFAULT_PRESET_ID },
-    projectScopes: {},
+    workspaceScopes: {},
   });
 }
 

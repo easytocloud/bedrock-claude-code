@@ -11,7 +11,7 @@ import { esc } from './components';
 // ---------------------------------------------------------------------------
 
 function renderScopeCard(attrs: {
-  scope: 'global' | 'project';
+  scope: 'global' | 'workspace';
   title: string;
   subtitle: string;
   badgeText: string;
@@ -24,7 +24,7 @@ function renderScopeCard(attrs: {
 
   // Build preset dropdown options
   const modeOptions = [
-    scope === 'project'
+    scope === 'workspace'
       ? `<option value="inherit"${presetMode === 'inherit' ? ' selected' : ''}>Inherit from Global</option>`
       : '',
     `<option value="manual"${presetMode === 'manual' ? ' selected' : ''}>Configure manually</option>`,
@@ -65,9 +65,9 @@ export function renderScopeCards(state: PanelState): string {
   const globalPresetId = store.globalScope.presetId;
   const globalMode = store.globalScope.mode;
 
-  // Project scope
-  const projectScope = state.workspacePath
-    ? (store.projectScopes[state.workspacePath] ?? { mode: 'inherit' })
+  // Workspace scope
+  const wsScope = state.workspacePath
+    ? (store.workspaceScopes[state.workspacePath] ?? { mode: 'inherit' })
     : { mode: 'inherit' as const };
 
   let html = '<div class="scope-section">';
@@ -86,19 +86,19 @@ export function renderScopeCards(state: PanelState): string {
     presets: store.presets,
   });
 
-  // Project card (only if workspace is open)
+  // Workspace card (only if workspace is open)
   if (state.hasWorkspace) {
-    const projectPresetId = projectScope.presetId;
+    const wsPresetId = wsScope.presetId;
     html += renderScopeCard({
-      scope: 'project',
-      title: 'Project Scope',
+      scope: 'workspace',
+      title: 'Workspace Scope',
       subtitle: `${state.workspaceName ?? state.workspacePath ?? ''} · .claude/settings.json`,
-      badgeText: projectScope.mode === 'preset'
-        ? (store.presets.find(p => p.id === projectPresetId)?.name ?? 'None')
-        : projectScope.mode === 'inherit' ? 'Inherited' : 'Manual',
+      badgeText: wsScope.mode === 'preset'
+        ? (store.presets.find(p => p.id === wsPresetId)?.name ?? 'None')
+        : wsScope.mode === 'inherit' ? 'Inherited' : 'Manual',
       badgeColor: 'orange',
-      presetId: projectPresetId,
-      presetMode: projectScope.mode,
+      presetId: wsPresetId,
+      presetMode: wsScope.mode,
       presets: store.presets,
     });
   }

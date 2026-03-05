@@ -19,7 +19,7 @@ Presets are then assigned to **scopes**:
 | Scope | Config files written | Dropdown options |
 |---|---|---|
 | **Global** | `~/.claude/settings.json`, `~/.claude.json` | Any preset, or Manual |
-| **Project** | `{workspace}/.claude/settings.json`, `.mcp.json` | Any preset, Inherit from Global, or Manual |
+| **Workspace** | `{workspace}/.claude/settings.json`, `.mcp.json` | Any preset, Inherit from Global, or Manual |
 
 Switching a scope's preset instantly reconfigures Claude Code — no manual file editing required.
 
@@ -31,7 +31,7 @@ All building blocks, presets, and scope assignments are stored in a single file:
 ~/.claude/coder-profiles.json
 ```
 
-On **Save All**, the extension resolves the active presets and writes the resulting flat configuration into Claude Code's own files. When a project scope is set to **Inherit from Global**, any previously written project-level settings are cleaned up automatically.
+On **Save All**, the extension resolves the active presets and writes the resulting flat configuration into Claude Code's own files. When a workspace scope is set to **Inherit from Global**, any previously written workspace-level settings are cleaned up automatically.
 
 A sample configuration is included in [`examples/coder-profiles.json`](examples/coder-profiles.json).
 
@@ -41,7 +41,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 2. Create a **Provider** (e.g. AWS Bedrock with your profile and region)
 3. Optionally create **MCP Server Groups** and **Directory Groups**
 4. Create a **Preset** that combines your provider with any groups
-5. Assign the preset to the **Global** or **Project** scope
+5. Assign the preset to the **Global** or **Workspace** scope
 6. Click **Save All**
 
 ### AWS Bedrock
@@ -66,14 +66,14 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 | Feature | Detail |
 |---|---|
 | Composable presets | Mix and match providers, MCP servers, and directories |
-| Scope management | Global and per-project configurations with inheritance |
+| Scope management | Global and per-workspace configurations with inheritance |
 | Provider types | Anthropic Direct, AWS Bedrock, OpenAI-compatible proxy |
 | MCP server groups | Reusable named collections of MCP servers (stdio, HTTP, SSE) |
 | Directory groups | Additional directories Claude Code may access |
 | Live model discovery | Refresh button fetches `/v1/models` from proxy servers |
 | Dirty indicator | Title bar shows `●` when unsaved changes exist |
 | Drawer-based editing | Slide-out panels for editing all building blocks |
-| Inherit mode | Project scope can inherit from global — cleans up project files |
+| Inherit mode | Workspace scope can inherit from global — cleans up workspace files |
 
 ## Requirements
 

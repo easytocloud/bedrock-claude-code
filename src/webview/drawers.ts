@@ -285,12 +285,12 @@ export function renderMcpServerDrawer(): string {
     <div id="mcp-transport-stdio" style="display:none">
       <div class="form-group">
         <label class="form-label">Command</label>
-        <input type="text" id="mcp-server-command" placeholder="e.g. npx @some/mcp-server" />
+        <input type="text" id="mcp-server-command" placeholder="e.g. npx" />
       </div>
       <div class="form-group">
         <label class="form-label">Arguments</label>
         <div class="form-hint">One per line (optional)</div>
-        <textarea id="mcp-server-args" rows="3" placeholder="--port 3000&#10;--verbose"></textarea>
+        <textarea id="mcp-server-args" rows="3" placeholder="-y&#10;@modelcontextprotocol/server-github"></textarea>
       </div>
     </div>
 

@@ -166,10 +166,10 @@ export function buildScript(nonce: string): string {
     const globalBadge = document.querySelector('[data-scope="global"] .scope-badge');
     if (globalBadge) globalBadge.textContent = badgeTextFor(store.globalScope);
 
-    const projectBadge = document.querySelector('[data-scope="project"] .scope-badge');
-    if (projectBadge) {
-      const projectScope = (state.workspacePath && store.projectScopes[state.workspacePath]) || { mode: 'inherit' };
-      projectBadge.textContent = badgeTextFor(projectScope);
+    const wsBadge = document.querySelector('[data-scope="workspace"] .scope-badge');
+    if (wsBadge) {
+      const wsScope = (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
+      wsBadge.textContent = badgeTextFor(wsScope);
     }
   }
 
@@ -202,7 +202,7 @@ export function buildScript(nonce: string): string {
     if (scope === 'global') {
       assignment = store.globalScope;
     } else {
-      assignment = (state.workspacePath && store.projectScopes[state.workspacePath]) || { mode: 'inherit' };
+      assignment = (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
     }
 
     if (assignment.mode === 'inherit') {
@@ -627,9 +627,10 @@ export function buildScript(nonce: string): string {
   function savePresetFromDrawer() {
     const store = state.store;
     const name = document.getElementById('preset-name').value.trim();
-    if (!name) return;
+    if (!name) { showToast('Preset name is required', true); return; }
 
     const providerId = document.getElementById('preset-provider').value;
+    if (!providerId) { showToast('Please select a provider', true); return; }
     const mcpGroupIds = Array.from(document.querySelectorAll('[data-mcp-group]:checked')).map(el => el.dataset.mcpGroup);
     const dirGroupIds = Array.from(document.querySelectorAll('[data-dir-group]:checked')).map(el => el.dataset.dirGroup);
 
@@ -672,11 +673,18 @@ export function buildScript(nonce: string): string {
     }
 
     const name = document.getElementById('provider-name').value.trim();
-    if (!name) return;
+    if (!name) { showToast('Provider name is required', true); return; }
 
     const selBtn = document.querySelector('[data-seg="provider-type"].sel');
     const type = selBtn ? selBtn.dataset.val : '';
-    if (!type) return;
+    if (!type) { showToast('Please select a provider type', true); return; }
+
+    if (type === 'bedrock' && !document.getElementById('provider-aws-profile').value.trim()) {
+      showToast('AWS profile is required for Bedrock', true); return;
+    }
+    if (type === 'proxy' && !document.getElementById('provider-proxy-url').value.trim()) {
+      showToast('Base URL is required for proxy providers', true); return;
+    }
 
     const providerData = {
       name,
@@ -725,7 +733,7 @@ export function buildScript(nonce: string): string {
   function saveMcpGroupFromDrawer() {
     const store = state.store;
     const name = document.getElementById('mcp-group-name').value.trim();
-    if (!name) return;
+    if (!name) { showToast('Group name is required', true); return; }
 
     // Collect servers from the current list (they were stored in a temp array)
     const servers = collectMcpServersFromDOM();
@@ -759,17 +767,37 @@ export function buildScript(nonce: string): string {
 
   function saveMcpServerFromDrawer() {
     const name = document.getElementById('mcp-server-name').value.trim();
-    if (!name) return;
+    if (!name) { showToast('Server name is required', true); return; }
 
     const transportBtn = document.querySelector('[data-seg="mcp-transport"].sel');
     const type = transportBtn ? transportBtn.dataset.val : 'http';
+
+    if ((type === 'http' || type === 'sse') && !document.getElementById('mcp-server-url').value.trim()) {
+      showToast('URL is required for HTTP/SSE servers', true); return;
+    }
+    if (type === 'stdio' && !document.getElementById('mcp-server-command').value.trim()) {
+      showToast('Command is required for stdio servers', true); return;
+    }
+
+    // For stdio: split command field if it contains spaces (e.g. "npx -y @pkg" → command="npx", args=["-y","@pkg",...])
+    let command;
+    let args;
+    if (type === 'stdio') {
+      const rawCmd = document.getElementById('mcp-server-command').value.trim();
+      const parts = rawCmd.split(/\s+/);
+      command = parts[0] || rawCmd;
+      const extraArgs = parts.slice(1);
+      const textareaArgs = document.getElementById('mcp-server-args').value.split('\\n').filter(Boolean);
+      args = [...extraArgs, ...textareaArgs];
+      if (args.length === 0) args = undefined;
+    }
 
     const server = {
       name,
       type,
       url: (type === 'http' || type === 'sse') ? document.getElementById('mcp-server-url').value : undefined,
-      command: type === 'stdio' ? document.getElementById('mcp-server-command').value : undefined,
-      args: type === 'stdio' ? document.getElementById('mcp-server-args').value.split('\\n').filter(Boolean) : undefined,
+      command,
+      args,
       env: collectMcpEnvFromDOM(),
     };
 
@@ -812,7 +840,7 @@ export function buildScript(nonce: string): string {
   function saveDirGroupFromDrawer() {
     const store = state.store;
     const name = document.getElementById('dir-group-name').value.trim();
-    if (!name) return;
+    if (!name) { showToast('Group name is required', true); return; }
 
     const dirs = collectDirsFromDOM();
 
@@ -856,9 +884,9 @@ export function buildScript(nonce: string): string {
     if (store.globalScope.presetId === editingPresetId) {
       store.globalScope = { mode: 'manual' };
     }
-    for (const [key, scope] of Object.entries(store.projectScopes)) {
+    for (const [key, scope] of Object.entries(store.workspaceScopes)) {
       if (scope.presetId === editingPresetId) {
-        store.projectScopes[key] = { mode: 'inherit' };
+        store.workspaceScopes[key] = { mode: 'inherit' };
       }
     }
 
@@ -981,15 +1009,15 @@ export function buildScript(nonce: string): string {
     if (scope === 'global') {
       store.globalScope = assignment;
     } else if (state.workspacePath) {
-      store.projectScopes[state.workspacePath] = assignment;
+      store.workspaceScopes[state.workspacePath] = assignment;
     }
 
     markDirty();
     updateScopeBadges();
     updateScopeBlocks(scope);
-    // If global changed, project scope may inherit from it
+    // If global changed, workspace scope may inherit from it
     if (scope === 'global') {
-      updateScopeBlocks('project');
+      updateScopeBlocks('workspace');
     }
   }
 
@@ -1001,11 +1029,11 @@ export function buildScript(nonce: string): string {
     updateScopeBadges();
     updateScopeBlocks('global');
     if (state.hasWorkspace) {
-      updateScopeBlocks('project');
+      updateScopeBlocks('workspace');
     }
     updateScopeDropdown('global');
     if (state.hasWorkspace) {
-      updateScopeDropdown('project');
+      updateScopeDropdown('workspace');
     }
   }
 
@@ -1110,10 +1138,10 @@ export function buildScript(nonce: string): string {
     const store = state.store;
     const assignment = scope === 'global'
       ? store.globalScope
-      : (state.workspacePath && store.projectScopes[state.workspacePath]) || { mode: 'inherit' };
+      : (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
 
     let html = '';
-    if (scope === 'project') {
+    if (scope === 'workspace') {
       html += '<option value="inherit"' + (assignment.mode === 'inherit' ? ' selected' : '') + '>Inherit from Global</option>';
     }
     html += '<option value="manual"' + (assignment.mode === 'manual' ? ' selected' : '') + '>Configure manually</option>';
@@ -1411,12 +1439,13 @@ export function buildScript(nonce: string): string {
     }
   });
 
-  function showToast(message) {
+  function showToast(message, isError) {
     const toast = document.getElementById('save-toast');
     if (toast) {
       toast.textContent = message;
+      toast.classList.toggle('error', !!isError);
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2500);
+      setTimeout(() => toast.classList.remove('show', 'error'), 2500);
     }
   }
 

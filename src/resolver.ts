@@ -248,17 +248,17 @@ export function applyAllScopes(
     }
   }
 
-  // Project scope
+  // Workspace scope
   if (workspaceRoot) {
-    const projectScope = store.projectScopes[workspaceRoot];
-    if (projectScope) {
-      if (projectScope.mode === 'preset' && projectScope.presetId) {
-        const resolved = resolvePreset(store, projectScope.presetId);
+    const wsScope = store.workspaceScopes[workspaceRoot];
+    if (wsScope) {
+      if (wsScope.mode === 'preset' && wsScope.presetId) {
+        const resolved = resolvePreset(store, wsScope.presetId);
         if (resolved) {
           applyProjectConfig(resolved, workspaceRoot);
         }
       }
-      if (projectScope.mode === 'inherit') {
+      if (wsScope.mode === 'inherit') {
         cleanProjectConfig(workspaceRoot);
       }
       // 'manual' mode: user manages files themselves

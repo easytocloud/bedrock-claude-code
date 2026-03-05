@@ -167,7 +167,7 @@ export function buildStyles(): string {
       flex-shrink: 0;
     }
     .scope-indicator.global { background: var(--blue); }
-    .scope-indicator.project { background: var(--orange); }
+    .scope-indicator.workspace { background: var(--orange); }
 
     .scope-title-area { flex: 1; }
     .scope-title {
@@ -772,6 +772,10 @@ export function buildStyles(): string {
     .save-toast.show {
       opacity: 1;
       transform: translateY(0);
+    }
+    .save-toast.error {
+      background: var(--red);
+      color: #fff;
     }
 
     /* ─── Empty State ───────────────────────────────────────────────── */

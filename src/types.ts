@@ -89,7 +89,7 @@ export interface ProfileStore {
   directoryGroups: DirectoryGroup[];
   presets: Preset[];
   globalScope: ScopeAssignment;
-  projectScopes: Record<string, ScopeAssignment>;
+  workspaceScopes: Record<string, ScopeAssignment>;
 }
 
 // ─── Panel State (extension ↔ webview) ───────────────────────────────

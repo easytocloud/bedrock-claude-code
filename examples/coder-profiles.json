@@ -175,7 +175,7 @@
     "mode": "preset",
     "presetId": "preset-work-eu"
   },
-  "projectScopes": {
+  "workspaceScopes": {
     "/Users/demo/projects/ml-pipeline": {
       "mode": "preset",
       "presetId": "preset-research"

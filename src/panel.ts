@@ -139,7 +139,7 @@ function migrateExistingSettings(workspaceRoot: string | undefined): ProfileStor
         mcpGroupIds: [groupId],
         directoryGroupIds: [],
       });
-      store.projectScopes[workspaceRoot] = { mode: 'preset', presetId };
+      store.workspaceScopes[workspaceRoot] = { mode: 'preset', presetId };
     }
   }
 
