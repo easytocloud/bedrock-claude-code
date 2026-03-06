@@ -399,6 +399,12 @@ export function buildScript(nonce: string): string {
       cachingToggle.classList.toggle('on', !!(provider && provider.disablePromptCaching));
     }
 
+    // Disable non-essential traffic toggle
+    const nonessentialToggle = document.querySelector('[data-toggle="provider-disable-nonessential"]');
+    if (nonessentialToggle) {
+      nonessentialToggle.classList.toggle('on', !!(provider && provider.disableLoginPrompt));
+    }
+
     // Default provider: lock name, type, and models — only API key is editable
     const isDefaultProv = providerId === DEFAULT_PROVIDER_ID;
     const provNameInput = document.getElementById('provider-name');
@@ -432,6 +438,8 @@ export function buildScript(nonce: string): string {
       });
       const cachingToggleEl = document.querySelector('[data-toggle="provider-disable-caching"]');
       if (cachingToggleEl) cachingToggleEl.style.pointerEvents = 'none';
+      const nonessentialToggleEl = document.querySelector('[data-toggle="provider-disable-nonessential"]');
+      if (nonessentialToggleEl) nonessentialToggleEl.style.pointerEvents = 'none';
     }
 
     openDrawer('provider');
@@ -756,6 +764,7 @@ export function buildScript(nonce: string): string {
       smallFastModel: getModelValue('provider-model-haiku'),
       opusModel: getModelValue('provider-model-opus'),
       disablePromptCaching: document.querySelector('[data-toggle="provider-disable-caching"]')?.classList.contains('on') || false,
+      disableLoginPrompt: document.querySelector('[data-toggle="provider-disable-nonessential"]')?.classList.contains('on') || false,
     };
 
     if (editingProviderId) {

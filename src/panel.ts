@@ -14,7 +14,7 @@ import { buildHtml } from './webview/index';
 // ---------------------------------------------------------------------------
 
 import { readClaudeSettings } from './claudeSettings';
-import { readUserMcpServers } from './claudeJson';
+import { readUserMcpServers, ensureOnboardingComplete } from './claudeJson';
 import { readProjectMcpServers } from './mcpJson';
 import { McpServerEntry } from './types';
 import { MANAGED_ENV_KEYS } from './models';
@@ -281,6 +281,9 @@ export class ClaudeCodeSettingsPanel {
     try {
       // Write the profile store
       writeProfileStore(store);
+
+      // Ensure the first-run wizard won't prompt for Anthropic login
+      ensureOnboardingComplete();
 
       // Resolve and apply active presets to Claude Code's config files
       applyAllScopes(store, this._workspaceRoot);

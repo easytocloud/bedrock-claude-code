@@ -75,6 +75,7 @@ export function resolvePreset(
       if (provider.opusModel) { env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel; }
     }
     if (provider.disablePromptCaching) { env['DISABLE_PROMPT_CACHING'] = '1'; }
+    if (provider.disableLoginPrompt) { env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = '1'; }
   }
 
   // Merge MCP servers from all selected groups

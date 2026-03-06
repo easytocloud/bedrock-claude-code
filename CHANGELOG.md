@@ -2,6 +2,12 @@
 
 All notable changes to this extension will be documented here.
 
+## [0.2.5] — 2026-03-06
+
+### Added
+- Save All now writes `hasCompletedOnboarding: true` to `~/.claude.json`, preventing Claude Code's first-run login wizard from appearing when Bedrock or a proxy provider is configured
+- Per-provider **Disable non-essential traffic** toggle (Bedrock/Proxy) sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` — useful in air-gapped or restricted-network environments
+
 ## [0.2.4] — 2026-03-06
 
 ### Added

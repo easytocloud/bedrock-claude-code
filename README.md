@@ -49,6 +49,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 - Select provider type **Bedrock**, fill in your AWS profile name and region
 - Pick models for each tier — cross-region inference profiles are recommended
 - Optionally set an auth-refresh command (e.g. `aws sso login --profile my-profile`)
+- Claude Code's login/logout commands are automatically disabled when using Bedrock
 
 ### Local / Compatible API (Ollama, vLLM, LM Studio, …)
 
@@ -57,6 +58,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
   - Single-model endpoints auto-select the model for all tiers
   - Multi-model endpoints show a dropdown to pick per tier
 - You can also type a model ID manually if the endpoint does not expose `/v1/models`
+- Set an API Key to any non-empty value (e.g. `local`) if Claude Code prompts for login — the proxy handles authentication, not Anthropic
 
 ### Anthropic Direct
 
@@ -77,6 +79,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 | Dirty indicator | Title bar shows `●` when unsaved changes exist |
 | Drawer-based editing | Slide-out panels for editing all building blocks |
 | Inherit mode | Workspace scope can inherit from global — cleans up workspace files |
+| Login prompt suppression | Save All writes `hasCompletedOnboarding` to `~/.claude.json`; optional "Disable non-essential traffic" toggle per provider |
 
 ## Requirements
 

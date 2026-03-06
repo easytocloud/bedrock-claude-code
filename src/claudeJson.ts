@@ -33,6 +33,19 @@ export function readUserMcpServers(): Record<string, McpServerConfig> {
   return readClaudeJson().mcpServers ?? {};
 }
 
+/**
+ * Ensures hasCompletedOnboarding is true in ~/.claude.json.
+ * Prevents Claude Code from showing the first-run login wizard when the
+ * user is relying on Bedrock or a proxy provider.
+ */
+export function ensureOnboardingComplete(): void {
+  const filePath = getClaudeJsonPath();
+  const existing = readClaudeJson();
+  if (existing['hasCompletedOnboarding']) { return; } // already set — no write needed
+  const updated = { ...existing, hasCompletedOnboarding: true };
+  fs.writeFileSync(filePath, JSON.stringify(updated, null, 2) + '\n', 'utf8');
+}
+
 /** Writes (only) the mcpServers key into ~/.claude.json, preserving all other keys. */
 export function writeUserMcpServers(servers: Record<string, McpServerConfig>): void {
   const filePath = getClaudeJsonPath();

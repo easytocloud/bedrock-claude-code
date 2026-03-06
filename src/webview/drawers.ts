@@ -207,6 +207,13 @@ export function renderProviderDrawer(): string {
           <div class="toggle-thumb"></div>
         </div>
       </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Disable non-essential traffic</span>
+        <div class="form-hint" style="flex:1;margin:0 12px">Blocks Statsig/telemetry; use in air-gapped or restricted networks</div>
+        <div class="toggle-track" data-toggle="provider-disable-nonessential">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
     </div>
   `;
 
