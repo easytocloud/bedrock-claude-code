@@ -2,6 +2,18 @@
 
 All notable changes to this extension will be documented here.
 
+## [0.3.0] — 2026-03-06
+
+### Added
+- **Status bar preset quick-switcher** — shows the active preset and scope; click to switch presets for global or workspace scope via quick-pick dropdown
+- **Import/Export presets** — share configurations between machines or team members; export scrubs credentials (`sk-ant-*`, `sk-or-*`, `AKIA*`, `ghp_*`, etc.) and replaces them with `<REPLACE_ME>`; import supports merge or replace mode with automatic ID remapping
+- **Draft auto-save** — unsaved changes are automatically persisted to `~/.claude/coder-profiles.draft.json` and restored when the panel is re-opened
+- **`.vscodeignore` awareness** — when writing workspace-scope config, the extension auto-adds `.mcp.json` and `.claude/` to `.vscodeignore` if the workspace is a VS Code extension project
+
+### Changed
+- **Webview JS extracted from template literal** — all browser-side JavaScript moved from an inline template literal in `src/webview/script.ts` to a standalone `media/webview.js` file loaded via `<script src>`. This eliminates the entire class of escaping bugs (regex `\s` → `s`, TypeScript annotations leaking to browser) that caused multiple regressions in v0.2.x
+- Extension now activates `onStartupFinished` so the status bar is visible immediately
+
 ## [0.2.6] — 2026-03-06
 
 ### Added

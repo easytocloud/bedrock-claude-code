@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { getClaudeSettingsPath } from './claudeSettings';
 import { readAwsProfiles } from './awsConfig';
@@ -8,6 +10,7 @@ import { applyAllScopes } from './resolver';
 import { PanelState, ProfileStore } from './types';
 import { ANTHROPIC_DEFAULTS } from './models';
 import { buildHtml } from './webview/index';
+import { refreshStatusBar, setRefreshHook } from './statusBar';
 
 // ---------------------------------------------------------------------------
 // Migration: import existing settings into a ProfileStore
@@ -161,6 +164,7 @@ export class ClaudeCodeSettingsPanel {
   private readonly _context: vscode.ExtensionContext;
   private readonly _workspaceRoot: string | undefined;
   private readonly _disposables: vscode.Disposable[] = [];
+  private _dirty = false;
 
   public static createOrShow(context: vscode.ExtensionContext): void {
     const column = vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
@@ -170,6 +174,7 @@ export class ClaudeCodeSettingsPanel {
       return;
     }
 
+    const mediaPath = vscode.Uri.joinPath(context.extensionUri, 'media');
     const panel = vscode.window.createWebviewPanel(
       'claudeCodeBedrockSettings',
       PANEL_TITLE,
@@ -177,6 +182,7 @@ export class ClaudeCodeSettingsPanel {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
+        localResourceRoots: [mediaPath],
       }
     );
 
@@ -191,6 +197,9 @@ export class ClaudeCodeSettingsPanel {
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
+    // Let the quick-switch command refresh this panel when it changes scopes
+    setRefreshHook(() => this._sendState());
+
     this._panel.webview.onDidReceiveMessage(
       async (msg: { type: string; [key: string]: unknown }) => this._handleMessage(msg),
       null,
@@ -198,13 +207,33 @@ export class ClaudeCodeSettingsPanel {
     );
 
     this._render();
+
+    // If a draft exists from a previous session, offer to restore it
+    const draft = ClaudeCodeSettingsPanel._loadDraft();
+    if (draft) {
+      vscode.window.showInformationMessage(
+        'You have unsaved changes from a previous session.',
+        'Restore Draft', 'Discard'
+      ).then(choice => {
+        if (choice === 'Restore Draft') {
+          this._panel.webview.postMessage({ type: 'init', data: { ...this._buildState(), store: draft } });
+          this._dirty = true;
+          this._panel.title = PANEL_TITLE_DIRTY;
+        } else if (choice === 'Discard') {
+          ClaudeCodeSettingsPanel._clearDraft();
+        }
+      });
+    }
   }
 
   private _render(): void {
     const nonce = crypto.randomBytes(16).toString('hex');
     const cspSource = this._panel.webview.cspSource;
+    const scriptUri = this._panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this._context.extensionUri, 'media', 'webview.js')
+    ).toString();
     const state = this._buildState();
-    this._panel.webview.html = buildHtml(state, nonce, cspSource);
+    this._panel.webview.html = buildHtml(state, nonce, cspSource, scriptUri);
   }
 
   private _buildState(): PanelState {
@@ -245,7 +274,13 @@ export class ClaudeCodeSettingsPanel {
         break;
 
       case 'dirty':
+        this._dirty = true;
         this._panel.title = PANEL_TITLE_DIRTY;
+        break;
+
+      case 'saveDraft':
+        // Auto-save draft so unsaved changes survive panel close
+        this._saveDraft(msg.store as ProfileStore);
         break;
 
       case 'saveStore':
@@ -289,6 +324,11 @@ export class ClaudeCodeSettingsPanel {
       // Resolve and apply active presets to Claude Code's config files
       applyAllScopes(store, this._workspaceRoot);
 
+      // Update the status bar to reflect the new scope/preset
+      refreshStatusBar();
+
+      this._dirty = false;
+      ClaudeCodeSettingsPanel._clearDraft();
       this._panel.title = PANEL_TITLE;
       this._panel.webview.postMessage({ type: 'saved' });
     } catch (err) {
@@ -337,8 +377,32 @@ export class ClaudeCodeSettingsPanel {
     }
   }
 
+  // ── Draft persistence ───────────────────────────────────────────────
+
+  private static _draftPath(): string {
+    return path.join(os.homedir(), '.claude', 'coder-profiles.draft.json');
+  }
+
+  private _saveDraft(store: ProfileStore): void {
+    try {
+      fs.writeFileSync(ClaudeCodeSettingsPanel._draftPath(), JSON.stringify(store, null, 2) + '\n', 'utf8');
+    } catch { /* best effort */ }
+  }
+
+  private static _clearDraft(): void {
+    try { fs.unlinkSync(ClaudeCodeSettingsPanel._draftPath()); } catch { /* ok if missing */ }
+  }
+
+  private static _loadDraft(): ProfileStore | null {
+    try {
+      const raw = fs.readFileSync(ClaudeCodeSettingsPanel._draftPath(), 'utf8');
+      return JSON.parse(raw) as ProfileStore;
+    } catch { return null; }
+  }
+
   public dispose(): void {
     ClaudeCodeSettingsPanel.currentPanel = undefined;
+    setRefreshHook(() => {}); // clear the hook
     this._panel.dispose();
     while (this._disposables.length) {
       const d = this._disposables.pop();

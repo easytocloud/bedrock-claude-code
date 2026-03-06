@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import {
   ProfileStore,
   ProviderProfile,
@@ -252,6 +253,10 @@ export function applyProjectConfig(
 
   // Write MCP servers to .mcp.json
   writeProjectMcpServers(workspaceRoot, resolved.mcpServers);
+
+  // If the workspace is a VS Code extension, ensure .mcp.json and .claude/
+  // are listed in .vscodeignore so they don't end up in published VSIXs.
+  ensureVscodeignore(workspaceRoot);
 }
 
 /**
@@ -285,4 +290,24 @@ export function applyAllScopes(
       // 'manual' mode: user manages files themselves
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// .vscodeignore helper — prevent leaking generated config into published VSIXs
+// ---------------------------------------------------------------------------
+
+const VSCODEIGNORE_ENTRIES = ['.mcp.json', '.claude/'];
+
+function ensureVscodeignore(workspaceRoot: string): void {
+  const ignorePath = path.join(workspaceRoot, '.vscodeignore');
+  if (!fs.existsSync(ignorePath)) { return; } // not a VS Code extension project
+  try {
+    let content = fs.readFileSync(ignorePath, 'utf8');
+    const lines = content.split('\n').map(l => l.trim());
+    const missing = VSCODEIGNORE_ENTRIES.filter(e => !lines.includes(e));
+    if (missing.length === 0) { return; }
+    if (!content.endsWith('\n')) { content += '\n'; }
+    content += missing.join('\n') + '\n';
+    fs.writeFileSync(ignorePath, content, 'utf8');
+  } catch { /* best effort — don't break save */ }
 }

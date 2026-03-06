@@ -83,6 +83,9 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 | MCP server groups | Reusable named collections of MCP servers (stdio, HTTP, SSE) |
 | Directory groups | Additional directories Claude Code may access |
 | Live model discovery | Fetch available models button queries `/v1/models` from proxy servers; auto-selects single-model endpoints |
+| Quick-switch status bar | Click the status bar item to switch presets for global or workspace scope without opening the panel |
+| Import / Export | Share presets between machines or team members — credentials are scrubbed on export, recipients fill in their own |
+| Draft auto-save | Unsaved changes persist across panel close and are restored on re-open |
 | Dirty indicator | Title bar shows `●` when unsaved changes exist |
 | Drawer-based editing | Slide-out panels for editing all building blocks |
 | Inherit mode | Workspace scope can inherit from global — cleans up workspace files |

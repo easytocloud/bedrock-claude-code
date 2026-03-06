@@ -1,8 +1,13 @@
 import * as vscode from 'vscode';
 import { ClaudeCodeSettingsPanel } from './panel';
 import { getClaudeSettingsPath } from './claudeSettings';
+import { createStatusBar } from './statusBar';
+import { exportPresets, importPresets } from './importExport';
 
 export function activate(context: vscode.ExtensionContext): void {
+  // Status bar — preset quick-switcher and scope indicator
+  createStatusBar(context);
+
   context.subscriptions.push(
     vscode.commands.registerCommand('bedrock-claude-code.openSettings', () => {
       ClaudeCodeSettingsPanel.createOrShow(context);
@@ -18,7 +23,10 @@ export function activate(context: vscode.ExtensionContext): void {
           `Could not open ${settingsPath}. Use "Open Claude Code Bedrock Settings" to create it first.`
         );
       }
-    })
+    }),
+
+    vscode.commands.registerCommand('bedrock-claude-code.exportPresets', exportPresets),
+    vscode.commands.registerCommand('bedrock-claude-code.importPresets', importPresets),
   );
 }
 

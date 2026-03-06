@@ -7,15 +7,15 @@ import { PanelState } from '../types';
 import { buildStyles } from './styles';
 import { renderScopeCards, renderPresetGrid, renderBuildingBlocks } from './layout';
 import { renderAllDrawers } from './drawers';
-import { buildScript } from './script';
+import { buildScriptData } from './script';
 
-export function buildHtml(state: PanelState, nonce: string, cspSource: string): string {
+export function buildHtml(state: PanelState, nonce: string, cspSource: string, scriptUri: string): string {
   const styles = buildStyles();
   const scopeCards = renderScopeCards(state);
   const presetGrid = renderPresetGrid(state);
   const buildingBlocks = renderBuildingBlocks(state);
   const drawers = renderAllDrawers();
-  const script = buildScript(nonce);
+  const dataScript = buildScriptData();
 
   return /* html */ `<!DOCTYPE html>
 <html lang="en">
@@ -23,7 +23,7 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string): 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src ${cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
+        content="default-src 'none'; style-src ${cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}' ${cspSource};" />
   <title>Claude Code Settings</title>
   <style nonce="${nonce}">${styles}</style>
 </head>
@@ -59,7 +59,10 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string): 
   <!-- Drawers -->
   ${drawers}
 
-  <script nonce="${nonce}">${script}</script>
+  <!-- Data injection (extension-side constants) -->
+  <script nonce="${nonce}">${dataScript}</script>
+  <!-- Main webview script (loaded from separate file) -->
+  <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
 }
