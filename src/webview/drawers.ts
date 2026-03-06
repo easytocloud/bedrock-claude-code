@@ -170,8 +170,18 @@ export function renderProviderDrawer(): string {
         <input type="text" id="provider-proxy-url" placeholder="http://localhost:11434" />
       </div>
       <div class="form-group">
-        <label class="form-label">API Key</label>
-        <input type="password" id="provider-proxy-key" placeholder="Optional" />
+        <label class="form-label">Authentication</label>
+        <div class="seg-control" id="proxy-auth-control">
+          <button type="button" class="seg-btn sel" data-seg="proxy-auth" data-val="apikey">API Key</button>
+          <button type="button" class="seg-btn" data-seg="proxy-auth" data-val="authtoken">Auth Token</button>
+        </div>
+      </div>
+      <div id="proxy-auth-apikey" class="form-group">
+        <input type="password" id="provider-proxy-key" placeholder="Optional — sets ANTHROPIC_API_KEY" />
+      </div>
+      <div id="proxy-auth-token" class="form-group" style="display:none">
+        <input type="password" id="provider-proxy-token" placeholder="OpenRouter API key — sets ANTHROPIC_AUTH_TOKEN" />
+        <div class="form-hint">Clears ANTHROPIC_API_KEY so Claude Code authenticates via token only (required by OpenRouter)</div>
       </div>
     </div>
 

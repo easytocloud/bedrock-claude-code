@@ -58,7 +58,14 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
   - Single-model endpoints auto-select the model for all tiers
   - Multi-model endpoints show a dropdown to pick per tier
 - You can also type a model ID manually if the endpoint does not expose `/v1/models`
-- Set an API Key to any non-empty value (e.g. `local`) if Claude Code prompts for login — the proxy handles authentication, not Anthropic
+- Authentication is mutually exclusive: choose **API Key** (sets `ANTHROPIC_API_KEY`) or **Auth Token** (sets `ANTHROPIC_AUTH_TOKEN` and clears `ANTHROPIC_API_KEY`)
+- Set an API Key to any non-empty value (e.g. `local`) if Claude Code prompts for login
+
+### OpenRouter
+
+- Select provider type **Proxy**, enter `https://openrouter.ai/api` as the base URL (the `/api` suffix is added automatically if omitted)
+- Choose **Auth Token** and paste your [OpenRouter API key](https://openrouter.ai/settings/keys) — the extension writes `ANTHROPIC_AUTH_TOKEN` and clears `ANTHROPIC_API_KEY` as [required by OpenRouter](https://openrouter.ai/docs/guides/guides/claude-code-integration)
+- Typing an `openrouter.ai` URL automatically switches from API Key to Auth Token mode
 
 ### Anthropic Direct
 

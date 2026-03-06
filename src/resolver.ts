@@ -57,10 +57,23 @@ export function resolvePreset(
       case 'anthropic':
         if (provider.anthropicApiKey) { env['ANTHROPIC_API_KEY'] = provider.anthropicApiKey; }
         break;
-      case 'proxy':
-        if (provider.proxyBaseUrl) { env['ANTHROPIC_BASE_URL'] = provider.proxyBaseUrl; }
-        if (provider.proxyApiKey) { env['ANTHROPIC_API_KEY'] = provider.proxyApiKey; }
+      case 'proxy': {
+        let baseUrl = provider.proxyBaseUrl || '';
+        // OpenRouter requires /api in the URL path
+        if (/openrouter\.ai/i.test(baseUrl) && !/\/api\b/i.test(baseUrl)) {
+          baseUrl = baseUrl.replace(/\/+$/, '') + '/api';
+        }
+        if (baseUrl) { env['ANTHROPIC_BASE_URL'] = baseUrl; }
+
+        if (provider.proxyAuthToken) {
+          // Auth-token mode (OpenRouter): set AUTH_TOKEN and clear API_KEY
+          env['ANTHROPIC_AUTH_TOKEN'] = provider.proxyAuthToken;
+          env['ANTHROPIC_API_KEY'] = '';
+        } else if (provider.proxyApiKey) {
+          env['ANTHROPIC_API_KEY'] = provider.proxyApiKey;
+        }
         break;
+      }
     }
 
     // Model env vars — for Anthropic native, clear any overrides (empty string resets

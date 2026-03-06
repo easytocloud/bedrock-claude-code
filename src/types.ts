@@ -21,7 +21,8 @@ export interface ProviderProfile {
 
   // Proxy-specific
   proxyBaseUrl?: string;
-  proxyApiKey?: string;
+  proxyApiKey?: string;       // Sets ANTHROPIC_API_KEY (most proxies)
+  proxyAuthToken?: string;    // Sets ANTHROPIC_AUTH_TOKEN (OpenRouter)
 
   // Model assignments (all provider types)
   primaryModel: string;

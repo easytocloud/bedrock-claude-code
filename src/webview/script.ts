@@ -368,13 +368,22 @@ export function buildScript(nonce: string): string {
       document.getElementById('provider-anthropic-key').value = provider.anthropicApiKey || '';
       document.getElementById('provider-proxy-url').value = provider.proxyBaseUrl || '';
       document.getElementById('provider-proxy-key').value = provider.proxyApiKey || '';
+      document.getElementById('provider-proxy-token').value = provider.proxyAuthToken || '';
       document.getElementById('provider-aws-refresh').value = provider.awsAuthRefresh || '';
     } else {
       document.getElementById('provider-anthropic-key').value = '';
       document.getElementById('provider-proxy-url').value = '';
       document.getElementById('provider-proxy-key').value = '';
+      document.getElementById('provider-proxy-token').value = '';
       document.getElementById('provider-aws-refresh').value = '';
     }
+
+    // Proxy auth mode: Auth Token vs API Key
+    const useAuthToken = provider && provider.proxyAuthToken;
+    document.querySelectorAll('[data-seg="proxy-auth"]').forEach(btn => {
+      btn.classList.toggle('sel', btn.dataset.val === (useAuthToken ? 'authtoken' : 'apikey'));
+    });
+    showProxyAuthSection(useAuthToken ? 'authtoken' : 'apikey');
 
     // AWS profiles dropdown
     const awsProfileSel = document.getElementById('provider-aws-profile');
@@ -453,6 +462,13 @@ export function buildScript(nonce: string): string {
     document.getElementById('provider-models-info').style.display = type === 'bedrock' ? '' : 'none';
     const fetchRow = document.getElementById('proxy-fetch-row');
     if (fetchRow) fetchRow.style.display = type === 'proxy' ? '' : 'none';
+  }
+
+  function showProxyAuthSection(mode) {
+    const apiKeyDiv = document.getElementById('proxy-auth-apikey');
+    const tokenDiv = document.getElementById('proxy-auth-token');
+    if (apiKeyDiv) apiKeyDiv.style.display = mode === 'apikey' ? '' : 'none';
+    if (tokenDiv) tokenDiv.style.display = mode === 'authtoken' ? '' : 'none';
   }
 
   function rebuildModelSelects(type, provider) {
@@ -759,7 +775,12 @@ export function buildScript(nonce: string): string {
       awsRegion: document.getElementById('provider-aws-region').value || undefined,
       awsAuthRefresh: document.getElementById('provider-aws-refresh').value || undefined,
       proxyBaseUrl: document.getElementById('provider-proxy-url').value || undefined,
-      proxyApiKey: document.getElementById('provider-proxy-key').value || undefined,
+      proxyApiKey: document.querySelector('[data-seg="proxy-auth"][data-val="apikey"]')?.classList.contains('sel')
+        ? (document.getElementById('provider-proxy-key').value || undefined)
+        : undefined,
+      proxyAuthToken: document.querySelector('[data-seg="proxy-auth"][data-val="authtoken"]')?.classList.contains('sel')
+        ? (document.getElementById('provider-proxy-token').value || undefined)
+        : undefined,
       primaryModel: getModelValue('provider-model-sonnet'),
       smallFastModel: getModelValue('provider-model-haiku'),
       opusModel: getModelValue('provider-model-opus'),
@@ -1430,6 +1451,22 @@ export function buildScript(nonce: string): string {
     }
     if (segName === 'mcp-transport') {
       showMcpTransportSection(segVal);
+    }
+    if (segName === 'proxy-auth') {
+      showProxyAuthSection(segVal);
+    }
+  });
+
+  // Auto-detect OpenRouter URL and switch to Auth Token mode
+  document.getElementById('provider-proxy-url')?.addEventListener('input', function() {
+    const url = this.value;
+    if (/openrouter\\.ai/i.test(url)) {
+      const alreadyToken = document.querySelector('[data-seg="proxy-auth"][data-val="authtoken"]')?.classList.contains('sel');
+      if (!alreadyToken) {
+        document.querySelectorAll('[data-seg="proxy-auth"]').forEach(b => b.classList.remove('sel'));
+        document.querySelector('[data-seg="proxy-auth"][data-val="authtoken"]')?.classList.add('sel');
+        showProxyAuthSection('authtoken');
+      }
     }
   });
 

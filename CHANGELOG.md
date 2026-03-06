@@ -2,6 +2,12 @@
 
 All notable changes to this extension will be documented here.
 
+## [0.2.6] — 2026-03-06
+
+### Added
+- Proxy providers: mutually exclusive **API Key** / **Auth Token** authentication — API Key sets `ANTHROPIC_API_KEY`, Auth Token sets `ANTHROPIC_AUTH_TOKEN` and clears `ANTHROPIC_API_KEY` (required by OpenRouter)
+- **OpenRouter auto-detection**: typing an `openrouter.ai` URL auto-switches to Auth Token mode; `/api` is appended silently if omitted from the base URL
+
 ## [0.2.5] — 2026-03-06
 
 ### Added
