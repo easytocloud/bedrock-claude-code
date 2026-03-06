@@ -23,6 +23,7 @@
   let editingPresetId = null;
   let editingProviderId = null;
   let proxyFetchedModels = [];
+  let bedrockFetchedModels = [];  // models discovered from AWS account
   let editingMcpGroupId = null;
   let editingMcpServerIndex = -1;  // index within group, -1 = new
   let editingDirGroupId = null;
@@ -341,8 +342,11 @@
 
     editingProviderId = isNew ? null : providerId;
     proxyFetchedModels = [];
-    const fetchStatus = document.getElementById('proxy-fetch-status');
+    bedrockFetchedModels = [];
+    var fetchStatus = document.getElementById('proxy-fetch-status');
     if (fetchStatus) fetchStatus.textContent = '';
+    var brFetchStatus = document.getElementById('bedrock-fetch-status');
+    if (brFetchStatus) brFetchStatus.textContent = '';
 
     document.getElementById('provider-drawer-title').textContent = isNew ? 'New Provider' : escHtml(provider.name);
     document.getElementById('provider-name').value = provider ? provider.name : '';
@@ -447,8 +451,10 @@
     document.getElementById('provider-section-proxy').style.display = type === 'proxy' ? '' : 'none';
     document.getElementById('provider-models-section').style.display = (type && type !== 'anthropic') ? '' : 'none';
     document.getElementById('provider-models-info').style.display = type === 'bedrock' ? '' : 'none';
-    const fetchRow = document.getElementById('proxy-fetch-row');
-    if (fetchRow) fetchRow.style.display = type === 'proxy' ? '' : 'none';
+    var bedrockFetch = document.getElementById('bedrock-fetch-row');
+    if (bedrockFetch) bedrockFetch.style.display = type === 'bedrock' ? '' : 'none';
+    var proxyFetch = document.getElementById('proxy-fetch-row');
+    if (proxyFetch) proxyFetch.style.display = type === 'proxy' ? '' : 'none';
   }
 
   function showProxyAuthSection(mode) {
@@ -462,9 +468,30 @@
     const region = document.getElementById('provider-aws-region').value;
 
     if (type === 'bedrock') {
-      populateModelSelect('provider-model-sonnet', filterModels(SONNET_MODELS, region), provider?.primaryModel, true);
-      populateModelSelect('provider-model-haiku', filterModels(HAIKU_MODELS, region), provider?.smallFastModel, true);
-      populateModelSelect('provider-model-opus', filterModels(OPUS_MODELS, region), provider?.opusModel, true);
+      // Smart presets (curated list filtered by region) + any fetched account models
+      var sonnetPresets = filterModels(SONNET_MODELS, region);
+      var haikuPresets = filterModels(HAIKU_MODELS, region);
+      var opusPresets = filterModels(OPUS_MODELS, region);
+      if (bedrockFetchedModels.length > 0) {
+        // Merge: smart presets first, then fetched models not already in presets
+        var presetIds = new Set(sonnetPresets.concat(haikuPresets, opusPresets).map(function(m) { return m.id; }));
+        var extra = bedrockFetchedModels.filter(function(m) { return !presetIds.has(m.id); });
+        // All three selects get the full merged list so any model can go in any slot
+        var allModels = sonnetPresets.concat(haikuPresets, opusPresets, extra);
+        // Deduplicate by id
+        var seen = new Set();
+        var merged = [];
+        for (var i = 0; i < allModels.length; i++) {
+          if (!seen.has(allModels[i].id)) { seen.add(allModels[i].id); merged.push(allModels[i]); }
+        }
+        populateModelSelect('provider-model-sonnet', merged, provider?.primaryModel, true);
+        populateModelSelect('provider-model-haiku', merged, provider?.smallFastModel, true);
+        populateModelSelect('provider-model-opus', merged, provider?.opusModel, true);
+      } else {
+        populateModelSelect('provider-model-sonnet', sonnetPresets, provider?.primaryModel, true);
+        populateModelSelect('provider-model-haiku', haikuPresets, provider?.smallFastModel, true);
+        populateModelSelect('provider-model-opus', opusPresets, provider?.opusModel, true);
+      }
     } else if (type === 'anthropic') {
       populateModelSelect('provider-model-sonnet', [], provider?.primaryModel || ANTHROPIC_DEFAULTS.sonnet, false);
       populateModelSelect('provider-model-haiku', [], provider?.smallFastModel || ANTHROPIC_DEFAULTS.haiku, false);
@@ -512,6 +539,25 @@
         : null;
       rebuildModelSelects(typeBtn ? typeBtn.dataset.val : 'proxy', currentProvider);
     }
+  }
+
+  function fetchBedrockModels() {
+    var profile = getModelValue('provider-aws-profile');
+    var region = document.getElementById('provider-aws-region').value;
+    var statusEl = document.getElementById('bedrock-fetch-status');
+    if (statusEl) statusEl.textContent = 'Fetching from AWS…';
+    vscode.postMessage({ type: 'fetchBedrockModels', awsProfile: profile, awsRegion: region });
+  }
+
+  function applyFetchedBedrockModels(models) {
+    // models: [{id, label}]
+    bedrockFetchedModels = models;
+    var statusEl = document.getElementById('bedrock-fetch-status');
+    if (statusEl) statusEl.textContent = 'Found ' + models.length + ' models — smart presets + account models merged below';
+    var currentProvider = editingProviderId
+      ? state.store.providers.find(function(p) { return p.id === editingProviderId; })
+      : null;
+    rebuildModelSelects('bedrock', currentProvider);
   }
 
   // ─── Filterable Combobox ──────────────────────────────────────
@@ -1361,6 +1407,9 @@
       case 'fetch-proxy-models':
         fetchProxyModels();
         break;
+      case 'fetch-bedrock-models':
+        fetchBedrockModels();
+        break;
       case 'save-provider':
         saveProviderFromDrawer();
         break;
@@ -1620,6 +1669,22 @@
       case 'localModelsError': {
         const statusEl = document.getElementById('proxy-fetch-status');
         if (statusEl) statusEl.textContent = 'Error: ' + (msg.message || 'Unknown error');
+        break;
+      }
+
+      case 'bedrockModels': {
+        if (msg.models && msg.models.length > 0) {
+          applyFetchedBedrockModels(msg.models);
+        } else {
+          const s = document.getElementById('bedrock-fetch-status');
+          if (s) s.textContent = 'No models returned';
+        }
+        break;
+      }
+
+      case 'bedrockModelsError': {
+        const s = document.getElementById('bedrock-fetch-status');
+        if (s) s.textContent = 'Error: ' + (msg.message || 'Unknown error');
         break;
       }
     }

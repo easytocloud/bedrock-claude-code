@@ -72,6 +72,10 @@ export function resolvePreset(
           env['ANTHROPIC_API_KEY'] = '';
         } else if (provider.proxyApiKey) {
           env['ANTHROPIC_API_KEY'] = provider.proxyApiKey;
+        } else {
+          // No explicit key — set a dummy value so Claude Code doesn't
+          // show the login screen after /logout.
+          env['ANTHROPIC_API_KEY'] = 'local';
         }
         break;
       }
@@ -89,7 +93,10 @@ export function resolvePreset(
       if (provider.opusModel) { env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel; }
     }
     if (provider.disablePromptCaching) { env['DISABLE_PROMPT_CACHING'] = '1'; }
-    if (provider.disableLoginPrompt) { env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = '1'; }
+    if (provider.disableLoginPrompt) {
+      env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = '1';
+      env['DISABLE_AUTOUPDATER'] = '1';
+    }
   }
 
   // Merge MCP servers from all selected groups

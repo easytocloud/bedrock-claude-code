@@ -2,6 +2,18 @@
 
 All notable changes to this extension will be documented here.
 
+## [0.3.2] — 2026-03-06
+
+### Added
+- Bedrock providers: **Fetch models from AWS** button discovers inference profiles and foundation models from the account, merged with smart presets in the filterable combobox
+- Import/Export: **clipboard option** (copy to clipboard / paste from clipboard) for sharing presets across local and remote sessions
+- **Save Changes dialog** when closing the settings panel with unsaved changes — save, discard, or keep the draft for later
+
+### Changed
+- Proxy providers without an explicit API key now auto-set `ANTHROPIC_API_KEY=local` to prevent Claude Code from showing the login screen after `/logout`
+- **Standalone mode** toggle (renamed) now also sets `DISABLE_AUTOUPDATER=1` — blocks all traffic to Anthropic for fully offline local model use
+- Proxy info box explains enabling Standalone mode for local models
+
 ## [0.3.1] — 2026-03-06
 
 ### Added

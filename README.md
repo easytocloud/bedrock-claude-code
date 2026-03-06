@@ -47,7 +47,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 ### AWS Bedrock
 
 - Select provider type **Bedrock**, fill in your AWS profile name and region
-- Pick models for each tier — cross-region inference profiles are recommended
+- Pick models from the smart presets or click **Fetch models from AWS** to discover all inference profiles and foundation models in your account
 - Optionally set an auth-refresh command (e.g. `aws sso login --profile my-profile`)
 - Claude Code's login/logout commands are automatically disabled when using Bedrock
 
@@ -58,8 +58,8 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
   - Single-model endpoints auto-select the model for all tiers
   - Multi-model endpoints show a dropdown to pick per tier
 - You can also type a model ID manually if the endpoint does not expose `/v1/models`
-- Authentication is mutually exclusive: choose **API Key** (sets `ANTHROPIC_API_KEY`) or **Auth Token** (sets `ANTHROPIC_AUTH_TOKEN` and clears `ANTHROPIC_API_KEY`)
-- Set an API Key to any non-empty value (e.g. `local`) if Claude Code prompts for login
+- Authentication is mutually exclusive: choose **API Key** (sets `ANTHROPIC_API_KEY`) or **Auth Token** (sets `ANTHROPIC_AUTH_TOKEN` and clears `ANTHROPIC_API_KEY`). If neither is set, a dummy key is written automatically to prevent the login screen
+- Enable **Standalone mode** in the Models section to block all traffic to Anthropic (telemetry, updates) — required for fully offline local model use
 
 ### OpenRouter
 

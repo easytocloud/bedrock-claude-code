@@ -164,7 +164,7 @@ export function renderProviderDrawer(): string {
         <span class="section-dot" style="background:var(--orange-accent)"></span>
         PROXY CONFIGURATION
       </div>
-      <div class="info-box">Works with any OpenAI-compatible API: Ollama, vLLM, LM Studio, LiteLLM, etc.</div>
+      <div class="info-box">Works with any OpenAI-compatible API: Ollama, vLLM, LM Studio, LiteLLM, etc. For local models, enable Standalone mode below to prevent Claude Code from contacting Anthropic.</div>
       <div class="form-group">
         <label class="form-label">Base URL</label>
         <input type="text" id="provider-proxy-url" placeholder="http://localhost:11434" />
@@ -192,7 +192,11 @@ export function renderProviderDrawer(): string {
         <span class="section-dot" style="background:var(--orange-accent)"></span>
         MODELS
       </div>
-      <div id="provider-models-info" class="info-box" style="display:none">Models filtered by selected AWS region.</div>
+      <div id="provider-models-info" class="info-box" style="display:none">Smart presets filtered by region — or fetch all models from your account.</div>
+      <div id="bedrock-fetch-row" style="display:none" class="form-group">
+        <button type="button" class="btn btn-primary" data-action="fetch-bedrock-models">Fetch models from AWS</button>
+        <div id="bedrock-fetch-status" class="form-hint" style="margin-top:6px"></div>
+      </div>
       <div id="proxy-fetch-row" style="display:none" class="form-group">
         <button type="button" class="btn btn-primary" data-action="fetch-proxy-models">Fetch available models</button>
         <div id="proxy-fetch-status" class="form-hint" style="margin-top:6px"></div>
@@ -218,8 +222,8 @@ export function renderProviderDrawer(): string {
         </div>
       </div>
       <div class="toggle-row">
-        <span class="toggle-label">Disable non-essential traffic</span>
-        <div class="form-hint" style="flex:1;margin:0 12px">Blocks Statsig/telemetry; use in air-gapped or restricted networks</div>
+        <span class="toggle-label">Standalone mode</span>
+        <div class="form-hint" style="flex:1;margin:0 12px">Blocks all traffic to Anthropic (telemetry, updates) — required for local/offline use</div>
         <div class="toggle-track" data-toggle="provider-disable-nonessential">
           <div class="toggle-thumb"></div>
         </div>

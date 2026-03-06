@@ -310,6 +310,10 @@ export class ClaudeCodeSettingsPanel {
       case 'fetchLocalModels':
         await this._fetchLocalModels(msg.baseUrl as string, msg.apiKey as string);
         break;
+
+      case 'fetchBedrockModels':
+        await this._fetchBedrockModels(msg.awsProfile as string, msg.awsRegion as string);
+        break;
     }
   }
 
@@ -377,6 +381,59 @@ export class ClaudeCodeSettingsPanel {
     }
   }
 
+  private async _fetchBedrockModels(awsProfile: string, awsRegion: string): Promise<void> {
+    try {
+      const { execSync } = require('child_process') as typeof import('child_process');
+      const env: Record<string, string> = { ...process.env as Record<string, string> };
+      if (awsProfile) { env['AWS_PROFILE'] = awsProfile; }
+      if (awsRegion) { env['AWS_REGION'] = awsRegion; }
+      const opts = { encoding: 'utf8' as const, env, timeout: 30000 };
+
+      // Fetch inference profiles (cross-region) and foundation models
+      const models: { id: string; label: string }[] = [];
+      const seen = new Set<string>();
+
+      try {
+        const profilesJson = execSync(
+          'aws bedrock list-inference-profiles --output json', opts
+        );
+        const profiles = JSON.parse(profilesJson) as {
+          inferenceProfileSummaries?: { inferenceProfileId: string; inferenceProfileName: string }[];
+        };
+        for (const p of profiles.inferenceProfileSummaries ?? []) {
+          if (!seen.has(p.inferenceProfileId)) {
+            seen.add(p.inferenceProfileId);
+            models.push({ id: p.inferenceProfileId, label: `${p.inferenceProfileName} (inference profile)` });
+          }
+        }
+      } catch { /* inference profiles may not be available in all regions */ }
+
+      try {
+        const fmJson = execSync(
+          'aws bedrock list-foundation-models --by-provider anthropic --output json', opts
+        );
+        const fm = JSON.parse(fmJson) as {
+          modelSummaries?: { modelId: string; modelName: string }[];
+        };
+        for (const m of fm.modelSummaries ?? []) {
+          if (!seen.has(m.modelId)) {
+            seen.add(m.modelId);
+            models.push({ id: m.modelId, label: `${m.modelName} (${m.modelId})` });
+          }
+        }
+      } catch { /* may fail if no bedrock access */ }
+
+      if (models.length === 0) {
+        throw new Error('No models returned. Check your AWS profile and region have Bedrock access.');
+      }
+
+      this._panel.webview.postMessage({ type: 'bedrockModels', models });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this._panel.webview.postMessage({ type: 'bedrockModelsError', message });
+    }
+  }
+
   // ── Draft persistence ───────────────────────────────────────────────
 
   private static _draftPath(): string {
@@ -401,12 +458,38 @@ export class ClaudeCodeSettingsPanel {
   }
 
   public dispose(): void {
+    const wasDirty = this._dirty;
     ClaudeCodeSettingsPanel.currentPanel = undefined;
-    setRefreshHook(() => {}); // clear the hook
+    setRefreshHook(() => {});
     this._panel.dispose();
     while (this._disposables.length) {
       const d = this._disposables.pop();
       if (d) { d.dispose(); }
+    }
+
+    // If the panel was closed with unsaved changes, offer to save
+    if (wasDirty) {
+      const draft = ClaudeCodeSettingsPanel._loadDraft();
+      if (draft) {
+        vscode.window.showWarningMessage(
+          'You closed the settings panel with unsaved changes.',
+          { modal: true },
+          'Save Changes',
+          'Discard'
+        ).then(choice => {
+          if (choice === 'Save Changes') {
+            writeProfileStore(draft);
+            ensureOnboardingComplete();
+            applyAllScopes(draft, this._workspaceRoot);
+            refreshStatusBar();
+            ClaudeCodeSettingsPanel._clearDraft();
+            vscode.window.showInformationMessage('Settings saved.');
+          } else if (choice === 'Discard') {
+            ClaudeCodeSettingsPanel._clearDraft();
+          }
+          // If dismissed (no choice), keep the draft for next time
+        });
+      }
     }
   }
 }

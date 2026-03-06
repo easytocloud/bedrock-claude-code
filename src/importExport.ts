@@ -68,6 +68,26 @@ function scrubStore(store: ProfileStore): ProfileStore {
 export async function exportPresets(): Promise<void> {
   const store = readProfileStore();
   const scrubbed = scrubStore(store);
+  const content = JSON.stringify(scrubbed, null, 2) + '\n';
+  const hasPlaceholders = content.includes(PLACEHOLDER);
+
+  const dest = await vscode.window.showQuickPick(
+    [
+      { label: '$(file) Save to file', description: 'Save dialog (remote filesystem in SSH sessions)', value: 'file' as const },
+      { label: '$(clippy) Copy to clipboard', description: 'Paste on any machine — works across local/remote', value: 'clipboard' as const },
+    ],
+    { placeHolder: 'Where to export?' }
+  );
+  if (!dest) { return; }
+
+  if (dest.value === 'clipboard') {
+    await vscode.env.clipboard.writeText(content);
+    const msg = hasPlaceholders
+      ? `Copied to clipboard. Credentials were replaced with ${PLACEHOLDER}.`
+      : 'Copied to clipboard.';
+    vscode.window.showInformationMessage(msg);
+    return;
+  }
 
   const uri = await vscode.window.showSaveDialog({
     defaultUri: vscode.Uri.file('claude-code-presets.json'),
@@ -75,11 +95,6 @@ export async function exportPresets(): Promise<void> {
     title: 'Export Claude Code Presets',
   });
   if (!uri) { return; }
-
-  const content = JSON.stringify(scrubbed, null, 2) + '\n';
-
-  // Check if any placeholders were inserted
-  const hasPlaceholders = content.includes(PLACEHOLDER);
 
   await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf8'));
 
@@ -97,17 +112,32 @@ export async function exportPresets(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function importPresets(): Promise<void> {
-  const uris = await vscode.window.showOpenDialog({
-    canSelectMany: false,
-    filters: { 'JSON': ['json'] },
-    title: 'Import Claude Code Presets',
-  });
-  if (!uris || uris.length === 0) { return; }
+  const source = await vscode.window.showQuickPick(
+    [
+      { label: '$(file) Load from file', description: 'Open dialog (remote filesystem in SSH sessions)', value: 'file' as const },
+      { label: '$(clippy) Paste from clipboard', description: 'Paste JSON copied from another machine', value: 'clipboard' as const },
+    ],
+    { placeHolder: 'Where to import from?' }
+  );
+  if (!source) { return; }
 
   let incoming: ProfileStore;
   try {
-    const raw = await vscode.workspace.fs.readFile(uris[0]);
-    incoming = JSON.parse(Buffer.from(raw).toString('utf8')) as ProfileStore;
+    let raw: string;
+    if (source.value === 'clipboard') {
+      raw = await vscode.env.clipboard.readText();
+      if (!raw.trim()) { throw new Error('Clipboard is empty'); }
+    } else {
+      const uris = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        filters: { 'JSON': ['json'] },
+        title: 'Import Claude Code Presets',
+      });
+      if (!uris || uris.length === 0) { return; }
+      raw = Buffer.from(await vscode.workspace.fs.readFile(uris[0])).toString('utf8');
+    }
+
+    incoming = JSON.parse(raw) as ProfileStore;
     if (!incoming.version || !incoming.providers || !incoming.presets) {
       throw new Error('Not a valid profile store');
     }
