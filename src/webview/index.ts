@@ -32,9 +32,12 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
     <!-- Header -->
     <div class="header">
       <div class="header-logo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <rect width="24" height="24" rx="6" fill="var(--blue)"/>
-          <path d="M7 8h10M7 12h7M7 16h10" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+        <svg width="28" height="28" viewBox="0 0 256 256">
+          <rect width="256" height="256" rx="40" fill="#1a1a2e"/>
+          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#4ec970" transform="matrix(0.84,0.38,-0.84,0.38,128,144)" opacity="0.78"/>
+          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#b48eda" transform="matrix(0.72,0.32,-0.72,0.32,128,114)" opacity="0.78"/>
+          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#e8973e" transform="matrix(0.60,0.27,-0.60,0.27,128,86)" opacity="0.82"/>
+          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#d97857" transform="matrix(0.40,0.18,-0.40,0.18,128,60)" opacity="0.88"/>
         </svg>
         <h1>Claude Code Settings</h1>
       </div>

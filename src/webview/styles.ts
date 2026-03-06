@@ -10,33 +10,41 @@ export function buildStyles(): string {
       --bg: var(--vscode-editor-background, #1e1e1e);
       --bg-raised: var(--vscode-sideBar-background, #252526);
       --bg-surface: var(--vscode-editorWidget-background, #2d2d2d);
-      --bg-hover: #363636;
-      --bg-active: #3e3e3e;
+      --bg-hover: var(--vscode-list-hoverBackground, #363636);
+      --bg-active: var(--vscode-list-activeSelectionBackground, #3e3e3e);
 
       --fg: var(--vscode-editor-foreground, #cccccc);
       --fg-dim: var(--vscode-descriptionForeground, #999999);
-      --fg-muted: #666666;
-      --fg-bright: #e8e8e8;
+      --fg-muted: var(--vscode-disabledForeground, #666666);
+      --fg-bright: var(--vscode-foreground, #e8e8e8);
 
       --blue: var(--vscode-textLink-foreground, #3b9eff);
       --blue-dim: rgba(59,158,255,0.10);
       --blue-mid: rgba(59,158,255,0.20);
 
-      --orange: #e8973e;
-      --orange-dim: rgba(232,151,62,0.10);
-      --orange-mid: rgba(232,151,62,0.20);
+      --orange: #c07b2a;
+      --orange-dim: rgba(192,123,42,0.10);
+      --orange-mid: rgba(192,123,42,0.20);
+      --orange-accent: #e8973e;
 
-      --green: #4ec970;
-      --green-dim: rgba(78,201,112,0.10);
-      --green-mid: rgba(78,201,112,0.20);
+      --green: #2e9e50;
+      --green-dim: rgba(46,158,80,0.10);
+      --green-mid: rgba(46,158,80,0.20);
+      --green-accent: #4ec970;
 
-      --purple: #b48eda;
-      --purple-dim: rgba(180,142,218,0.10);
-      --purple-mid: rgba(180,142,218,0.20);
+      --purple: #8b6bb5;
+      --purple-dim: rgba(139,107,181,0.10);
+      --purple-mid: rgba(139,107,181,0.20);
+      --purple-accent: #b48eda;
 
-      --red: #e05a5a;
-      --red-dim: rgba(224,90,90,0.10);
-      --red-mid: rgba(224,90,90,0.20);
+      --teal: #2a9d8f;
+      --teal-dim: rgba(42,157,143,0.10);
+      --teal-mid: rgba(42,157,143,0.20);
+      --teal-accent: #40c9b4;
+
+      --red: #c74848;
+      --red-dim: rgba(199,72,72,0.10);
+      --red-mid: rgba(199,72,72,0.20);
 
       --border: var(--vscode-panel-border, #3e3e3e);
       --input-bg: var(--vscode-input-background, #333333);
@@ -48,7 +56,7 @@ export function buildStyles(): string {
       --radius-sm: 5px;
       --radius-lg: 12px;
       --radius-pill: 100px;
-      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+      --shadow: var(--vscode-widget-shadow, 0 8px 32px rgba(0,0,0,0.4));
       --transition: 0.18s ease;
       --drawer-width: 480px;
     }
@@ -167,7 +175,7 @@ export function buildStyles(): string {
       flex-shrink: 0;
     }
     .scope-indicator.global { background: var(--blue); }
-    .scope-indicator.workspace { background: var(--orange); }
+    .scope-indicator.workspace { background: var(--teal-accent); }
 
     .scope-title-area { flex: 1; }
     .scope-title {
@@ -188,6 +196,7 @@ export function buildStyles(): string {
     }
     .scope-badge.blue { background: var(--blue-dim); color: var(--blue); }
     .scope-badge.orange { background: var(--orange-dim); color: var(--orange); }
+    .scope-badge.teal { background: var(--teal-dim); color: var(--teal); }
 
     .scope-chevron {
       color: var(--fg-muted);
@@ -238,9 +247,9 @@ export function buildStyles(): string {
       flex-shrink: 0;
     }
     .panel-indicator.red { background: var(--red); }
-    .panel-indicator.orange { background: var(--orange); }
-    .panel-indicator.purple { background: var(--purple); }
-    .panel-indicator.green { background: var(--green); }
+    .panel-indicator.orange { background: var(--orange-accent); }
+    .panel-indicator.purple { background: var(--purple-accent); }
+    .panel-indicator.green { background: var(--green-accent); }
     .panel-title-area { flex: 1; }
     .panel-title {
       font-weight: 600;
@@ -386,9 +395,9 @@ export function buildStyles(): string {
       min-width: 160px;
       max-width: 280px;
     }
-    .bb-chip.orange { border-left-color: var(--orange); }
-    .bb-chip.purple { border-left-color: var(--purple); }
-    .bb-chip.green { border-left-color: var(--green); }
+    .bb-chip.orange { border-left-color: var(--orange-accent); }
+    .bb-chip.purple { border-left-color: var(--purple-accent); }
+    .bb-chip.green { border-left-color: var(--green-accent); }
     .bb-chip:hover {
       border-color: var(--fg-muted);
       background: var(--bg-hover);
@@ -745,7 +754,7 @@ export function buildStyles(): string {
     .badge-new {
       font-size: 9px;
       font-weight: 700;
-      background: var(--green);
+      background: var(--green-accent);
       color: #000;
       padding: 1px 5px;
       border-radius: var(--radius-pill);
@@ -757,7 +766,7 @@ export function buildStyles(): string {
       position: fixed;
       top: 16px;
       right: 16px;
-      background: var(--green);
+      background: var(--green-accent);
       color: #000;
       padding: 8px 16px;
       border-radius: var(--radius);
@@ -776,6 +785,52 @@ export function buildStyles(): string {
     .save-toast.error {
       background: var(--red);
       color: #fff;
+    }
+
+    /* ─── Filterable Combobox ─────────────────────────────────────────── */
+    .combobox {
+      position: relative;
+    }
+    .combobox-input {
+      width: 100%;
+      padding: 6px 10px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-sm);
+      color: var(--input-fg);
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .combobox-input:focus { outline: none; border-color: var(--input-focus); }
+    .combobox-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--input-border);
+      border-top: none;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      z-index: 100;
+      display: none;
+    }
+    .combobox.open .combobox-list { display: block; }
+    .combobox-option {
+      padding: 5px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--fg);
+    }
+    .combobox-option:hover,
+    .combobox-option.active {
+      background: var(--bg-hover);
+    }
+    .combobox-option mark {
+      background: var(--blue-mid);
+      color: inherit;
+      border-radius: 2px;
     }
 
     /* ─── Empty State ───────────────────────────────────────────────── */

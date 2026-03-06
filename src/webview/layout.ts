@@ -96,7 +96,7 @@ export function renderScopeCards(state: PanelState): string {
       badgeText: wsScope.mode === 'preset'
         ? (store.presets.find(p => p.id === wsPresetId)?.name ?? 'None')
         : wsScope.mode === 'inherit' ? 'Inherited' : 'Manual',
-      badgeColor: 'orange',
+      badgeColor: 'teal',
       presetId: wsPresetId,
       presetMode: wsScope.mode,
       presets: store.presets,

@@ -50,7 +50,7 @@ export function renderPresetDrawer(): string {
 
     <!-- Provider slot -->
     <div class="section-heading">
-      <span class="section-dot" style="background:var(--orange)"></span>
+      <span class="section-dot" style="background:var(--orange-accent)"></span>
       PROVIDER <span style="color:var(--fg-dim);font-weight:400;text-transform:none">— pick one</span>
     </div>
     <div class="form-group">
@@ -65,7 +65,7 @@ export function renderPresetDrawer(): string {
 
     <!-- MCP groups slot -->
     <div class="section-heading">
-      <span class="section-dot" style="background:var(--purple)"></span>
+      <span class="section-dot" style="background:var(--purple-accent)"></span>
       MCP SERVERS <span style="color:var(--fg-dim);font-weight:400;text-transform:none">— pick one or more</span>
     </div>
     <div id="preset-mcp-groups" class="check-list"></div>
@@ -75,7 +75,7 @@ export function renderPresetDrawer(): string {
 
     <!-- Directory groups slot -->
     <div class="section-heading">
-      <span class="section-dot" style="background:var(--green)"></span>
+      <span class="section-dot" style="background:var(--green-accent)"></span>
       ADDITIONAL DIRECTORIES <span style="color:var(--fg-dim);font-weight:400;text-transform:none">— pick one or more</span>
     </div>
     <div id="preset-dir-groups" class="check-list"></div>
@@ -125,7 +125,7 @@ export function renderProviderDrawer(): string {
     <!-- Anthropic section -->
     <div id="provider-section-anthropic" style="display:none">
       <div class="section-heading">
-        <span class="section-dot" style="background:var(--orange)"></span>
+        <span class="section-dot" style="background:var(--orange-accent)"></span>
         ANTHROPIC API
       </div>
       <div class="info-box">Uses Anthropic's API directly. Get a key at console.anthropic.com</div>
@@ -138,7 +138,7 @@ export function renderProviderDrawer(): string {
     <!-- Bedrock section -->
     <div id="provider-section-bedrock" style="display:none">
       <div class="section-heading">
-        <span class="section-dot" style="background:var(--orange)"></span>
+        <span class="section-dot" style="background:var(--orange-accent)"></span>
         AWS CONFIGURATION
       </div>
       <div class="info-box">Automatically sets CLAUDE_CODE_USE_BEDROCK=1 and AWS environment variables.</div>
@@ -161,7 +161,7 @@ export function renderProviderDrawer(): string {
     <!-- Proxy section -->
     <div id="provider-section-proxy" style="display:none">
       <div class="section-heading">
-        <span class="section-dot" style="background:var(--orange)"></span>
+        <span class="section-dot" style="background:var(--orange-accent)"></span>
         PROXY CONFIGURATION
       </div>
       <div class="info-box">Works with any OpenAI-compatible API: Ollama, vLLM, LM Studio, LiteLLM, etc.</div>
@@ -189,7 +189,7 @@ export function renderProviderDrawer(): string {
     <div id="provider-models-section" style="display:none">
       <div class="divider"></div>
       <div class="section-heading">
-        <span class="section-dot" style="background:var(--orange)"></span>
+        <span class="section-dot" style="background:var(--orange-accent)"></span>
         MODELS
       </div>
       <div id="provider-models-info" class="info-box" style="display:none">Models filtered by selected AWS region.</div>
@@ -318,7 +318,7 @@ export function renderMcpServerDrawer(): string {
     <!-- Environment Variables -->
     <div class="divider"></div>
     <div class="section-heading">
-      <span class="section-dot" style="background:var(--purple)"></span>
+      <span class="section-dot" style="background:var(--purple-accent)"></span>
       ENVIRONMENT VARIABLES
     </div>
     <div id="mcp-server-env" class="item-list">

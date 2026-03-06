@@ -2,6 +2,17 @@
 
 All notable changes to this extension will be documented here.
 
+## [0.3.1] — 2026-03-06
+
+### Added
+- **Filterable combobox** for AWS profiles and model selects — type to filter with substring matching anywhere in the item text, keyboard navigation (arrow keys + Enter), match highlighting, and support for 100+ AWS profiles or 500+ OpenRouter models
+
+### Changed
+- Workspace scope color changed from orange to **teal** — visually distinct from providers (orange) and closer to global scope (blue) in function
+- Header icon replaced with the extension's isometric stack logo
+- Light theme readability improved — `--fg-muted`, `--fg-bright`, `--bg-hover`, `--bg-active`, and `--shadow` now use VS Code theme variables that adapt to both light and dark themes
+- Accent colors (`--orange`, `--green`, `--purple`) darkened for better text contrast; brighter variants preserved as `--*-accent` for decorative elements
+
 ## [0.3.0] — 2026-03-06
 
 ### Added

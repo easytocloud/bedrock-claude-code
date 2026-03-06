@@ -375,15 +375,12 @@
     });
     showProxyAuthSection(useAuthToken ? 'authtoken' : 'apikey');
 
-    // AWS profiles dropdown
-    const awsProfileSel = document.getElementById('provider-aws-profile');
-    awsProfileSel.innerHTML = '';
-    for (const p of (state.awsProfiles || ['default'])) {
-      const opt = document.createElement('option');
-      opt.value = p;
-      opt.textContent = p;
-      if (provider && provider.awsProfile === p) opt.selected = true;
-      awsProfileSel.appendChild(opt);
+    // AWS profiles — filterable combobox
+    var awsTarget = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
+    if (awsTarget) {
+      var awsItems = (state.awsProfiles || ['default']).map(function(p) { return { value: p, label: p }; });
+      var awsCombo = createCombobox('provider-aws-profile', awsItems, provider ? provider.awsProfile : '', false);
+      awsTarget.replaceWith(awsCombo);
     }
 
     // AWS region
@@ -517,43 +514,137 @@
     }
   }
 
+  // ─── Filterable Combobox ──────────────────────────────────────
+  function createCombobox(id, items, selectedValue, allowCustom) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'combobox';
+    wrapper.id = id + '-combobox';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'combobox-input';
+    input.id = id;
+    input.autocomplete = 'off';
+    input.placeholder = items.length > 0 ? 'Type to filter (' + items.length + ' items)…' : 'Enter value';
+    const selectedItem = items.find(function(i) { return i.value === selectedValue; });
+    input.value = selectedItem ? selectedItem.label : (selectedValue || '');
+    input.dataset.selectedValue = selectedValue || '';
+
+    const list = document.createElement('div');
+    list.className = 'combobox-list';
+
+    function renderOptions(filter) {
+      list.innerHTML = '';
+      var lc = (filter || '').toLowerCase();
+      var count = 0;
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (lc && item.label.toLowerCase().indexOf(lc) < 0 && item.value.toLowerCase().indexOf(lc) < 0) continue;
+        if (count >= 50) {
+          var more = document.createElement('div');
+          more.className = 'combobox-option';
+          more.style.color = 'var(--fg-dim)';
+          more.textContent = '… type more to narrow results';
+          list.appendChild(more);
+          break;
+        }
+        var div = document.createElement('div');
+        div.className = 'combobox-option';
+        div.dataset.value = item.value;
+        if (lc) {
+          var idx = item.label.toLowerCase().indexOf(lc);
+          if (idx >= 0) {
+            div.innerHTML = escHtml(item.label.slice(0, idx)) +
+              '<mark>' + escHtml(item.label.slice(idx, idx + lc.length)) + '</mark>' +
+              escHtml(item.label.slice(idx + lc.length));
+          } else {
+            div.textContent = item.label;
+          }
+        } else {
+          div.textContent = item.label;
+        }
+        if (item.value === input.dataset.selectedValue) div.classList.add('active');
+        list.appendChild(div);
+        count++;
+      }
+      if (allowCustom && filter) {
+        var custom = document.createElement('div');
+        custom.className = 'combobox-option';
+        custom.dataset.value = filter;
+        custom.innerHTML = '✏️ Use "' + escHtml(filter) + '"';
+        list.appendChild(custom);
+      }
+    }
+
+    input.addEventListener('focus', function() {
+      renderOptions(input.value === (selectedItem ? selectedItem.label : '') ? '' : input.value);
+      wrapper.classList.add('open');
+    });
+    input.addEventListener('input', function() {
+      renderOptions(input.value);
+      wrapper.classList.add('open');
+    });
+    list.addEventListener('click', function(e) {
+      var opt = e.target.closest('.combobox-option');
+      if (!opt || !opt.dataset.value) return;
+      input.dataset.selectedValue = opt.dataset.value;
+      var match = items.find(function(i) { return i.value === opt.dataset.value; });
+      input.value = match ? match.label : opt.dataset.value;
+      wrapper.classList.remove('open');
+    });
+    document.addEventListener('click', function(e) {
+      if (!wrapper.contains(e.target)) {
+        wrapper.classList.remove('open');
+        if (allowCustom && input.value && !items.find(function(i) { return i.label === input.value; })) {
+          input.dataset.selectedValue = input.value;
+        }
+      }
+    });
+    input.addEventListener('keydown', function(e) {
+      var visible = list.querySelectorAll('.combobox-option[data-value]');
+      var active = list.querySelector('.combobox-option.active');
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        var arr = Array.from(visible);
+        var cur = active ? arr.indexOf(active) : -1;
+        var next = e.key === 'ArrowDown' ? Math.min(cur + 1, arr.length - 1) : Math.max(cur - 1, 0);
+        if (active) active.classList.remove('active');
+        if (arr[next]) { arr[next].classList.add('active'); arr[next].scrollIntoView({ block: 'nearest' }); }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (active && active.dataset.value) {
+          input.dataset.selectedValue = active.dataset.value;
+          var match = items.find(function(i) { return i.value === active.dataset.value; });
+          input.value = match ? match.label : active.dataset.value;
+          wrapper.classList.remove('open');
+        }
+      } else if (e.key === 'Escape') {
+        wrapper.classList.remove('open');
+      }
+    });
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(list);
+    return wrapper;
+  }
+
   function populateModelSelect(selectId, models, currentValue, showDropdown) {
-    const sel = document.getElementById(selectId);
-    if (!sel) return;
+    var existing = document.getElementById(selectId);
+    var comboWrapper = document.getElementById(selectId + '-combobox');
+    var target = comboWrapper || existing;
+    if (!target) return;
 
     if (showDropdown && models.length > 0) {
-      // Replace with select dropdown
-      const selectEl = document.createElement('select');
-      selectEl.id = selectId;
-
-      let found = false;
-      for (const m of models) {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = m.label;
-        if (m.id === currentValue) { opt.selected = true; found = true; }
-        selectEl.appendChild(opt);
-      }
-      // Custom option
-      const customOpt = document.createElement('option');
-      customOpt.value = '_custom';
-      customOpt.textContent = '✏️ Custom model ID...';
-      if (!found && currentValue) {
-        customOpt.value = currentValue;
-        customOpt.textContent = currentValue + ' (custom)';
-        customOpt.selected = true;
-      }
-      selectEl.appendChild(customOpt);
-
-      sel.replaceWith(selectEl);
+      var items = models.map(function(m) { return { value: m.id, label: m.label }; });
+      var combo = createCombobox(selectId, items, currentValue, true);
+      target.replaceWith(combo);
     } else {
-      // Replace with text input
-      const input = document.createElement('input');
+      var input = document.createElement('input');
       input.type = 'text';
       input.id = selectId;
       input.value = currentValue || '';
       input.placeholder = 'Enter model ID';
-      sel.replaceWith(input);
+      target.replaceWith(input);
     }
   }
 
@@ -750,7 +841,7 @@
     const type = selBtn ? selBtn.dataset.val : '';
     if (!type) { showToast('Please select a provider type', true); return; }
 
-    if (type === 'bedrock' && !document.getElementById('provider-aws-profile').value.trim()) {
+    if (type === 'bedrock' && !getModelValue('provider-aws-profile').trim()) {
       showToast('AWS profile is required for Bedrock', true); return;
     }
     if (type === 'proxy' && !document.getElementById('provider-proxy-url').value.trim()) {
@@ -761,7 +852,7 @@
       name,
       type,
       anthropicApiKey: document.getElementById('provider-anthropic-key').value || undefined,
-      awsProfile: document.getElementById('provider-aws-profile').value || undefined,
+      awsProfile: getModelValue('provider-aws-profile') || undefined,
       awsRegion: document.getElementById('provider-aws-region').value || undefined,
       awsAuthRefresh: document.getElementById('provider-aws-refresh').value || undefined,
       proxyBaseUrl: document.getElementById('provider-proxy-url').value || undefined,
@@ -804,6 +895,8 @@
   function getModelValue(selectId) {
     const el = document.getElementById(selectId);
     if (!el) return '';
+    // Combobox stores selected value in data attribute
+    if (el.dataset.selectedValue !== undefined) return el.dataset.selectedValue;
     return el.value || '';
   }
 
