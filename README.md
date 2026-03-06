@@ -53,13 +53,16 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 ### Local / Compatible API (Ollama, vLLM, LM Studio, …)
 
 - Select provider type **Proxy**, enter the base URL (e.g. `http://localhost:11434`)
-- Click **Refresh** to discover available models from `/v1/models`
-- Select a model for each tier
+- Click **Fetch available models** to discover models from `/v1/models`
+  - Single-model endpoints auto-select the model for all tiers
+  - Multi-model endpoints show a dropdown to pick per tier
+- You can also type a model ID manually if the endpoint does not expose `/v1/models`
 
 ### Anthropic Direct
 
 - The built-in **Anthropic** provider is always available
 - Optionally set your API key in the provider editor
+- Model selection is not shown — Claude Code uses its built-in defaults (Sonnet for primary, Haiku for small/fast tasks, Opus for complex tasks)
 
 ## Features
 
@@ -70,7 +73,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 | Provider types | Anthropic Direct, AWS Bedrock, OpenAI-compatible proxy |
 | MCP server groups | Reusable named collections of MCP servers (stdio, HTTP, SSE) |
 | Directory groups | Additional directories Claude Code may access |
-| Live model discovery | Refresh button fetches `/v1/models` from proxy servers |
+| Live model discovery | Fetch available models button queries `/v1/models` from proxy servers; auto-selects single-model endpoints |
 | Dirty indicator | Title bar shows `●` when unsaved changes exist |
 | Drawer-based editing | Slide-out panels for editing all building blocks |
 | Inherit mode | Workspace scope can inherit from global — cleans up workspace files |

@@ -63,10 +63,17 @@ export function resolvePreset(
         break;
     }
 
-    // Model env vars (all provider types)
-    if (provider.primaryModel) { env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = provider.primaryModel; }
-    if (provider.smallFastModel) { env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = provider.smallFastModel; }
-    if (provider.opusModel) { env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel; }
+    // Model env vars — for Anthropic native, clear any overrides (empty string resets
+    // workspace-level to unset); for other providers, set the configured model names.
+    if (provider.type === 'anthropic') {
+      env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = '';
+      env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = '';
+      env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = '';
+    } else {
+      if (provider.primaryModel) { env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = provider.primaryModel; }
+      if (provider.smallFastModel) { env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = provider.smallFastModel; }
+      if (provider.opusModel) { env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel; }
+    }
     if (provider.disablePromptCaching) { env['DISABLE_PROMPT_CACHING'] = '1'; }
   }
 

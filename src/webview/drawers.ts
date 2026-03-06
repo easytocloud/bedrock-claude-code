@@ -183,6 +183,10 @@ export function renderProviderDrawer(): string {
         MODELS
       </div>
       <div id="provider-models-info" class="info-box" style="display:none">Models filtered by selected AWS region.</div>
+      <div id="proxy-fetch-row" style="display:none" class="form-group">
+        <button type="button" class="btn btn-primary" data-action="fetch-proxy-models">Fetch available models</button>
+        <div id="proxy-fetch-status" class="form-hint" style="margin-top:6px"></div>
+      </div>
 
       <div class="form-group">
         <label class="form-label">Sonnet (primary)</label>

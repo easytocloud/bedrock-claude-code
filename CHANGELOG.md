@@ -2,6 +2,18 @@
 
 All notable changes to this extension will be documented here.
 
+## [0.2.4] — 2026-03-06
+
+### Added
+- Proxy/local providers: **Fetch available models** button in the Models section discovers models from `/v1/models` (or `/models` fallback); single-model endpoints auto-select across all tiers, multi-model endpoints populate a dropdown
+
+### Changed
+- Anthropic provider no longer shows a Models section — it always uses Claude Code's built-in defaults, and clears any model overrides from outer scopes
+- Anthropic provider chips and preset preview show **Haiku / Sonnet / Opus** instead of raw model IDs
+
+### Fixed
+- TypeScript type annotations accidentally embedded in the webview template literal caused all drawers to be blank (regression in v0.2.3)
+
 ## [0.2.3] — 2026-03-05
 
 ### Fixed

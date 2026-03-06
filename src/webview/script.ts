@@ -36,6 +36,7 @@ export function buildScript(nonce: string): string {
   let drawerStack = [];
   let editingPresetId = null;
   let editingProviderId = null;
+  let proxyFetchedModels = [];
   let editingMcpGroupId = null;
   let editingMcpServerIndex = -1;  // index within group, -1 = new
   let editingDirGroupId = null;
@@ -123,14 +124,20 @@ export function buildScript(nonce: string): string {
     return p.type;
   }
 
+  function modelDisplayLabel(provider, haiku, sonnet, opus) {
+    if (provider.type === 'anthropic') { return [haiku, sonnet, opus]; }
+    return [provider.smallFastModel || '—', provider.primaryModel || '—', provider.opusModel || '—'];
+  }
+
   function renderProviderChipHtml(p) {
+    const [haiku, sonnet, opus] = modelDisplayLabel(p, 'Haiku', 'Sonnet', 'Opus');
     return \`<div class="bb-chip orange" data-action="edit-provider" data-id="\${escHtml(p.id)}">
       <div class="bb-chip-text">
         <span class="bb-chip-name">\${escHtml(p.name)}</span>
         <span class="bb-chip-detail">\${escHtml(providerTypeLabel(p))}</span>
-        <span class="bb-chip-detail bb-chip-spacer">\${escHtml(p.smallFastModel || '—')}</span>
-        <span class="bb-chip-detail">\${escHtml(p.primaryModel || '—')}</span>
-        <span class="bb-chip-detail">\${escHtml(p.opusModel || '—')}</span>
+        <span class="bb-chip-detail bb-chip-spacer">\${escHtml(haiku)}</span>
+        <span class="bb-chip-detail">\${escHtml(sonnet)}</span>
+        <span class="bb-chip-detail">\${escHtml(opus)}</span>
       </div>
     </div>\`;
   }
@@ -329,10 +336,11 @@ export function buildScript(nonce: string): string {
     }
 
     preview.style.display = '';
+    const [haiku, sonnet, opus] = modelDisplayLabel(provider, 'Haiku', 'Sonnet', 'Opus');
     preview.innerHTML = \`
-      <div class="provider-preview-row"><span class="provider-preview-label">Sonnet:</span> \${escHtml(provider.primaryModel)}</div>
-      <div class="provider-preview-row"><span class="provider-preview-label">Haiku:</span> \${escHtml(provider.smallFastModel)}</div>
-      <div class="provider-preview-row"><span class="provider-preview-label">Opus:</span> \${escHtml(provider.opusModel)}</div>\`;
+      <div class="provider-preview-row"><span class="provider-preview-label">Sonnet:</span> \${escHtml(sonnet)}</div>
+      <div class="provider-preview-row"><span class="provider-preview-label">Haiku:</span> \${escHtml(haiku)}</div>
+      <div class="provider-preview-row"><span class="provider-preview-label">Opus:</span> \${escHtml(opus)}</div>\`;
   }
 
   // ─── Populate provider drawer ──────────────────────────────────
@@ -342,6 +350,9 @@ export function buildScript(nonce: string): string {
     const provider = isNew ? null : store.providers.find(p => p.id === providerId);
 
     editingProviderId = isNew ? null : providerId;
+    proxyFetchedModels = [];
+    const fetchStatus = document.getElementById('proxy-fetch-status');
+    if (fetchStatus) fetchStatus.textContent = '';
 
     document.getElementById('provider-drawer-title').textContent = isNew ? 'New Provider' : escHtml(provider.name);
     document.getElementById('provider-name').value = provider ? provider.name : '';
@@ -430,8 +441,10 @@ export function buildScript(nonce: string): string {
     document.getElementById('provider-section-anthropic').style.display = type === 'anthropic' ? '' : 'none';
     document.getElementById('provider-section-bedrock').style.display = type === 'bedrock' ? '' : 'none';
     document.getElementById('provider-section-proxy').style.display = type === 'proxy' ? '' : 'none';
-    document.getElementById('provider-models-section').style.display = type ? '' : 'none';
+    document.getElementById('provider-models-section').style.display = (type && type !== 'anthropic') ? '' : 'none';
     document.getElementById('provider-models-info').style.display = type === 'bedrock' ? '' : 'none';
+    const fetchRow = document.getElementById('proxy-fetch-row');
+    if (fetchRow) fetchRow.style.display = type === 'proxy' ? '' : 'none';
   }
 
   function rebuildModelSelects(type, provider) {
@@ -446,9 +459,47 @@ export function buildScript(nonce: string): string {
       populateModelSelect('provider-model-haiku', [], provider?.smallFastModel || ANTHROPIC_DEFAULTS.haiku, false);
       populateModelSelect('provider-model-opus', [], provider?.opusModel || ANTHROPIC_DEFAULTS.opus, false);
     } else if (type === 'proxy') {
-      populateModelSelect('provider-model-sonnet', [], provider?.primaryModel || '', false);
-      populateModelSelect('provider-model-haiku', [], provider?.smallFastModel || '', false);
-      populateModelSelect('provider-model-opus', [], provider?.opusModel || '', false);
+      if (proxyFetchedModels.length > 1) {
+        const modelList = proxyFetchedModels.map(id => ({ id, label: id }));
+        populateModelSelect('provider-model-sonnet', modelList, provider?.primaryModel || '', true);
+        populateModelSelect('provider-model-haiku', modelList, provider?.smallFastModel || '', true);
+        populateModelSelect('provider-model-opus', modelList, provider?.opusModel || '', true);
+      } else {
+        populateModelSelect('provider-model-sonnet', [], provider?.primaryModel || '', false);
+        populateModelSelect('provider-model-haiku', [], provider?.smallFastModel || '', false);
+        populateModelSelect('provider-model-opus', [], provider?.opusModel || '', false);
+      }
+    }
+  }
+
+  function fetchProxyModels() {
+    const url = document.getElementById('provider-proxy-url').value.trim();
+    if (!url) { showToast('Enter a Base URL first', true); return; }
+    const key = document.getElementById('provider-proxy-key').value.trim();
+    const statusEl = document.getElementById('proxy-fetch-status');
+    statusEl.textContent = 'Fetching…';
+    // The webview sandbox cannot make arbitrary fetch calls — delegate to the extension host
+    vscode.postMessage({ type: 'fetchLocalModels', baseUrl: url, apiKey: key });
+  }
+
+  function applyFetchedProxyModels(ids) {
+    proxyFetchedModels = ids;
+    const statusEl = document.getElementById('proxy-fetch-status');
+    if (!statusEl) return;
+
+    if (ids.length === 1) {
+      statusEl.textContent = 'Found 1 model: ' + ids[0];
+      ['provider-model-sonnet', 'provider-model-haiku', 'provider-model-opus'].forEach(elId => {
+        const el = document.getElementById(elId);
+        if (el) el.value = ids[0];
+      });
+    } else {
+      statusEl.textContent = 'Found ' + ids.length + ' models — select below';
+      const typeBtn = document.querySelector('[data-seg="provider-type"].sel');
+      const currentProvider = editingProviderId
+        ? state.store.providers.find(p => p.id === editingProviderId)
+        : null;
+      rebuildModelSelects(typeBtn ? typeBtn.dataset.val : 'proxy', currentProvider);
     }
   }
 
@@ -1194,6 +1245,9 @@ export function buildScript(nonce: string): string {
       case 'new-provider-standalone':
         openProviderDrawer(null);
         break;
+      case 'fetch-proxy-models':
+        fetchProxyModels();
+        break;
       case 'save-provider':
         saveProviderFromDrawer();
         break;
@@ -1424,9 +1478,21 @@ export function buildScript(nonce: string): string {
         break;
       }
 
-      case 'localModels':
-        // TODO: populate model dropdowns for proxy provider type
+      case 'localModels': {
+        const statusEl = document.getElementById('proxy-fetch-status');
+        if (msg.models && msg.models.length > 0) {
+          applyFetchedProxyModels(msg.models);
+        } else {
+          if (statusEl) statusEl.textContent = 'No models returned';
+        }
         break;
+      }
+
+      case 'localModelsError': {
+        const statusEl = document.getElementById('proxy-fetch-status');
+        if (statusEl) statusEl.textContent = 'Error: ' + (msg.message || 'Unknown error');
+        break;
+      }
     }
   });
 
