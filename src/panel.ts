@@ -381,7 +381,36 @@ export class ClaudeCodeSettingsPanel {
     }
   }
 
+  // ── Bedrock model cache (1-hour TTL per profile+region) ─────────────
+
+  private static _modelCachePath(awsProfile: string, awsRegion: string): string {
+    const key = `${awsProfile || 'default'}-${awsRegion}`.replace(/[^a-z0-9-]/gi, '_');
+    return path.join(os.homedir(), '.claude', `bedrock-model-cache-${key}.json`);
+  }
+
+  private static _readModelCache(cachePath: string): { id: string; label: string }[] | null {
+    try {
+      const raw = fs.readFileSync(cachePath, 'utf8');
+      const { ts, models } = JSON.parse(raw) as { ts: number; models: { id: string; label: string }[] };
+      if (Date.now() - ts < 60 * 60 * 1000) { return models; } // 1-hour TTL
+    } catch { /* cache miss or corrupt */ }
+    return null;
+  }
+
+  private static _writeModelCache(cachePath: string, models: { id: string; label: string }[]): void {
+    try {
+      fs.writeFileSync(cachePath, JSON.stringify({ ts: Date.now(), models }, null, 2), 'utf8');
+    } catch { /* best effort */ }
+  }
+
   private async _fetchBedrockModels(awsProfile: string, awsRegion: string): Promise<void> {
+    const cachePath = ClaudeCodeSettingsPanel._modelCachePath(awsProfile, awsRegion);
+    const cached = ClaudeCodeSettingsPanel._readModelCache(cachePath);
+    if (cached) {
+      this._panel.webview.postMessage({ type: 'bedrockModels', models: cached });
+      return;
+    }
+
     try {
       const { execSync } = require('child_process') as typeof import('child_process');
       const env: Record<string, string> = { ...process.env as Record<string, string> };
@@ -392,6 +421,7 @@ export class ClaudeCodeSettingsPanel {
       // Fetch inference profiles (cross-region) and foundation models
       const models: { id: string; label: string }[] = [];
       const seen = new Set<string>();
+      const fetchErrors: string[] = [];
 
       try {
         const profilesJson = execSync(
@@ -406,7 +436,9 @@ export class ClaudeCodeSettingsPanel {
             models.push({ id: p.inferenceProfileId, label: `${p.inferenceProfileName} (inference profile)` });
           }
         }
-      } catch { /* inference profiles may not be available in all regions */ }
+      } catch (err) {
+        fetchErrors.push(`list-inference-profiles: ${err instanceof Error ? err.message.split('\n')[0] : String(err)}`);
+      }
 
       try {
         const fmJson = execSync(
@@ -421,12 +453,18 @@ export class ClaudeCodeSettingsPanel {
             models.push({ id: m.modelId, label: `${m.modelName} (${m.modelId})` });
           }
         }
-      } catch { /* may fail if no bedrock access */ }
-
-      if (models.length === 0) {
-        throw new Error('No models returned. Check your AWS profile and region have Bedrock access.');
+      } catch (err) {
+        fetchErrors.push(`list-foundation-models: ${err instanceof Error ? err.message.split('\n')[0] : String(err)}`);
       }
 
+      if (models.length === 0) {
+        const detail = fetchErrors.length > 0 ? `\n\nErrors:\n${fetchErrors.join('\n')}` : '';
+        throw new Error(
+          `No models returned. Check: (1) AWS CLI installed and on PATH? (2) Profile "${awsProfile || 'default'}" and region "${awsRegion}" configured? (3) Bedrock enabled in this region?${detail}`
+        );
+      }
+
+      ClaudeCodeSettingsPanel._writeModelCache(cachePath, models);
       this._panel.webview.postMessage({ type: 'bedrockModels', models });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

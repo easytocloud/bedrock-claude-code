@@ -50,14 +50,14 @@ export function renderPresetDrawer(): string {
 
     <!-- Provider slot -->
     <div class="section-heading">
-      <span class="section-dot" style="background:var(--orange-accent)"></span>
-      PROVIDER <span style="color:var(--fg-dim);font-weight:400;text-transform:none">— pick one</span>
+      <span class="section-dot section-dot-orange"></span>
+      PROVIDER <span class="section-subtitle">— pick one</span>
     </div>
     <div class="form-group">
       <select id="preset-provider">
         <option value="">— Select a provider —</option>
       </select>
-      <button type="button" class="add-inline" data-action="new-provider-from-preset" style="margin-top:6px">+ New provider</button>
+      <button type="button" class="add-inline add-inline-mt" data-action="new-provider-from-preset">+ New provider</button>
     </div>
     <div id="preset-provider-preview" class="provider-preview" style="display:none"></div>
 
@@ -65,8 +65,8 @@ export function renderPresetDrawer(): string {
 
     <!-- MCP groups slot -->
     <div class="section-heading">
-      <span class="section-dot" style="background:var(--purple-accent)"></span>
-      MCP SERVERS <span style="color:var(--fg-dim);font-weight:400;text-transform:none">— pick one or more</span>
+      <span class="section-dot section-dot-purple"></span>
+      MCP SERVERS <span class="section-subtitle">— pick one or more</span>
     </div>
     <div id="preset-mcp-groups" class="check-list"></div>
     <button type="button" class="add-inline" data-action="new-mcp-group-from-preset">+ New MCP server group</button>
@@ -75,8 +75,8 @@ export function renderPresetDrawer(): string {
 
     <!-- Directory groups slot -->
     <div class="section-heading">
-      <span class="section-dot" style="background:var(--green-accent)"></span>
-      ADDITIONAL DIRECTORIES <span style="color:var(--fg-dim);font-weight:400;text-transform:none">— pick one or more</span>
+      <span class="section-dot section-dot-green"></span>
+      ADDITIONAL DIRECTORIES <span class="section-subtitle">— pick one or more</span>
     </div>
     <div id="preset-dir-groups" class="check-list"></div>
     <button type="button" class="add-inline" data-action="new-dir-group-from-preset">+ New directory group</button>
@@ -125,7 +125,7 @@ export function renderProviderDrawer(): string {
     <!-- Anthropic section -->
     <div id="provider-section-anthropic" style="display:none">
       <div class="section-heading">
-        <span class="section-dot" style="background:var(--orange-accent)"></span>
+        <span class="section-dot section-dot-orange"></span>
         ANTHROPIC API
       </div>
       <div class="info-box">Uses Anthropic's API directly. Get a key at console.anthropic.com</div>
@@ -138,7 +138,7 @@ export function renderProviderDrawer(): string {
     <!-- Bedrock section -->
     <div id="provider-section-bedrock" style="display:none">
       <div class="section-heading">
-        <span class="section-dot" style="background:var(--orange-accent)"></span>
+        <span class="section-dot section-dot-orange"></span>
         AWS CONFIGURATION
       </div>
       <div class="info-box">Automatically sets CLAUDE_CODE_USE_BEDROCK=1 and AWS environment variables.</div>
@@ -161,7 +161,7 @@ export function renderProviderDrawer(): string {
     <!-- Proxy section -->
     <div id="provider-section-proxy" style="display:none">
       <div class="section-heading">
-        <span class="section-dot" style="background:var(--orange-accent)"></span>
+        <span class="section-dot section-dot-orange"></span>
         PROXY CONFIGURATION
       </div>
       <div class="info-box">Works with any OpenAI-compatible API: Ollama, vLLM, LM Studio, LiteLLM, etc. For local models, enable Standalone mode below to prevent Claude Code from contacting Anthropic.</div>
@@ -189,17 +189,17 @@ export function renderProviderDrawer(): string {
     <div id="provider-models-section" style="display:none">
       <div class="divider"></div>
       <div class="section-heading">
-        <span class="section-dot" style="background:var(--orange-accent)"></span>
+        <span class="section-dot section-dot-orange"></span>
         MODELS
       </div>
       <div id="provider-models-info" class="info-box" style="display:none">Smart presets filtered by region — or fetch all models from your account.</div>
       <div id="bedrock-fetch-row" style="display:none" class="form-group">
         <button type="button" class="btn btn-primary" data-action="fetch-bedrock-models">Fetch models from AWS</button>
-        <div id="bedrock-fetch-status" class="form-hint" style="margin-top:6px"></div>
+        <div id="bedrock-fetch-status" class="form-hint form-hint-mt"></div>
       </div>
       <div id="proxy-fetch-row" style="display:none" class="form-group">
         <button type="button" class="btn btn-primary" data-action="fetch-proxy-models">Fetch available models</button>
-        <div id="proxy-fetch-status" class="form-hint" style="margin-top:6px"></div>
+        <div id="proxy-fetch-status" class="form-hint form-hint-mt"></div>
       </div>
 
       <div class="form-group">
@@ -223,7 +223,7 @@ export function renderProviderDrawer(): string {
       </div>
       <div class="toggle-row">
         <span class="toggle-label">Standalone mode</span>
-        <div class="form-hint" style="flex:1;margin:0 12px">Blocks all traffic to Anthropic (telemetry, updates) — required for local/offline use</div>
+        <div class="form-hint form-hint-flex">Blocks all traffic to Anthropic (telemetry, updates) — required for local/offline use</div>
         <div class="toggle-track" data-toggle="provider-disable-nonessential">
           <div class="toggle-thumb"></div>
         </div>
@@ -322,7 +322,7 @@ export function renderMcpServerDrawer(): string {
     <!-- Environment Variables -->
     <div class="divider"></div>
     <div class="section-heading">
-      <span class="section-dot" style="background:var(--purple-accent)"></span>
+      <span class="section-dot section-dot-purple"></span>
       ENVIRONMENT VARIABLES
     </div>
     <div id="mcp-server-env" class="item-list">

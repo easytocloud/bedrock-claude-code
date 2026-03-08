@@ -2,6 +2,33 @@
 
 All notable changes to this extension will be documented here.
 
+## [Unreleased]
+
+## [0.3.3] — 2026-03-08
+
+### Added
+- **esbuild bundler** — `npm run build` now bundles to a single `out/extension.js` (faster builds, smaller output); `npm run watch:tsc` kept for F5 development host
+- **Bedrock model cache** — discovered models cached to `~/.claude/bedrock-model-cache-<profile>-<region>.json` with 1-hour TTL; avoids redundant AWS CLI calls
+- `docs/ARCHITECTURE.md` — contributor documentation covering preset hierarchy, scope resolution pipeline, webview data injection, and build scripts
+- `IMPROVEMENTS.md` — structured improvement backlog with triage and open items table
+
+### Changed
+- Status bar icon changed to `$(sparkle)`; inherited scope shows `$(link)` icon with "Inherited from global" tooltip
+- Status bar quick-switch placeHolder shows workspace name; each preset item description shows `type · providerName`
+- Editing state in webview consolidated into `editing` and `fetched` objects (was 9 module-level variables)
+- Chip rendering unified — shared `renderChipHtml()` in `media/webview.js` and `renderChip()` in `src/webview/layout.ts`
+- Inline `style="..."` attributes in drawers replaced with named CSS utility classes
+
+### Fixed
+- F5 pre-launch task no longer hangs — `.vscode/tasks.json` now uses `watch:tsc` (tsc output) instead of `watch` (esbuild, incompatible with `$tsc-watch` problemMatcher)
+- AWS CLI errors in model discovery now surface per-command detail plus a 3-point checklist instead of being silently swallowed
+- AWS region validated against known list in `resolvePreset()`; invalid regions throw a descriptive error immediately
+
+### Internal
+- ESLint rules upgraded to `error`; `no-var`, `prefer-const`, `no-debugger`, `no-console` (warn), `@typescript-eslint/no-unused-vars` added; `media/webview.js` added to lint scope
+- `tsconfig.json` strictness flags: `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, `skipLibCheck`
+- `preserveUnmanagedEnv()` helper extracted in `resolver.ts` — eliminates duplicated env-var filtering logic
+
 ## [0.3.2] — 2026-03-06
 
 ### Added
@@ -124,3 +151,17 @@ All notable changes to this extension will be documented here.
 - Allowed directory management
 - Disable login prompt toggle
 - Dirty indicator (● in panel title when unsaved changes exist)
+
+[Unreleased]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.2...v0.3.3
+[0.3.2]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.2.6...v0.3.0
+[0.2.6]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.2.5...v0.2.6
+[0.2.5]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.2.4...v0.2.5
+[0.2.4]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/easytocloud/bedrock-claude-code/releases/tag/v0.1.0

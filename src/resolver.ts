@@ -2,13 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   ProfileStore,
-  ProviderProfile,
   McpServerConfig,
-  McpServerGroup,
-  ScopeAssignment,
   ClaudeCodeSettings,
 } from './types';
-import { MANAGED_ENV_KEYS } from './models';
+import { MANAGED_ENV_KEYS, AWS_REGIONS } from './models';
 import {
   readClaudeSettings,
   writeClaudeSettings,
@@ -52,7 +49,12 @@ export function resolvePreset(
       case 'bedrock':
         env['CLAUDE_CODE_USE_BEDROCK'] = '1';
         if (provider.awsProfile) { env['AWS_PROFILE'] = provider.awsProfile; }
-        if (provider.awsRegion) { env['AWS_REGION'] = provider.awsRegion; }
+        if (provider.awsRegion) {
+          if (!AWS_REGIONS.includes(provider.awsRegion)) {
+            throw new Error(`Invalid AWS region "${provider.awsRegion}". Must be one of: ${AWS_REGIONS.join(', ')}`);
+          }
+          env['AWS_REGION'] = provider.awsRegion;
+        }
         if (provider.awsAuthRefresh) { awsAuthRefresh = provider.awsAuthRefresh; }
         break;
       case 'anthropic':
@@ -136,21 +138,27 @@ export function resolvePreset(
 // ---------------------------------------------------------------------------
 
 /**
+ * Return a copy of `existing` with all MANAGED_ENV_KEYS removed,
+ * so user-defined env vars are preserved when we overwrite managed ones.
+ */
+function preserveUnmanagedEnv(existing: Record<string, string>): Record<string, string> {
+  const preserved: Record<string, string> = {};
+  for (const [key, value] of Object.entries(existing)) {
+    if (!MANAGED_ENV_KEYS.has(key)) {
+      preserved[key] = value;
+    }
+  }
+  return preserved;
+}
+
+/**
  * Apply a resolved config to the global scope:
  * - env vars → ~/.claude/settings.json
  * - MCP servers → ~/.claude.json
  */
 export function applyGlobalConfig(resolved: ResolvedConfig): void {
   const settings = readClaudeSettings();
-  const existingEnv = settings.env ?? {};
-
-  // Preserve env vars not managed by us
-  const preservedEnv: Record<string, string> = {};
-  for (const [key, value] of Object.entries(existingEnv)) {
-    if (!MANAGED_ENV_KEYS.has(key)) {
-      preservedEnv[key] = value;
-    }
-  }
+  const preservedEnv = preserveUnmanagedEnv(settings.env ?? {});
 
   const newSettings: ClaudeCodeSettings = {
     ...settings,
@@ -229,15 +237,7 @@ export function applyProjectConfig(
 ): void {
   // Write env vars and directories to project-level settings
   const settings = readProjectSettings(workspaceRoot);
-  const existingEnv = settings.env ?? {};
-
-  // Preserve env vars not managed by us
-  const preservedEnv: Record<string, string> = {};
-  for (const [key, value] of Object.entries(existingEnv)) {
-    if (!MANAGED_ENV_KEYS.has(key)) {
-      preservedEnv[key] = value;
-    }
-  }
+  const preservedEnv = preserveUnmanagedEnv(settings.env ?? {});
 
   const newSettings: ClaudeCodeSettings = {
     ...settings,

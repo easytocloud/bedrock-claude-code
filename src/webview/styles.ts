@@ -585,6 +585,14 @@ export function buildStyles(): string {
       border-radius: 50%;
       flex-shrink: 0;
     }
+    .section-dot-orange { background: var(--orange-accent); }
+    .section-dot-purple { background: var(--purple-accent); }
+    .section-dot-green  { background: var(--green-accent); }
+    .section-subtitle   { color: var(--fg-dim); font-weight: 400; text-transform: none; }
+    .form-hint-mt   { margin-top: 6px; }
+    .form-hint-flex { flex: 1; margin: 0 12px; }
+    .env-key-input  { width: 40%; display: inline-block; margin-right: 4px; }
+    .env-val-input  { width: 55%; display: inline-block; }
 
     /* ─── Server / Directory List ───────────────────────────────────── */
     .item-list { margin-bottom: 12px; }

@@ -44,25 +44,27 @@ export function refreshStatusBar(): void {
   const wsScope = workspaceRoot ? store.workspaceScopes[workspaceRoot] : undefined;
 
   const globalPresetName = presetLabel(globalScope, store.presets);
-  const wsPresetName = wsScope ? scopeLabel(wsScope, store.presets) : undefined;
 
   // Status bar shows the most relevant scope
   if (wsScope && wsScope.mode === 'preset' && wsScope.presetId) {
     // Workspace has its own preset
     const name = presetLabel(wsScope, store.presets);
-    statusBarItem.text = `$(symbol-event) ${name}`;
+    statusBarItem.text = `$(sparkle) ${name}`;
     statusBarItem.tooltip = `Global: ${globalPresetName}\nWorkspace: ${name}\n\nClick to switch presets`;
   } else if (wsScope && wsScope.mode === 'manual') {
-    statusBarItem.text = `$(symbol-event) Manual`;
+    statusBarItem.text = `$(sparkle) Manual`;
     statusBarItem.tooltip = `Global: ${globalPresetName}\nWorkspace: Manual\n\nClick to switch presets`;
   } else if (wsScope && wsScope.mode === 'inherit') {
-    statusBarItem.text = `$(symbol-event) ${globalPresetName}`;
-    statusBarItem.tooltip = `Global: ${globalPresetName}\nWorkspace: Inherited\n\nClick to switch presets`;
+    // Workspace explicitly inherits — show link icon to indicate delegation
+    statusBarItem.text = `$(link) ${globalPresetName}`;
+    statusBarItem.tooltip = `Global: ${globalPresetName}\nWorkspace: Inherited from global\n\nClick to override for this workspace`;
   } else {
-    // No workspace or no workspace scope set
-    statusBarItem.text = `$(symbol-event) ${globalPresetName}`;
+    // No workspace scope configured — show global with hollow indicator
+    statusBarItem.text = workspaceRoot
+      ? `$(sparkle) ${globalPresetName}`
+      : `$(sparkle) ${globalPresetName}`;
     statusBarItem.tooltip = workspaceRoot
-      ? `Global: ${globalPresetName}\nWorkspace: Not set\n\nClick to switch presets`
+      ? `Global: ${globalPresetName}\nWorkspace: Not configured — click to set`
       : `Global: ${globalPresetName}\n\nClick to switch presets`;
   }
 
@@ -94,7 +96,7 @@ async function quickSwitch(): Promise<void> {
     const provider = store.providers.find(p => p.id === preset.providerId);
     items.push({
       label: `${isCurrent ? '$(check) ' : '     '}${preset.name}`,
-      description: provider ? provider.name : '',
+      description: provider ? `${provider.type} · ${provider.name}` : '',
       scope: 'global',
       mode: 'preset',
       presetId: preset.id,
@@ -124,7 +126,7 @@ async function quickSwitch(): Promise<void> {
       const provider = store.providers.find(p => p.id === preset.providerId);
       items.push({
         label: `${isCurrent ? '$(check) ' : '     '}${preset.name}`,
-        description: provider ? provider.name : '',
+        description: provider ? `${provider.type} · ${provider.name}` : '',
         scope: 'workspace',
         mode: 'preset',
         presetId: preset.id,
@@ -138,8 +140,11 @@ async function quickSwitch(): Promise<void> {
     });
   }
 
+  const wsName = vscode.workspace.workspaceFolders?.[0]?.name;
   const pick = await vscode.window.showQuickPick(items, {
-    placeHolder: 'Switch preset scope',
+    placeHolder: wsName
+      ? `Switch preset — Global and Workspace (${wsName})`
+      : 'Switch preset — Global scope',
     matchOnDescription: true,
   });
 
@@ -183,11 +188,6 @@ function presetLabel(scope: ScopeAssignment, presets: { id: string; name: string
     return presets.find(p => p.id === scope.presetId)?.name ?? 'Unknown';
   }
   return scope.mode === 'manual' ? 'Manual' : 'Not set';
-}
-
-function scopeLabel(scope: ScopeAssignment, presets: { id: string; name: string }[]): string {
-  if (scope.mode === 'inherit') { return 'Inherit'; }
-  return presetLabel(scope, presets);
 }
 
 // ---------------------------------------------------------------------------

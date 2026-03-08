@@ -20,17 +20,23 @@
   let state = null;  // PanelState
   let dirty = false;
   let drawerStack = [];
-  let editingPresetId = null;
-  let editingProviderId = null;
-  let proxyFetchedModels = [];
-  let bedrockFetchedModels = [];  // models discovered from AWS account
-  let editingMcpGroupId = null;
-  let editingMcpServerIndex = -1;  // index within group, -1 = new
-  let editingDirGroupId = null;
 
-  // Temp storage for items added to not-yet-saved groups
-  let pendingServers = [];  // servers for a new MCP group (before first save)
-  let pendingDirs = [];     // directories for a new directory group (before first save)
+  // Editing context — which item is currently open in a drawer
+  const editing = {
+    presetId: null,
+    providerId: null,
+    mcpGroupId: null,
+    mcpServerIndex: -1,  // -1 = new
+    dirGroupId: null,
+    pendingServers: [],  // servers added to a not-yet-saved MCP group
+    pendingDirs: [],     // dirs added to a not-yet-saved directory group
+  };
+
+  // Model lists fetched from external sources (reset when opening a provider drawer)
+  const fetched = {
+    proxyModels: [],
+    bedrockModels: [],
+  };
 
   // ─── Helpers ───────────────────────────────────────────────────
   function escHtml(s) {
@@ -120,35 +126,38 @@
     return [provider.smallFastModel || '—', provider.primaryModel || '—', provider.opusModel || '—'];
   }
 
-  function renderProviderChipHtml(p) {
-    const [haiku, sonnet, opus] = modelDisplayLabel(p, 'Haiku', 'Sonnet', 'Opus');
-    return `<div class="bb-chip orange" data-action="edit-provider" data-id="${escHtml(p.id)}">
+  // Generic chip renderer — mirrors renderChip() in src/webview/layout.ts.
+  // items: Array of { text, spacer? }
+  function renderChipHtml(color, action, id, name, items) {
+    const itemHtml = items.map(i =>
+      `<span class="bb-chip-detail${i.spacer ? ' bb-chip-spacer' : ''}">${escHtml(i.text)}</span>`
+    ).join('');
+    return `<div class="bb-chip ${color}" data-action="${action}" data-id="${escHtml(id)}">
       <div class="bb-chip-text">
-        <span class="bb-chip-name">${escHtml(p.name)}</span>
-        <span class="bb-chip-detail">${escHtml(providerTypeLabel(p))}</span>
-        <span class="bb-chip-detail bb-chip-spacer">${escHtml(haiku)}</span>
-        <span class="bb-chip-detail">${escHtml(sonnet)}</span>
-        <span class="bb-chip-detail">${escHtml(opus)}</span>
+        <span class="bb-chip-name">${escHtml(name)}</span>
+        ${itemHtml}
       </div>
     </div>`;
+  }
+
+  function renderProviderChipHtml(p) {
+    const [haiku, sonnet, opus] = modelDisplayLabel(p, 'Haiku', 'Sonnet', 'Opus');
+    return renderChipHtml('orange', 'edit-provider', p.id, p.name, [
+      { text: providerTypeLabel(p) },
+      { text: haiku, spacer: true },
+      { text: sonnet },
+      { text: opus },
+    ]);
   }
 
   function renderMcpGroupChipHtml(g) {
-    return `<div class="bb-chip purple" data-action="edit-mcp-group" data-id="${escHtml(g.id)}">
-      <div class="bb-chip-text">
-        <span class="bb-chip-name">${escHtml(g.name)}</span>
-        ${g.servers.map(s => '<span class="bb-chip-detail">' + escHtml(s.name) + '</span>').join('')}
-      </div>
-    </div>`;
+    return renderChipHtml('purple', 'edit-mcp-group', g.id, g.name,
+      g.servers.map(s => ({ text: s.name })));
   }
 
   function renderDirGroupChipHtml(g) {
-    return `<div class="bb-chip green" data-action="edit-dir-group" data-id="${escHtml(g.id)}">
-      <div class="bb-chip-text">
-        <span class="bb-chip-name">${escHtml(g.name)}</span>
-        ${g.directories.map(d => '<span class="bb-chip-detail">' + escHtml(d) + '</span>').join('')}
-      </div>
-    </div>`;
+    return renderChipHtml('green', 'edit-dir-group', g.id, g.name,
+      g.directories.map(d => ({ text: d })));
   }
 
   // ─── Update scope badges ─────────────────────────────────────
@@ -233,7 +242,7 @@
     const isNew = !presetId;
     const preset = isNew ? null : store.presets.find(p => p.id === presetId);
 
-    editingPresetId = isNew ? null : presetId;
+    editing.presetId = isNew ? null : presetId;
 
     document.getElementById('preset-drawer-title').textContent = isNew ? 'New Preset' : escHtml(preset.name);
     document.getElementById('preset-name').value = preset ? preset.name : '';
@@ -340,9 +349,9 @@
     const isNew = !providerId;
     const provider = isNew ? null : store.providers.find(p => p.id === providerId);
 
-    editingProviderId = isNew ? null : providerId;
-    proxyFetchedModels = [];
-    bedrockFetchedModels = [];
+    editing.providerId = isNew ? null : providerId;
+    fetched.proxyModels = [];
+    fetched.bedrockModels = [];
     var fetchStatus = document.getElementById('proxy-fetch-status');
     if (fetchStatus) fetchStatus.textContent = '';
     var brFetchStatus = document.getElementById('bedrock-fetch-status');
@@ -472,10 +481,10 @@
       var sonnetPresets = filterModels(SONNET_MODELS, region);
       var haikuPresets = filterModels(HAIKU_MODELS, region);
       var opusPresets = filterModels(OPUS_MODELS, region);
-      if (bedrockFetchedModels.length > 0) {
+      if (fetched.bedrockModels.length > 0) {
         // Merge: smart presets first, then fetched models not already in presets
         var presetIds = new Set(sonnetPresets.concat(haikuPresets, opusPresets).map(function(m) { return m.id; }));
-        var extra = bedrockFetchedModels.filter(function(m) { return !presetIds.has(m.id); });
+        var extra = fetched.bedrockModels.filter(function(m) { return !presetIds.has(m.id); });
         // All three selects get the full merged list so any model can go in any slot
         var allModels = sonnetPresets.concat(haikuPresets, opusPresets, extra);
         // Deduplicate by id
@@ -497,8 +506,8 @@
       populateModelSelect('provider-model-haiku', [], provider?.smallFastModel || ANTHROPIC_DEFAULTS.haiku, false);
       populateModelSelect('provider-model-opus', [], provider?.opusModel || ANTHROPIC_DEFAULTS.opus, false);
     } else if (type === 'proxy') {
-      if (proxyFetchedModels.length > 1) {
-        const modelList = proxyFetchedModels.map(id => ({ id, label: id }));
+      if (fetched.proxyModels.length > 1) {
+        const modelList = fetched.proxyModels.map(id => ({ id, label: id }));
         populateModelSelect('provider-model-sonnet', modelList, provider?.primaryModel || '', true);
         populateModelSelect('provider-model-haiku', modelList, provider?.smallFastModel || '', true);
         populateModelSelect('provider-model-opus', modelList, provider?.opusModel || '', true);
@@ -521,7 +530,7 @@
   }
 
   function applyFetchedProxyModels(ids) {
-    proxyFetchedModels = ids;
+    fetched.proxyModels = ids;
     const statusEl = document.getElementById('proxy-fetch-status');
     if (!statusEl) return;
 
@@ -534,8 +543,8 @@
     } else {
       statusEl.textContent = 'Found ' + ids.length + ' models — select below';
       const typeBtn = document.querySelector('[data-seg="provider-type"].sel');
-      const currentProvider = editingProviderId
-        ? state.store.providers.find(p => p.id === editingProviderId)
+      const currentProvider = editing.providerId
+        ? state.store.providers.find(p => p.id === editing.providerId)
         : null;
       rebuildModelSelects(typeBtn ? typeBtn.dataset.val : 'proxy', currentProvider);
     }
@@ -551,11 +560,11 @@
 
   function applyFetchedBedrockModels(models) {
     // models: [{id, label}]
-    bedrockFetchedModels = models;
+    fetched.bedrockModels = models;
     var statusEl = document.getElementById('bedrock-fetch-status');
     if (statusEl) statusEl.textContent = 'Found ' + models.length + ' models — smart presets + account models merged below';
-    var currentProvider = editingProviderId
-      ? state.store.providers.find(function(p) { return p.id === editingProviderId; })
+    var currentProvider = editing.providerId
+      ? state.store.providers.find(function(p) { return p.id === editing.providerId; })
       : null;
     rebuildModelSelects('bedrock', currentProvider);
   }
@@ -700,13 +709,13 @@
     const isNew = !groupId;
     const group = isNew ? null : store.mcpGroups.find(g => g.id === groupId);
 
-    editingMcpGroupId = isNew ? null : groupId;
-    if (isNew) pendingServers = [];
+    editing.mcpGroupId = isNew ? null : groupId;
+    if (isNew) editing.pendingServers = [];
 
     document.getElementById('mcp-group-drawer-title').textContent = isNew ? 'New MCP Server Group' : escHtml(group.name);
     document.getElementById('mcp-group-name').value = group ? group.name : '';
 
-    renderMcpServerList(group ? group.servers : pendingServers);
+    renderMcpServerList(group ? group.servers : editing.pendingServers);
 
     const deleteBtn = document.querySelector('[data-action="delete-mcp-group"]');
     if (deleteBtn) deleteBtn.style.display = isNew ? 'none' : '';
@@ -741,7 +750,7 @@
 
   // ─── Populate MCP server drawer ────────────────────────────────
   function openMcpServerDrawer(server, index) {
-    editingMcpServerIndex = index;
+    editing.mcpServerIndex = index;
     const isNew = index < 0;
 
     document.getElementById('mcp-server-drawer-title').textContent = isNew ? 'Add MCP Server' : 'Edit MCP Server';
@@ -780,8 +789,8 @@
     container.innerHTML = entries.map(([key, val], i) => `
       <div class="item-row" data-env-index="${i}">
         <div class="item-row-info">
-          <input type="text" value="${escHtml(key)}" placeholder="KEY" style="width:40%;display:inline-block;margin-right:4px" data-env-key="${i}" />
-          <input type="text" value="${escHtml(val)}" placeholder="value" style="width:55%;display:inline-block" data-env-val="${i}" />
+          <input type="text" value="${escHtml(key)}" placeholder="KEY" class="env-key-input" data-env-key="${i}" />
+          <input type="text" value="${escHtml(val)}" placeholder="value" class="env-val-input" data-env-val="${i}" />
         </div>
         <button class="btn-icon btn-sm" data-action="remove-mcp-env-var" data-index="${i}">&times;</button>
       </div>`).join('');
@@ -793,13 +802,13 @@
     const isNew = !groupId;
     const group = isNew ? null : store.directoryGroups.find(g => g.id === groupId);
 
-    editingDirGroupId = isNew ? null : groupId;
-    if (isNew) pendingDirs = [];
+    editing.dirGroupId = isNew ? null : groupId;
+    if (isNew) editing.pendingDirs = [];
 
     document.getElementById('dir-group-drawer-title').textContent = isNew ? 'New Directory Group' : escHtml(group.name);
     document.getElementById('dir-group-name').value = group ? group.name : '';
 
-    renderDirectoryList(group ? group.directories : pendingDirs);
+    renderDirectoryList(group ? group.directories : editing.pendingDirs);
 
     const deleteBtn = document.querySelector('[data-action="delete-dir-group"]');
     if (deleteBtn) deleteBtn.style.display = isNew ? 'none' : '';
@@ -842,8 +851,8 @@
     const mcpGroupIds = Array.from(document.querySelectorAll('[data-mcp-group]:checked')).map(el => el.dataset.mcpGroup);
     const dirGroupIds = Array.from(document.querySelectorAll('[data-dir-group]:checked')).map(el => el.dataset.dirGroup);
 
-    if (editingPresetId) {
-      const preset = store.presets.find(p => p.id === editingPresetId);
+    if (editing.presetId) {
+      const preset = store.presets.find(p => p.id === editing.presetId);
       if (preset) {
         preset.name = name;
         preset.providerId = providerId;
@@ -869,7 +878,7 @@
     const store = state.store;
 
     // Default provider: only the API key is editable
-    if (editingProviderId === DEFAULT_PROVIDER_ID) {
+    if (editing.providerId === DEFAULT_PROVIDER_ID) {
       const provider = store.providers.find(p => p.id === DEFAULT_PROVIDER_ID);
       if (provider) {
         provider.anthropicApiKey = document.getElementById('provider-anthropic-key').value || undefined;
@@ -915,8 +924,8 @@
       disableLoginPrompt: document.querySelector('[data-toggle="provider-disable-nonessential"]')?.classList.contains('on') || false,
     };
 
-    if (editingProviderId) {
-      const provider = store.providers.find(p => p.id === editingProviderId);
+    if (editing.providerId) {
+      const provider = store.providers.find(p => p.id === editing.providerId);
       if (provider) {
         Object.assign(provider, providerData);
       }
@@ -933,7 +942,7 @@
 
     // If preset drawer is still open, refresh its provider dropdown
     if (drawerStack.length > 0 && drawerStack[drawerStack.length - 1] === 'preset') {
-      openPresetDrawer(editingPresetId);
+      openPresetDrawer(editing.presetId);
       // Reopen won't push to stack since it's already there — need to handle differently
     }
   }
@@ -954,8 +963,8 @@
     // Collect servers from the current list (they were stored in a temp array)
     const servers = collectMcpServersFromDOM();
 
-    if (editingMcpGroupId) {
-      const group = store.mcpGroups.find(g => g.id === editingMcpGroupId);
+    if (editing.mcpGroupId) {
+      const group = store.mcpGroups.find(g => g.id === editing.mcpGroupId);
       if (group) {
         group.name = name;
         group.servers = servers;
@@ -974,10 +983,10 @@
   }
 
   function collectMcpServersFromDOM() {
-    const group = editingMcpGroupId
-      ? state.store.mcpGroups.find(g => g.id === editingMcpGroupId)
+    const group = editing.mcpGroupId
+      ? state.store.mcpGroups.find(g => g.id === editing.mcpGroupId)
       : null;
-    return group ? [...group.servers] : [...pendingServers];
+    return group ? [...group.servers] : [...editing.pendingServers];
   }
 
   function saveMcpServerFromDrawer() {
@@ -1017,13 +1026,13 @@
     };
 
     // Find the group we're editing servers for (or use pending list for new groups)
-    const group = editingMcpGroupId
-      ? state.store.mcpGroups.find(g => g.id === editingMcpGroupId)
+    const group = editing.mcpGroupId
+      ? state.store.mcpGroups.find(g => g.id === editing.mcpGroupId)
       : null;
-    const serverList = group ? group.servers : pendingServers;
+    const serverList = group ? group.servers : editing.pendingServers;
 
-    if (editingMcpServerIndex >= 0 && editingMcpServerIndex < serverList.length) {
-      serverList[editingMcpServerIndex] = server;
+    if (editing.mcpServerIndex >= 0 && editing.mcpServerIndex < serverList.length) {
+      serverList[editing.mcpServerIndex] = server;
     } else {
       serverList.push(server);
     }
@@ -1052,8 +1061,8 @@
 
     const dirs = collectDirsFromDOM();
 
-    if (editingDirGroupId) {
-      const group = store.directoryGroups.find(g => g.id === editingDirGroupId);
+    if (editing.dirGroupId) {
+      const group = store.directoryGroups.find(g => g.id === editing.dirGroupId);
       if (group) {
         group.name = name;
         group.directories = dirs;
@@ -1082,16 +1091,16 @@
 
   // ─── Delete functions ──────────────────────────────────────────
   function deletePreset() {
-    if (!editingPresetId || editingPresetId === DEFAULT_PRESET_ID) return;
+    if (!editing.presetId || editing.presetId === DEFAULT_PRESET_ID) return;
     const store = state.store;
-    store.presets = store.presets.filter(p => p.id !== editingPresetId);
+    store.presets = store.presets.filter(p => p.id !== editing.presetId);
 
     // Clear scope references
-    if (store.globalScope.presetId === editingPresetId) {
+    if (store.globalScope.presetId === editing.presetId) {
       store.globalScope = { mode: 'manual' };
     }
     for (const [key, scope] of Object.entries(store.workspaceScopes)) {
-      if (scope.presetId === editingPresetId) {
+      if (scope.presetId === editing.presetId) {
         store.workspaceScopes[key] = { mode: 'inherit' };
       }
     }
@@ -1102,12 +1111,12 @@
   }
 
   function deleteProvider() {
-    if (!editingProviderId || editingProviderId === DEFAULT_PROVIDER_ID) return;
+    if (!editing.providerId || editing.providerId === DEFAULT_PROVIDER_ID) return;
     const store = state.store;
-    store.providers = store.providers.filter(p => p.id !== editingProviderId);
+    store.providers = store.providers.filter(p => p.id !== editing.providerId);
     // Clear references in presets
     for (const preset of store.presets) {
-      if (preset.providerId === editingProviderId) {
+      if (preset.providerId === editing.providerId) {
         preset.providerId = '';
       }
     }
@@ -1117,11 +1126,11 @@
   }
 
   function deleteMcpGroup() {
-    if (!editingMcpGroupId) return;
+    if (!editing.mcpGroupId) return;
     const store = state.store;
-    store.mcpGroups = store.mcpGroups.filter(g => g.id !== editingMcpGroupId);
+    store.mcpGroups = store.mcpGroups.filter(g => g.id !== editing.mcpGroupId);
     for (const preset of store.presets) {
-      preset.mcpGroupIds = preset.mcpGroupIds.filter(id => id !== editingMcpGroupId);
+      preset.mcpGroupIds = preset.mcpGroupIds.filter(id => id !== editing.mcpGroupId);
     }
     markDirty();
     closeTopDrawer();
@@ -1129,11 +1138,11 @@
   }
 
   function deleteDirGroup() {
-    if (!editingDirGroupId) return;
+    if (!editing.dirGroupId) return;
     const store = state.store;
-    store.directoryGroups = store.directoryGroups.filter(g => g.id !== editingDirGroupId);
+    store.directoryGroups = store.directoryGroups.filter(g => g.id !== editing.dirGroupId);
     for (const preset of store.presets) {
-      preset.directoryGroupIds = preset.directoryGroupIds.filter(id => id !== editingDirGroupId);
+      preset.directoryGroupIds = preset.directoryGroupIds.filter(id => id !== editing.dirGroupId);
     }
     markDirty();
     closeTopDrawer();
@@ -1142,8 +1151,8 @@
 
   // ─── Duplicate functions ───────────────────────────────────────
   function duplicatePreset() {
-    if (!editingPresetId) return;
-    const original = state.store.presets.find(p => p.id === editingPresetId);
+    if (!editing.presetId) return;
+    const original = state.store.presets.find(p => p.id === editing.presetId);
     if (!original) return;
     state.store.presets.push({
       ...JSON.parse(JSON.stringify(original)),
@@ -1156,8 +1165,8 @@
   }
 
   function duplicateProvider() {
-    if (!editingProviderId) return;
-    const original = state.store.providers.find(p => p.id === editingProviderId);
+    if (!editing.providerId) return;
+    const original = state.store.providers.find(p => p.id === editing.providerId);
     if (!original) return;
     state.store.providers.push({
       ...JSON.parse(JSON.stringify(original)),
@@ -1170,8 +1179,8 @@
   }
 
   function duplicateMcpGroup() {
-    if (!editingMcpGroupId) return;
-    const original = state.store.mcpGroups.find(g => g.id === editingMcpGroupId);
+    if (!editing.mcpGroupId) return;
+    const original = state.store.mcpGroups.find(g => g.id === editing.mcpGroupId);
     if (!original) return;
     state.store.mcpGroups.push({
       ...JSON.parse(JSON.stringify(original)),
@@ -1184,8 +1193,8 @@
   }
 
   function duplicateDirGroup() {
-    if (!editingDirGroupId) return;
-    const original = state.store.directoryGroups.find(g => g.id === editingDirGroupId);
+    if (!editing.dirGroupId) return;
+    const original = state.store.directoryGroups.find(g => g.id === editing.dirGroupId);
     if (!original) return;
     state.store.directoryGroups.push({
       ...JSON.parse(JSON.stringify(original)),
@@ -1440,8 +1449,8 @@
         break;
       case 'edit-mcp-server-item': {
         const idx = parseInt(target.dataset.index, 10);
-        const group = editingMcpGroupId ? state.store.mcpGroups.find(g => g.id === editingMcpGroupId) : null;
-        const srvList = group ? group.servers : pendingServers;
+        const group = editing.mcpGroupId ? state.store.mcpGroups.find(g => g.id === editing.mcpGroupId) : null;
+        const srvList = group ? group.servers : editing.pendingServers;
         if (srvList[idx]) {
           openMcpServerDrawer(srvList[idx], idx);
         }
@@ -1449,8 +1458,8 @@
       }
       case 'remove-mcp-server-item': {
         const idx = parseInt(target.dataset.index, 10);
-        const group = editingMcpGroupId ? state.store.mcpGroups.find(g => g.id === editingMcpGroupId) : null;
-        const srvList = group ? group.servers : pendingServers;
+        const group = editing.mcpGroupId ? state.store.mcpGroups.find(g => g.id === editing.mcpGroupId) : null;
+        const srvList = group ? group.servers : editing.pendingServers;
         srvList.splice(idx, 1);
         renderMcpServerList(srvList);
         if (group) markDirty();
@@ -1476,8 +1485,8 @@
         duplicateDirGroup();
         break;
       case 'add-directory': {
-        const group = editingDirGroupId ? state.store.directoryGroups.find(g => g.id === editingDirGroupId) : null;
-        const dirList = group ? group.directories : pendingDirs;
+        const group = editing.dirGroupId ? state.store.directoryGroups.find(g => g.id === editing.dirGroupId) : null;
+        const dirList = group ? group.directories : editing.pendingDirs;
         dirList.push('');
         renderDirectoryList(dirList);
         if (group) markDirty();
@@ -1485,13 +1494,13 @@
       }
       case 'browse-directory': {
         const idx = parseInt(target.dataset.index, 10);
-        vscode.postMessage({ type: 'pickDirectory', groupId: editingDirGroupId || '', index: idx });
+        vscode.postMessage({ type: 'pickDirectory', groupId: editing.dirGroupId || '', index: idx });
         break;
       }
       case 'remove-directory': {
         const idx = parseInt(target.dataset.index, 10);
-        const group = editingDirGroupId ? state.store.directoryGroups.find(g => g.id === editingDirGroupId) : null;
-        const dirList = group ? group.directories : pendingDirs;
+        const group = editing.dirGroupId ? state.store.directoryGroups.find(g => g.id === editing.dirGroupId) : null;
+        const dirList = group ? group.directories : editing.pendingDirs;
         dirList.splice(idx, 1);
         renderDirectoryList(dirList);
         if (group) markDirty();
@@ -1507,8 +1516,8 @@
           container.innerHTML += `
             <div class="item-row" data-env-index="${idx}">
               <div class="item-row-info">
-                <input type="text" value="" placeholder="KEY" style="width:40%;display:inline-block;margin-right:4px" data-env-key="${idx}" />
-                <input type="text" value="" placeholder="value" style="width:55%;display:inline-block" data-env-val="${idx}" />
+                <input type="text" value="" placeholder="KEY" class="env-key-input" data-env-key="${idx}" />
+                <input type="text" value="" placeholder="value" class="env-val-input" data-env-val="${idx}" />
               </div>
               <button class="btn-icon btn-sm" data-action="remove-mcp-env-var" data-index="${idx}">&times;</button>
             </div>`;
@@ -1543,14 +1552,14 @@
     if (target.id === 'provider-aws-region') {
       const typeBtn = document.querySelector('[data-seg="provider-type"].sel');
       if (typeBtn && typeBtn.dataset.val === 'bedrock') {
-        const provider = editingProviderId ? state.store.providers.find(p => p.id === editingProviderId) : null;
+        const provider = editing.providerId ? state.store.providers.find(p => p.id === editing.providerId) : null;
         rebuildModelSelects('bedrock', provider);
       }
     }
     if (target.dataset.dirPath !== undefined) {
       const idx = parseInt(target.dataset.dirPath, 10);
-      const group = editingDirGroupId ? state.store.directoryGroups.find(g => g.id === editingDirGroupId) : null;
-      const dirList = group ? group.directories : pendingDirs;
+      const group = editing.dirGroupId ? state.store.directoryGroups.find(g => g.id === editing.dirGroupId) : null;
+      const dirList = group ? group.directories : editing.pendingDirs;
       if (idx < dirList.length) {
         dirList[idx] = target.value;
         if (group) markDirty();
@@ -1572,7 +1581,7 @@
 
     if (segName === 'provider-type') {
       showProviderSections(segVal);
-      const provider = editingProviderId ? state.store.providers.find(p => p.id === editingProviderId) : null;
+      const provider = editing.providerId ? state.store.providers.find(p => p.id === editing.providerId) : null;
       rebuildModelSelects(segVal, provider);
 
       // Update icon
@@ -1645,7 +1654,7 @@
       case 'directoryPicked': {
         const { groupId, index, path } = msg;
         const group = groupId ? state.store.directoryGroups.find(g => g.id === groupId) : null;
-        const dirList = group ? group.directories : pendingDirs;
+        const dirList = group ? group.directories : editing.pendingDirs;
         if (index < dirList.length) {
           dirList[index] = path;
         } else {

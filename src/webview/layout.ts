@@ -3,7 +3,7 @@
  * Renders the primary visible content of the settings panel.
  */
 import { PanelState, Preset, ProviderProfile, McpServerGroup, DirectoryGroup } from '../types';
-import { DEFAULT_PRESET_ID, DEFAULT_PROVIDER_ID } from '../profiles';
+import { DEFAULT_PRESET_ID } from '../profiles';
 import { esc } from './components';
 
 // ---------------------------------------------------------------------------
@@ -204,37 +204,41 @@ function providerTypeLabel(p: ProviderProfile): string {
   return p.type;
 }
 
-function renderProviderChip(p: ProviderProfile): string {
+// Generic chip renderer — mirrors renderChipHtml() in media/webview.js.
+// items: Array of { text, spacer? }
+function renderChip(
+  color: string, action: string, id: string,
+  name: string, items: { text: string; spacer?: boolean }[]
+): string {
+  const itemHtml = items
+    .map(i => `<span class="bb-chip-detail${i.spacer ? ' bb-chip-spacer' : ''}">${esc(i.text)}</span>`)
+    .join('');
   return `
-    <div class="bb-chip orange" data-action="edit-provider" data-id="${esc(p.id)}">
+    <div class="bb-chip ${color}" data-action="${action}" data-id="${esc(id)}">
       <div class="bb-chip-text">
-        <span class="bb-chip-name">${esc(p.name)}</span>
-        <span class="bb-chip-detail">${esc(providerTypeLabel(p))}</span>
-        <span class="bb-chip-detail bb-chip-spacer">${esc(p.smallFastModel || '—')}</span>
-        <span class="bb-chip-detail">${esc(p.primaryModel || '—')}</span>
-        <span class="bb-chip-detail">${esc(p.opusModel || '—')}</span>
+        <span class="bb-chip-name">${esc(name)}</span>
+        ${itemHtml}
       </div>
     </div>`;
+}
+
+function renderProviderChip(p: ProviderProfile): string {
+  return renderChip('orange', 'edit-provider', p.id, p.name, [
+    { text: providerTypeLabel(p) },
+    { text: p.smallFastModel || '—', spacer: true },
+    { text: p.primaryModel || '—' },
+    { text: p.opusModel || '—' },
+  ]);
 }
 
 function renderMcpGroupChip(g: McpServerGroup): string {
-  return `
-    <div class="bb-chip purple" data-action="edit-mcp-group" data-id="${esc(g.id)}">
-      <div class="bb-chip-text">
-        <span class="bb-chip-name">${esc(g.name)}</span>
-        ${g.servers.map(s => `<span class="bb-chip-detail">${esc(s.name)}</span>`).join('')}
-      </div>
-    </div>`;
+  return renderChip('purple', 'edit-mcp-group', g.id, g.name,
+    g.servers.map(s => ({ text: s.name })));
 }
 
 function renderDirGroupChip(g: DirectoryGroup): string {
-  return `
-    <div class="bb-chip green" data-action="edit-dir-group" data-id="${esc(g.id)}">
-      <div class="bb-chip-text">
-        <span class="bb-chip-name">${esc(g.name)}</span>
-        ${g.directories.map(d => `<span class="bb-chip-detail">${esc(d)}</span>`).join('')}
-      </div>
-    </div>`;
+  return renderChip('green', 'edit-dir-group', g.id, g.name,
+    g.directories.map(d => ({ text: d })));
 }
 
 export function renderBuildingBlocks(state: PanelState): string {
