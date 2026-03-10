@@ -11,5 +11,7 @@ eslint.config.js
 tsconfig.json
 **/*.ts
 *.vsix
-!out/**
-out/**/*.map
+esbuild.js
+# Exclude all of out/, then selectively re-include only the esbuild bundle
+out/**
+!out/extension.js

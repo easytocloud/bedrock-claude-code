@@ -4,6 +4,12 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.4] — 2026-03-10
+
+### Fixed
+- Extension package size reduced by ~50% — `.vscodeignore` now correctly excludes source maps and stale tsc output (only the esbuild bundle `out/extension.js` is shipped)
+- Screenshot image resized from 1800×3700 to 1280px wide, reducing it from 452K to 260K
+
 ## [0.3.3] — 2026-03-08
 
 ### Added
