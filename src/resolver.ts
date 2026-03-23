@@ -95,7 +95,13 @@ export function resolvePreset(
       if (provider.opusModel) { env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel; }
     }
     if (provider.disablePromptCaching) { env['DISABLE_PROMPT_CACHING'] = '1'; }
-    if (provider.disableLoginPrompt) {
+    // Bedrock always disables login/nonessential traffic (AWS auth, never needs Anthropic login).
+    // Proxy defaults to disabled (most are local/non-Anthropic); explicit false overrides for
+    // proxies that forward to Anthropic and need the login flow.
+    const shouldDisableLoginPrompt =
+      provider.type === 'bedrock' ||
+      (provider.type === 'proxy' && provider.disableLoginPrompt !== false);
+    if (shouldDisableLoginPrompt) {
       env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = '1';
       env['DISABLE_AUTOUPDATER'] = '1';
     }

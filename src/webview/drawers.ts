@@ -221,9 +221,9 @@ export function renderProviderDrawer(): string {
           <div class="toggle-thumb"></div>
         </div>
       </div>
-      <div class="toggle-row">
+      <div class="toggle-row" id="provider-standalone-row">
         <span class="toggle-label">Standalone mode</span>
-        <div class="form-hint form-hint-flex">Blocks all traffic to Anthropic (telemetry, updates) — required for local/offline use</div>
+        <div class="form-hint form-hint-flex">Blocks all traffic to Anthropic (telemetry, updates, login). Default on — disable only if this proxy forwards to Anthropic directly.</div>
         <div class="toggle-track" data-toggle="provider-disable-nonessential">
           <div class="toggle-thumb"></div>
         </div>

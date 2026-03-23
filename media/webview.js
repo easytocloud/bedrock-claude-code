@@ -408,10 +408,14 @@
       cachingToggle.classList.toggle('on', !!(provider && provider.disablePromptCaching));
     }
 
-    // Disable non-essential traffic toggle
+    // Standalone mode toggle — only visible for proxy providers.
+    // Proxy defaults to on (disableLoginPrompt !== false); explicit false = user opted out.
     const nonessentialToggle = document.querySelector('[data-toggle="provider-disable-nonessential"]');
     if (nonessentialToggle) {
-      nonessentialToggle.classList.toggle('on', !!(provider && provider.disableLoginPrompt));
+      const standaloneOn = provider && provider.type === 'proxy'
+        ? provider.disableLoginPrompt !== false
+        : false;
+      nonessentialToggle.classList.toggle('on', standaloneOn);
     }
 
     // Default provider: lock name, type, and models — only API key is editable
@@ -464,6 +468,10 @@
     if (bedrockFetch) bedrockFetch.style.display = type === 'bedrock' ? '' : 'none';
     var proxyFetch = document.getElementById('proxy-fetch-row');
     if (proxyFetch) proxyFetch.style.display = type === 'proxy' ? '' : 'none';
+    // Standalone mode toggle only shown for proxy — bedrock is always-on (handled in resolver),
+    // anthropic never applies.
+    var standaloneRow = document.getElementById('provider-standalone-row');
+    if (standaloneRow) standaloneRow.style.display = type === 'proxy' ? '' : 'none';
   }
 
   function showProxyAuthSection(mode) {
@@ -1588,6 +1596,16 @@
       const icon = document.getElementById('provider-drawer-icon');
       if (icon) {
         icon.textContent = segVal === 'anthropic' ? '☁️' : segVal === 'bedrock' ? '🔶' : '🔗';
+      }
+
+      // When switching to proxy, default standalone mode on (user can override)
+      const nonessentialToggle = document.querySelector('[data-toggle="provider-disable-nonessential"]');
+      if (nonessentialToggle && segVal === 'proxy') {
+        // Keep existing value if the provider was already proxy, otherwise default on
+        const alreadyProxy = provider && provider.type === 'proxy';
+        if (!alreadyProxy) {
+          nonessentialToggle.classList.add('on');
+        }
       }
     }
     if (segName === 'mcp-transport') {

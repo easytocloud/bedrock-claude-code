@@ -59,7 +59,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
   - Multi-model endpoints show a dropdown to pick per tier
 - You can also type a model ID manually if the endpoint does not expose `/v1/models`
 - Authentication is mutually exclusive: choose **API Key** (sets `ANTHROPIC_API_KEY`) or **Auth Token** (sets `ANTHROPIC_AUTH_TOKEN` and clears `ANTHROPIC_API_KEY`). If neither is set, a dummy key is written automatically to prevent the login screen
-- Enable **Standalone mode** in the Models section to block all traffic to Anthropic (telemetry, updates) — required for fully offline local model use
+- **Standalone mode** is on by default for Proxy providers — it blocks all traffic to Anthropic (telemetry, updates, login prompt). Disable it only if your proxy forwards requests to Anthropic directly and you need the Anthropic login flow.
 
 ### OpenRouter
 
@@ -90,7 +90,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 | Dirty indicator | Title bar shows `●` when unsaved changes exist |
 | Drawer-based editing | Slide-out panels for editing all building blocks |
 | Inherit mode | Workspace scope can inherit from global — cleans up workspace files |
-| Login prompt suppression | Save All writes `hasCompletedOnboarding` to `~/.claude.json`; optional "Disable non-essential traffic" toggle per provider |
+| Login prompt suppression | Automatic for Bedrock (always on) and Proxy (on by default, overridable). Proxy toggle lets you opt out when the proxy forwards to Anthropic. |
 
 ## Requirements
 
