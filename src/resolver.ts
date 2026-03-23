@@ -44,6 +44,16 @@ export function resolvePreset(
   let awsAuthRefresh: string | undefined;
 
   if (provider) {
+    // Explicitly reset ALL cross-provider keys first. Without this, a workspace preset
+    // using a different provider than the global preset would silently inherit the global
+    // values (e.g. CLAUDE_CODE_USE_BEDROCK=1 leaking into an Anthropic workspace preset).
+    env['CLAUDE_CODE_USE_BEDROCK'] = '0';
+    env['AWS_PROFILE'] = '';
+    env['AWS_REGION'] = '';
+    env['ANTHROPIC_BASE_URL'] = '';
+    env['ANTHROPIC_API_KEY'] = '';
+    env['ANTHROPIC_AUTH_TOKEN'] = '';
+
     // Provider-specific env vars
     switch (provider.type) {
       case 'bedrock':
@@ -90,21 +100,19 @@ export function resolvePreset(
       env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = '';
       env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = '';
     } else {
-      if (provider.primaryModel) { env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = provider.primaryModel; }
-      if (provider.smallFastModel) { env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = provider.smallFastModel; }
-      if (provider.opusModel) { env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel; }
+      env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = provider.primaryModel || '';
+      env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = provider.smallFastModel || '';
+      env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel || '';
     }
-    if (provider.disablePromptCaching) { env['DISABLE_PROMPT_CACHING'] = '1'; }
+    env['DISABLE_PROMPT_CACHING'] = provider.disablePromptCaching ? '1' : '';
     // Bedrock always disables login/nonessential traffic (AWS auth, never needs Anthropic login).
     // Proxy defaults to disabled (most are local/non-Anthropic); explicit false overrides for
     // proxies that forward to Anthropic and need the login flow.
     const shouldDisableLoginPrompt =
       provider.type === 'bedrock' ||
       (provider.type === 'proxy' && provider.disableLoginPrompt !== false);
-    if (shouldDisableLoginPrompt) {
-      env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = '1';
-      env['DISABLE_AUTOUPDATER'] = '1';
-    }
+    env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = shouldDisableLoginPrompt ? '1' : '';
+    env['DISABLE_AUTOUPDATER'] = shouldDisableLoginPrompt ? '1' : '';
   }
 
   // Merge MCP servers from all selected groups

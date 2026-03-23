@@ -4,6 +4,16 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.7] — 2026-03-23
+
+### Fixed
+- **Cross-provider env var isolation** — `resolvePreset()` now explicitly resets all provider-choice keys (`CLAUDE_CODE_USE_BEDROCK=0`, `AWS_PROFILE`, `AWS_REGION`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`) before applying provider-specific values. Previously, a workspace preset using a different provider than the global preset would silently inherit global values (e.g. `CLAUDE_CODE_USE_BEDROCK=1` leaking into an Anthropic or proxy workspace preset). Same fix applied to `DISABLE_PROMPT_CACHING`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, and `DISABLE_AUTOUPDATER` — these are now always written explicitly rather than only when truthy.
+
+## [0.3.6] — 2026-03-23
+
+### Changed
+- **`claudeCode.disableLoginPrompt` VS Code setting now synced automatically** — when saving a preset, the extension writes this setting at the correct scope (Global for global preset, Workspace for workspace preset) so the Claude Code extension never shows the Anthropic login prompt when using Bedrock or a standalone proxy. Workspace "inherit" mode clears the workspace override to fall back to global.
+
 ## [0.3.5] — 2026-03-23
 
 ### Changed
