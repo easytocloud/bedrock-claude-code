@@ -44,15 +44,14 @@ export function resolvePreset(
   let awsAuthRefresh: string | undefined;
 
   if (provider) {
-    // Explicitly reset ALL cross-provider keys first. Without this, a workspace preset
-    // using a different provider than the global preset would silently inherit the global
-    // values (e.g. CLAUDE_CODE_USE_BEDROCK=1 leaking into an Anthropic workspace preset).
+    // Reset cross-provider keys so a workspace preset using a different provider than the
+    // global preset doesn't silently inherit parent values.
+    // - CLAUDE_CODE_USE_BEDROCK=0 overrides a parent bedrock preset (set to 1 below if bedrock)
+    // - ANTHROPIC_BASE_URL='' overrides a parent proxy URL (deleted below for global)
+    // - AWS_PROFILE/AWS_REGION: NOT reset — they don't affect non-bedrock providers
+    // - ANTHROPIC_API_KEY/AUTH_TOKEN: written only by the provider-specific block below
     env['CLAUDE_CODE_USE_BEDROCK'] = '0';
-    env['AWS_PROFILE'] = '';
-    env['AWS_REGION'] = '';
     env['ANTHROPIC_BASE_URL'] = '';
-    env['ANTHROPIC_API_KEY'] = '';
-    env['ANTHROPIC_AUTH_TOKEN'] = '';
 
     // Provider-specific env vars
     switch (provider.type) {
@@ -79,9 +78,8 @@ export function resolvePreset(
         if (baseUrl) { env['ANTHROPIC_BASE_URL'] = baseUrl; }
 
         if (provider.proxyAuthToken) {
-          // Auth-token mode (OpenRouter): set AUTH_TOKEN and clear API_KEY
+          // Auth-token mode (OpenRouter): set AUTH_TOKEN only — never write both
           env['ANTHROPIC_AUTH_TOKEN'] = provider.proxyAuthToken;
-          env['ANTHROPIC_API_KEY'] = '';
         } else if (provider.proxyApiKey) {
           env['ANTHROPIC_API_KEY'] = provider.proxyApiKey;
         } else {
@@ -113,6 +111,7 @@ export function resolvePreset(
       (provider.type === 'proxy' && provider.disableLoginPrompt !== false);
     env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = shouldDisableLoginPrompt ? '1' : '';
     env['DISABLE_AUTOUPDATER'] = shouldDisableLoginPrompt ? '1' : '';
+
   }
 
   // Merge MCP servers from all selected groups
@@ -152,6 +151,38 @@ export function resolvePreset(
 // ---------------------------------------------------------------------------
 
 /**
+ * Returns true when key=value carries no information and need not be written.
+ * - Empty string is always a no-op at global level (no parent to override).
+ * - CLAUDE_CODE_USE_BEDROCK=0 is the default; writing it at global level is noise.
+ */
+function isNoOp(key: string, value: string): boolean {
+  if (value === '') { return true; }
+  if (key === 'CLAUDE_CODE_USE_BEDROCK' && value === '0') { return true; }
+  return false;
+}
+
+/** Strip no-op values before writing to global settings — global has no parent. */
+function filterForGlobal(env: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(env).filter(([k, v]) => !isNoOp(k, v)));
+}
+
+/**
+ * At project level, a no-op value is worth writing only when the global env has
+ * that key set to a meaningful value (i.e. we need to explicitly override it).
+ * Otherwise it's noise.
+ */
+function filterForProject(
+  env: Record<string, string>,
+  globalEnv: Record<string, string>
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(env).filter(([k, v]) => !isNoOp(k, v) || !isNoOp(k, globalEnv[k] ?? ''))
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
  * Return a copy of `existing` with all MANAGED_ENV_KEYS removed,
  * so user-defined env vars are preserved when we overwrite managed ones.
  */
@@ -176,7 +207,7 @@ export function applyGlobalConfig(resolved: ResolvedConfig): void {
 
   const newSettings: ClaudeCodeSettings = {
     ...settings,
-    env: { ...preservedEnv, ...resolved.env },
+    env: { ...preservedEnv, ...filterForGlobal(resolved.env) },
   };
 
   // Set or clear allowedDirectories
@@ -250,12 +281,13 @@ export function applyProjectConfig(
   workspaceRoot: string
 ): void {
   // Write env vars and directories to project-level settings
+  const globalEnv = readClaudeSettings().env ?? {};
   const settings = readProjectSettings(workspaceRoot);
   const preservedEnv = preserveUnmanagedEnv(settings.env ?? {});
 
   const newSettings: ClaudeCodeSettings = {
     ...settings,
-    env: { ...preservedEnv, ...resolved.env },
+    env: { ...preservedEnv, ...filterForProject(resolved.env, globalEnv) },
   };
 
   if (resolved.allowedDirectories.length > 0) {

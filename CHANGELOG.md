@@ -4,6 +4,11 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.8] — 2026-03-23
+
+### Fixed
+- **Cleaner settings.json output** — global presets no longer write empty-string or no-op env vars (e.g. `ANTHROPIC_BASE_URL: ""`, `CLAUDE_CODE_USE_BEDROCK: "0"`) that carry no meaning without a parent scope. Project presets now write empty-string overrides only for keys that are actually set in the global scope and need to be cleared — not for every possible key. Additionally, `AWS_PROFILE` and `AWS_REGION` are no longer reset to `""` when switching to a non-Bedrock provider (those variables are irrelevant to non-Bedrock providers and need not be cleared). OpenRouter/auth-token proxy presets no longer write `ANTHROPIC_API_KEY: ""` alongside `ANTHROPIC_AUTH_TOKEN` — only one auth key is ever written per scope.
+
 ## [0.3.7] — 2026-03-23
 
 ### Fixed
