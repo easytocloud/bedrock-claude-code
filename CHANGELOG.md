@@ -7,8 +7,9 @@ All notable changes to this extension will be documented here.
 ## [0.3.5] — 2026-03-23
 
 ### Changed
-- **Standalone mode now automatic for non-Anthropic providers** — Bedrock always sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and `DISABLE_AUTOUPDATER=1` (no toggle needed). Proxy providers default to the same; toggle the new "Standalone mode" switch off only when your proxy forwards to Anthropic directly (e.g. a local proxy that logs in to Anthropic on your behalf).
-- Standalone mode toggle hidden for Bedrock in the provider drawer (always on, no override); visible and defaulting to on for Proxy; not shown for Anthropic.
+- **Standalone mode now automatic for non-Anthropic providers** — Bedrock always sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and `DISABLE_AUTOUPDATER=1` (no toggle needed). Proxy providers default to the same; toggle the "Standalone mode" switch off only when your proxy forwards to Anthropic directly.
+- Standalone mode toggle hidden for Bedrock in the provider drawer (always on); visible and defaulting to on for Proxy; not shown for Anthropic.
+- **`claudeCode.disableLoginPrompt` VS Code setting now synced automatically** — when saving a preset, the extension writes this setting at the correct scope (Global for global preset, Workspace for workspace preset) so the Claude Code extension never shows the Anthropic login prompt when using Bedrock or a standalone proxy. Workspace "inherit" mode clears the workspace override to fall back to global.
 
 ## [0.3.4] — 2026-03-10
 

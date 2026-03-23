@@ -90,7 +90,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 | Dirty indicator | Title bar shows `●` when unsaved changes exist |
 | Drawer-based editing | Slide-out panels for editing all building blocks |
 | Inherit mode | Workspace scope can inherit from global — cleans up workspace files |
-| Login prompt suppression | Automatic for Bedrock (always on) and Proxy (on by default, overridable). Proxy toggle lets you opt out when the proxy forwards to Anthropic. |
+| Login prompt suppression | Automatic for Bedrock (always on) and Proxy (on by default, overridable). Sets both env vars in `~/.claude/settings.json` and the `claudeCode.disableLoginPrompt` VS Code setting at the right scope (global or workspace). |
 
 ## Requirements
 

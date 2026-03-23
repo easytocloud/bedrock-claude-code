@@ -317,6 +317,52 @@ export class ClaudeCodeSettingsPanel {
     }
   }
 
+  /**
+   * Sync claudeCode.disableLoginPrompt in VS Code settings based on the active
+   * provider type, at the correct configuration scope:
+   * - Global preset   → ConfigurationTarget.Global
+   * - Workspace preset → ConfigurationTarget.Workspace (overrides global for this workspace)
+   * - Workspace inherit → clear workspace override (falls back to global)
+   * - Workspace manual → leave workspace setting untouched
+   *
+   * This prevents the Claude Code extension from showing the Anthropic login
+   * prompt when Bedrock or a standalone proxy provider is active.
+   */
+  private _syncVsCodeLoginSetting(store: ProfileStore): void {
+    const cfg = vscode.workspace.getConfiguration('claudeCode');
+
+    const disableForPreset = (presetId: string): boolean | undefined => {
+      const preset = store.presets.find(p => p.id === presetId);
+      const provider = preset ? store.providers.find(p => p.id === preset.providerId) : undefined;
+      if (!provider) { return undefined; }
+      if (provider.type === 'bedrock') { return true; }
+      if (provider.type === 'proxy') { return provider.disableLoginPrompt !== false ? true : undefined; }
+      return undefined; // anthropic → reset to default
+    };
+
+    // Global scope
+    const globalDisable = store.globalScope.mode === 'preset' && store.globalScope.presetId
+      ? disableForPreset(store.globalScope.presetId)
+      : undefined;
+    cfg.update('disableLoginPrompt', globalDisable, vscode.ConfigurationTarget.Global)
+      .then(undefined, () => { /* best effort */ });
+
+    // Workspace scope
+    if (this._workspaceRoot) {
+      const wsScope = store.workspaceScopes[this._workspaceRoot];
+      if (wsScope?.mode === 'preset' && wsScope.presetId) {
+        const wsDisable = disableForPreset(wsScope.presetId);
+        cfg.update('disableLoginPrompt', wsDisable, vscode.ConfigurationTarget.Workspace)
+          .then(undefined, () => { /* best effort */ });
+      } else if (wsScope?.mode === 'inherit') {
+        // Clear workspace override so the global value takes effect
+        cfg.update('disableLoginPrompt', undefined, vscode.ConfigurationTarget.Workspace)
+          .then(undefined, () => { /* best effort */ });
+      }
+      // 'manual' mode: user manages the setting themselves
+    }
+  }
+
   private async _saveStore(store: ProfileStore): Promise<void> {
     try {
       // Write the profile store
@@ -327,6 +373,9 @@ export class ClaudeCodeSettingsPanel {
 
       // Resolve and apply active presets to Claude Code's config files
       applyAllScopes(store, this._workspaceRoot);
+
+      // Sync claudeCode.disableLoginPrompt in VS Code settings
+      this._syncVsCodeLoginSetting(store);
 
       // Update the status bar to reflect the new scope/preset
       refreshStatusBar();
@@ -519,6 +568,7 @@ export class ClaudeCodeSettingsPanel {
             writeProfileStore(draft);
             ensureOnboardingComplete();
             applyAllScopes(draft, this._workspaceRoot);
+            this._syncVsCodeLoginSetting(draft);
             refreshStatusBar();
             ClaudeCodeSettingsPanel._clearDraft();
             vscode.window.showInformationMessage('Settings saved.');
