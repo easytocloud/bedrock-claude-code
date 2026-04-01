@@ -4,6 +4,18 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.10] — 2026-04-01
+
+### Added
+- **aws-envs support** — the provider drawer now detects when `~/.aws/config` is a symlink or `$AWS_CONFIG_FILE` is set and shows the resolved config path as a read-only "AWS Config" field. When the config points to an [easytocloud aws-envs](https://github.com/easytocloud/aws-envs) environment (`~/.aws/aws-envs/<name>/config`), a selectable "AWS Env" dropdown appears instead, letting you switch environments directly from the provider dialog — the symlink is updated and the AWS Profile list refreshes automatically.
+- `AWS_CONFIG_FILE` is now written to the Claude Code settings env block for Bedrock presets whenever a non-default config file is in use, ensuring Claude Code picks up the same credentials the extension resolved.
+- iCloud dotfiles path normalisation — paths under `~/Library/Mobile Documents/com~apple~CloudDocs/dotFiles/aws/dot-aws/` are transparently mapped to `~/.aws/` so aws-envs detection works when dotfiles are synced via iCloud.
+
+## [0.3.9] — 2026-03-23
+
+### Fixed
+- **Proxy presets no longer trigger the Claude Code login prompt** — `ANTHROPIC_AUTH_TOKEN` is now always written when `ANTHROPIC_BASE_URL` is set. Claude Code shows the login screen whenever `AUTH_TOKEN` is absent, regardless of `ANTHROPIC_API_KEY`. Presets with a proxy API key now write both (`ANTHROPIC_API_KEY` for the x-api-key header the proxy expects, `ANTHROPIC_AUTH_TOKEN='local'` as a login suppressor); keyless proxies use `ANTHROPIC_AUTH_TOKEN='local'` only.
+
 ## [0.3.8] — 2026-03-23
 
 ### Fixed

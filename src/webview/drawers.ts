@@ -141,7 +141,16 @@ export function renderProviderDrawer(): string {
         <span class="section-dot section-dot-orange"></span>
         AWS CONFIGURATION
       </div>
-      <div class="info-box">Automatically sets CLAUDE_CODE_USE_BEDROCK=1 and AWS environment variables.</div>
+      <div class="info-box">Uses AWS credentials to authenticate with Amazon Bedrock.</div>
+      <!-- AWS Config / AWS Env row — populated by webview.js -->
+      <div class="form-group" id="provider-aws-config-row" style="display:none">
+        <label class="form-label" id="provider-aws-config-label">AWS Config</label>
+        <div id="provider-aws-config-value" class="form-hint"></div>
+      </div>
+      <div class="form-group" id="provider-aws-env-row" style="display:none">
+        <label class="form-label">AWS Env</label>
+        <select id="provider-aws-env"></select>
+      </div>
       <div class="form-group">
         <label class="form-label">AWS Profile</label>
         <select id="provider-aws-profile"></select>

@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { getClaudeSettingsPath } from './claudeSettings';
-import { readAwsProfiles } from './awsConfig';
+import { readAwsProfiles, readAwsProfilesFrom, getAwsConfigInfo } from './awsConfig';
 import { readProfileStore, writeProfileStore, createEmptyStore, generateId } from './profiles';
 import { applyAllScopes } from './resolver';
 import { PanelState, ProfileStore } from './types';
@@ -247,6 +247,7 @@ export class ClaudeCodeSettingsPanel {
       }
     }
 
+    const awsConfigInfo = getAwsConfigInfo();
     const awsProfiles = readAwsProfiles();
 
     const workspaceName = this._workspaceRoot
@@ -256,6 +257,7 @@ export class ClaudeCodeSettingsPanel {
     return {
       store,
       awsProfiles,
+      awsConfigInfo,
       hasWorkspace: !!this._workspaceRoot,
       workspacePath: this._workspaceRoot,
       workspaceName,
@@ -314,6 +316,34 @@ export class ClaudeCodeSettingsPanel {
       case 'fetchBedrockModels':
         await this._fetchBedrockModels(msg.awsProfile as string, msg.awsRegion as string);
         break;
+
+      case 'switchAwsEnv': {
+        // User selected a different aws-env — update the symlink and reload profiles
+        const envName = msg.envName as string;
+        const awsEnvsBase = path.join(os.homedir(), '.aws', 'aws-envs');
+        const newConfigPath = path.join(awsEnvsBase, envName, 'config');
+        const symlinkPath = path.join(os.homedir(), '.aws', 'config');
+        try {
+          // Remove existing symlink/file and create new symlink pointing to the env config
+          if (fs.existsSync(symlinkPath) || fs.lstatSync(symlinkPath).isSymbolicLink()) {
+            fs.unlinkSync(symlinkPath);
+          }
+          fs.symlinkSync(newConfigPath, symlinkPath);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          vscode.window.showErrorMessage(`Failed to switch AWS env: ${message}`);
+          break;
+        }
+        // Reload profiles from the new env config and send updated state
+        const profiles = readAwsProfilesFrom(newConfigPath);
+        const configInfo = getAwsConfigInfo();
+        this._panel.webview.postMessage({
+          type: 'awsEnvSwitched',
+          awsProfiles: profiles,
+          awsConfigInfo: configInfo,
+        });
+        break;
+      }
     }
   }
 

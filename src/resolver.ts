@@ -6,6 +6,7 @@ import {
   ClaudeCodeSettings,
 } from './types';
 import { MANAGED_ENV_KEYS, AWS_REGIONS } from './models';
+import { getAwsConfigInfo } from './awsConfig';
 import {
   readClaudeSettings,
   writeClaudeSettings,
@@ -55,7 +56,7 @@ export function resolvePreset(
 
     // Provider-specific env vars
     switch (provider.type) {
-      case 'bedrock':
+      case 'bedrock': {
         env['CLAUDE_CODE_USE_BEDROCK'] = '1';
         if (provider.awsProfile) { env['AWS_PROFILE'] = provider.awsProfile; }
         if (provider.awsRegion) {
@@ -65,7 +66,12 @@ export function resolvePreset(
           env['AWS_REGION'] = provider.awsRegion;
         }
         if (provider.awsAuthRefresh) { awsAuthRefresh = provider.awsAuthRefresh; }
+        // Write AWS_CONFIG_FILE so Claude Code uses the same config file the
+        // user has configured (respects $AWS_CONFIG_FILE and symlinks to aws-envs).
+        const awsCfgInfo = getAwsConfigInfo();
+        if (awsCfgInfo) { env['AWS_CONFIG_FILE'] = awsCfgInfo.configPath; }
         break;
+      }
       case 'anthropic':
         if (provider.anthropicApiKey) { env['ANTHROPIC_API_KEY'] = provider.anthropicApiKey; }
         break;
@@ -77,15 +83,18 @@ export function resolvePreset(
         }
         if (baseUrl) { env['ANTHROPIC_BASE_URL'] = baseUrl; }
 
+        // ANTHROPIC_AUTH_TOKEN must always be set when ANTHROPIC_BASE_URL is in use —
+        // Claude Code shows the login prompt whenever AUTH_TOKEN is absent, regardless
+        // of ANTHROPIC_API_KEY.  Use the configured token if given; otherwise 'local'
+        // as a dummy suppressor.  When a proxy API key is also configured, write it as
+        // ANTHROPIC_API_KEY so the proxy receives the x-api-key header it expects.
         if (provider.proxyAuthToken) {
-          // Auth-token mode (OpenRouter): set AUTH_TOKEN only — never write both
           env['ANTHROPIC_AUTH_TOKEN'] = provider.proxyAuthToken;
         } else if (provider.proxyApiKey) {
           env['ANTHROPIC_API_KEY'] = provider.proxyApiKey;
+          env['ANTHROPIC_AUTH_TOKEN'] = 'local';   // suppresses login prompt only
         } else {
-          // No explicit key — set a dummy value so Claude Code doesn't
-          // show the login screen after /logout.
-          env['ANTHROPIC_API_KEY'] = 'local';
+          env['ANTHROPIC_AUTH_TOKEN'] = 'local';
         }
         break;
       }

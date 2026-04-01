@@ -98,6 +98,7 @@ export interface ProfileStore {
 export interface PanelState {
   store: ProfileStore;
   awsProfiles: string[];
+  awsConfigInfo?: import('./awsConfig').AwsConfigInfo | null;
   hasWorkspace: boolean;
   workspacePath?: string;
   workspaceName?: string;

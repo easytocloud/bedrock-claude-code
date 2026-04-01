@@ -50,6 +50,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 - Pick models from the smart presets or click **Fetch models from AWS** to discover all inference profiles and foundation models in your account
 - Optionally set an auth-refresh command (e.g. `aws sso login --profile my-profile`)
 - Claude Code's login/logout commands are automatically disabled when using Bedrock
+- If `$AWS_CONFIG_FILE` is set or `~/.aws/config` is a symlink, the resolved config path is shown as **AWS Config** (read-only). If you use [easytocloud aws-envs](https://github.com/easytocloud/aws-envs), an **AWS Env** dropdown appears instead — select a different environment to switch the active symlink and refresh the profile list instantly
 
 ### Local / Compatible API (Ollama, vLLM, LM Studio, …)
 

@@ -343,6 +343,50 @@
       <div class="provider-preview-row"><span class="provider-preview-label">Opus:</span> ${escHtml(opus)}</div>`;
   }
 
+  // ─── AWS Config / AWS Env display ─────────────────────────────
+  /**
+   * Populate the AWS Config / AWS Env rows in the provider drawer.
+   * - isAwsEnv=false: show read-only "AWS Config" row with the resolved path.
+   * - isAwsEnv=true:  show selectable "AWS Env (!)" row with a <select> of env names.
+   */
+  function renderAwsConfigRow(awsConfigInfo) {
+    var configRow = document.getElementById('provider-aws-config-row');
+    var envRow = document.getElementById('provider-aws-env-row');
+    if (!configRow || !envRow) return;
+
+    if (!awsConfigInfo) {
+      configRow.style.display = 'none';
+      envRow.style.display = 'none';
+      return;
+    }
+
+    if (awsConfigInfo.isAwsEnv) {
+      // Hide plain config row, show env selector
+      configRow.style.display = 'none';
+      envRow.style.display = '';
+      var sel = document.getElementById('provider-aws-env');
+      if (sel) {
+        sel.innerHTML = '';
+        var envNames = awsConfigInfo.envNames || [];
+        envNames.forEach(function(name) {
+          var opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          if (name === awsConfigInfo.envName) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+    } else {
+      // Hide env row, show read-only config path
+      envRow.style.display = 'none';
+      configRow.style.display = '';
+      var label = document.getElementById('provider-aws-config-label');
+      var val = document.getElementById('provider-aws-config-value');
+      if (label) label.textContent = 'AWS Config';
+      if (val) val.textContent = awsConfigInfo.configPath || '';
+    }
+  }
+
   // ─── Populate provider drawer ──────────────────────────────────
   function openProviderDrawer(providerId) {
     const store = state.store;
@@ -387,6 +431,9 @@
       btn.classList.toggle('sel', btn.dataset.val === (useAuthToken ? 'authtoken' : 'apikey'));
     });
     showProxyAuthSection(useAuthToken ? 'authtoken' : 'apikey');
+
+    // AWS config / env info row
+    renderAwsConfigRow(state.awsConfigInfo || null);
 
     // AWS profiles — filterable combobox
     var awsTarget = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
@@ -1564,6 +1611,10 @@
         rebuildModelSelects('bedrock', provider);
       }
     }
+    if (target.id === 'provider-aws-env') {
+      // User picked a different aws-env — ask the extension to switch the symlink
+      vscode.postMessage({ type: 'switchAwsEnv', envName: target.value });
+    }
     if (target.dataset.dirPath !== undefined) {
       const idx = parseInt(target.dataset.dirPath, 10);
       const group = editing.dirGroupId ? state.store.directoryGroups.find(g => g.id === editing.dirGroupId) : null;
@@ -1712,6 +1763,20 @@
       case 'bedrockModelsError': {
         const s = document.getElementById('bedrock-fetch-status');
         if (s) s.textContent = 'Error: ' + (msg.message || 'Unknown error');
+        break;
+      }
+
+      case 'awsEnvSwitched': {
+        // Update state and refresh the AWS profile combobox + config display
+        state.awsProfiles = msg.awsProfiles || ['default'];
+        state.awsConfigInfo = msg.awsConfigInfo || null;
+        renderAwsConfigRow(state.awsConfigInfo);
+        var awsTarget2 = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
+        if (awsTarget2) {
+          var awsItems2 = state.awsProfiles.map(function(p) { return { value: p, label: p }; });
+          var awsCombo2 = createCombobox('provider-aws-profile', awsItems2, '', false);
+          awsTarget2.replaceWith(awsCombo2);
+        }
         break;
       }
     }
