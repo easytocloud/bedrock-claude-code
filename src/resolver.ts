@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import {
   ProfileStore,
@@ -6,7 +7,6 @@ import {
   ClaudeCodeSettings,
 } from './types';
 import { MANAGED_ENV_KEYS, AWS_REGIONS } from './models';
-import { getAwsConfigInfo } from './awsConfig';
 import {
   readClaudeSettings,
   writeClaudeSettings,
@@ -66,10 +66,12 @@ export function resolvePreset(
           env['AWS_REGION'] = provider.awsRegion;
         }
         if (provider.awsAuthRefresh) { awsAuthRefresh = provider.awsAuthRefresh; }
-        // Write AWS_CONFIG_FILE so Claude Code uses the same config file the
-        // user has configured (respects $AWS_CONFIG_FILE and symlinks to aws-envs).
-        const awsCfgInfo = getAwsConfigInfo();
-        if (awsCfgInfo) { env['AWS_CONFIG_FILE'] = awsCfgInfo.configPath; }
+        // Write AWS_CONFIG_FILE when the provider has a specific aws-env selected.
+        // This is stored per-provider so switching envs for one provider does not
+        // affect other providers.
+        if (provider.awsEnv) {
+          env['AWS_CONFIG_FILE'] = path.join(os.homedir(), '.aws', 'aws-envs', provider.awsEnv, 'config');
+        }
         break;
       }
       case 'anthropic':

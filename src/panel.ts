@@ -318,27 +318,27 @@ export class ClaudeCodeSettingsPanel {
         break;
 
       case 'switchAwsEnv': {
-        // User selected a different aws-env — update the symlink and reload profiles
+        // User selected a different aws-env — store it on the provider (per-provider,
+        // no symlink mutation) and reload profiles from the target config.
         const envName = msg.envName as string;
+        const providerId = msg.providerId as string | undefined;
+        const store = readProfileStore();
+        if (providerId) {
+          const provider = store.providers.find(p => p.id === providerId);
+          if (provider) {
+            provider.awsEnv = envName;
+            writeProfileStore(store);
+            applyAllScopes(store, this._workspaceRoot);
+          }
+        }
         const awsEnvsBase = path.join(os.homedir(), '.aws', 'aws-envs');
         const newConfigPath = path.join(awsEnvsBase, envName, 'config');
-        const symlinkPath = path.join(os.homedir(), '.aws', 'config');
-        try {
-          // Remove existing symlink/file and create new symlink pointing to the env config
-          if (fs.existsSync(symlinkPath) || fs.lstatSync(symlinkPath).isSymbolicLink()) {
-            fs.unlinkSync(symlinkPath);
-          }
-          fs.symlinkSync(newConfigPath, symlinkPath);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          vscode.window.showErrorMessage(`Failed to switch AWS env: ${message}`);
-          break;
-        }
-        // Reload profiles from the new env config and send updated state
         const profiles = readAwsProfilesFrom(newConfigPath);
         const configInfo = getAwsConfigInfo();
         this._panel.webview.postMessage({
           type: 'awsEnvSwitched',
+          envName,
+          providerId,
           awsProfiles: profiles,
           awsConfigInfo: configInfo,
         });

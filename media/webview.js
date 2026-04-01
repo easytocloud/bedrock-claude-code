@@ -349,7 +349,8 @@
    * - isAwsEnv=false: show read-only "AWS Config" row with the resolved path.
    * - isAwsEnv=true:  show selectable "AWS Env (!)" row with a <select> of env names.
    */
-  function renderAwsConfigRow(awsConfigInfo) {
+  // selectedEnvName: the awsEnv stored on the current provider (may differ from the live symlink)
+  function renderAwsConfigRow(awsConfigInfo, selectedEnvName) {
     var configRow = document.getElementById('provider-aws-config-row');
     var envRow = document.getElementById('provider-aws-env-row');
     if (!configRow || !envRow) return;
@@ -368,11 +369,13 @@
       if (sel) {
         sel.innerHTML = '';
         var envNames = awsConfigInfo.envNames || [];
+        // Use the per-provider stored selection; fall back to the live symlink target
+        var activeEnv = selectedEnvName || awsConfigInfo.envName;
         envNames.forEach(function(name) {
           var opt = document.createElement('option');
           opt.value = name;
           opt.textContent = name;
-          if (name === awsConfigInfo.envName) opt.selected = true;
+          if (name === activeEnv) opt.selected = true;
           sel.appendChild(opt);
         });
       }
@@ -432,8 +435,8 @@
     });
     showProxyAuthSection(useAuthToken ? 'authtoken' : 'apikey');
 
-    // AWS config / env info row
-    renderAwsConfigRow(state.awsConfigInfo || null);
+    // AWS config / env info row — pass per-provider awsEnv so each provider shows its own selection
+    renderAwsConfigRow(state.awsConfigInfo || null, provider ? provider.awsEnv : undefined);
 
     // AWS profiles — filterable combobox
     var awsTarget = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
@@ -965,6 +968,10 @@
       awsProfile: getModelValue('provider-aws-profile') || undefined,
       awsRegion: document.getElementById('provider-aws-region').value || undefined,
       awsAuthRefresh: document.getElementById('provider-aws-refresh').value || undefined,
+      awsEnv: (function() {
+        var sel = document.getElementById('provider-aws-env');
+        return (sel && sel.offsetParent !== null) ? (sel.value || undefined) : undefined;
+      })(),
       proxyBaseUrl: document.getElementById('provider-proxy-url').value || undefined,
       proxyApiKey: document.querySelector('[data-seg="proxy-auth"][data-val="apikey"]')?.classList.contains('sel')
         ? (document.getElementById('provider-proxy-key').value || undefined)
@@ -1612,8 +1619,8 @@
       }
     }
     if (target.id === 'provider-aws-env') {
-      // User picked a different aws-env — ask the extension to switch the symlink
-      vscode.postMessage({ type: 'switchAwsEnv', envName: target.value });
+      // User picked a different aws-env — store it per-provider (no symlink mutation)
+      vscode.postMessage({ type: 'switchAwsEnv', envName: target.value, providerId: editing.providerId });
     }
     if (target.dataset.dirPath !== undefined) {
       const idx = parseInt(target.dataset.dirPath, 10);
@@ -1770,7 +1777,12 @@
         // Update state and refresh the AWS profile combobox + config display
         state.awsProfiles = msg.awsProfiles || ['default'];
         state.awsConfigInfo = msg.awsConfigInfo || null;
-        renderAwsConfigRow(state.awsConfigInfo);
+        // Persist awsEnv on the provider in the local store so the drawer reflects it
+        if (msg.providerId && msg.envName) {
+          var switchedProvider = state.store.providers.find(function(p) { return p.id === msg.providerId; });
+          if (switchedProvider) { switchedProvider.awsEnv = msg.envName; }
+        }
+        renderAwsConfigRow(state.awsConfigInfo, msg.envName);
         var awsTarget2 = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
         if (awsTarget2) {
           var awsItems2 = state.awsProfiles.map(function(p) { return { value: p, label: p }; });

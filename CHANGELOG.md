@@ -4,6 +4,13 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.11] — 2026-04-01
+
+### Fixed
+- **AWS Env is now stored per-provider** — each Bedrock provider carries its own `awsEnv` field in `coder-profiles.json`. Previously, the active AWS environment was read from the live `~/.aws/config` symlink at resolve-time, meaning switching envs for one provider silently affected all others. Now `AWS_CONFIG_FILE` is derived from `provider.awsEnv` (written as `~/.aws/aws-envs/<name>/config`) so providers are fully independent.
+- **AWS Env selector no longer mutates the system symlink** — switching the AWS Env dropdown no longer rewrites `~/.aws/config`. The selection is saved directly to the provider and applied via the resolver, leaving the system symlink untouched.
+- **AWS Env dropdown shows per-provider selection** — when opening the provider drawer, the dropdown now reflects the env stored on *that* provider rather than always defaulting to whichever env the symlink currently points to.
+
 ## [0.3.10] — 2026-04-01
 
 ### Added

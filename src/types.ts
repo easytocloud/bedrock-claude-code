@@ -15,6 +15,10 @@ export interface ProviderProfile {
   awsProfile?: string;
   awsRegion?: string;
   awsAuthRefresh?: string;
+  /** Selected aws-envs name (e.g. "prod"). When set, AWS_CONFIG_FILE is written as
+   *  ~/.aws/aws-envs/<awsEnv>/config — stored per-provider so each provider carries
+   *  its own config independently of the live filesystem symlink. */
+  awsEnv?: string;
 
   // Anthropic-specific
   anthropicApiKey?: string;
