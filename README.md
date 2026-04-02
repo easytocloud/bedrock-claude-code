@@ -1,4 +1,4 @@
-# Claude Code Settings
+# Claude Code Personae
 
 A VS Code extension for managing [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configurations through composable, reusable presets.
 

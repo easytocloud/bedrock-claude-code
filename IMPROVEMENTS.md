@@ -98,19 +98,11 @@ After saving a provider from a nested drawer, the parent preset drawer's provide
 
 **Fix**: On drawer close, if parent drawer is still in the stack, rebuild its dropdown HTML without closing it.
 
-### UX-4: Global editing state is fragmented and uses magic numbers 🔲
-**File**: `media/webview.js:19-33`
-11 module-level variables; `editingMcpServerIndex = -1` means "new".
+### ~~UX-4~~: Global editing state is fragmented and uses magic numbers ✅
+Consolidated into `editing` and `fetched` objects in v0.3.3.
 
-**Fix**:
-```javascript
-let editingContext = { type: null, id: null, parentId: null, isNew: false };
-```
-
-### UX-5: Inline styles scattered throughout renders 🔲
-**Files**: `media/webview.js` (multiple), `src/webview/drawers.ts:54,165`
-
-**Fix**: Extract the 8–10 recurring inline styles to named CSS classes in `styles.ts`.
+### ~~UX-5~~: Inline styles scattered throughout renders ✅
+Inline `style="..."` attributes in drawers replaced with named CSS utility classes in v0.3.3.
 
 ### IMPORT-2: Draft restoration does not detect externally modified store 🔲
 **File**: `src/panel.ts:211-226`
@@ -153,11 +145,8 @@ Added `declaration: false`, `skipLibCheck: true`, `noUnusedLocals`, `noUnusedPar
 ### ARCH-5: Code duplication in env-var filtering ✅
 `preserveUnmanagedEnv()` helper extracted in `src/resolver.ts`; both `applyGlobalConfig` and `applyProjectConfig` use it.
 
-### ARCH-6: Chip rendering duplicated between server and client 🔲
-**Files**: `src/webview/layout.ts:207-238`, `media/webview.js:123-152`
-Changes to chip layout require updating two places.
-
-**Fix**: Export chip template functions from `src/webview/components.ts`; call from both render paths.
+### ~~ARCH-6~~: Chip rendering duplicated between server and client ✅
+Unified via shared `renderChipHtml()` in `media/webview.js` and `renderChip()` in `src/webview/layout.ts` in v0.3.3.
 
 ---
 
@@ -169,14 +158,10 @@ Changes to chip layout require updating two places.
 | IMPORT-1 | Import referential integrity | Small | High |
 | UX-2 | Onboarding empty state | Small | Medium |
 | IMPORT-3 | Contextual credential placeholders | Small | Medium |
-| STATUS (icon) | Status bar icon — `$(sparkle)` chosen, confirm preference | Tiny | Low |
 | ARCH-3 | JSON schema validation | Medium | High |
 | UX-3 | Stale provider dropdown in nested drawer | Medium | Medium |
 | IMPORT-2 | Draft vs. external store conflict detection | Small | Medium |
-| UX-5 | Extract inline styles to CSS classes | Medium | Low |
 | TEST-1 | Test suite + CI (Jest + GitHub Actions) | Large | High |
 | ARCH-1 | panel.ts decomposition | Large | High |
 | ARCH-4 | Provider strategy pattern | Large | Medium |
 | UX-1 | Accessibility (ARIA + keyboard nav) | Medium | Medium |
-| UX-4 | Consolidate editing state variables | Medium | Low |
-| ARCH-6 | Unify chip rendering | Medium | Low |
