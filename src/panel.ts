@@ -261,6 +261,7 @@ export class ClaudeCodeSettingsPanel {
       hasWorkspace: !!this._workspaceRoot,
       workspacePath: this._workspaceRoot,
       workspaceName,
+      dismissTestReminder: this._context.globalState.get<boolean>('dismissTestReminder') || false,
     };
   }
 
@@ -311,6 +312,14 @@ export class ClaudeCodeSettingsPanel {
 
       case 'fetchLocalModels':
         await this._fetchLocalModels(msg.baseUrl as string, msg.apiKey as string);
+        break;
+
+      case 'testModel':
+        await this._testModel(msg.baseUrl as string, msg.apiKey as string, msg.authToken as string, msg.modelId as string, msg.slot as string);
+        break;
+
+      case 'setDismissPref':
+        await this._context.globalState.update(msg.key as string, msg.value);
         break;
 
       case 'fetchBedrockModels':
@@ -457,6 +466,38 @@ export class ClaudeCodeSettingsPanel {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this._panel.webview.postMessage({ type: 'localModelsError', message });
+    }
+  }
+
+  private async _testModel(baseUrl: string, apiKey: string, authToken: string, modelId: string, slot: string): Promise<void> {
+    try {
+      if (!baseUrl) { throw new Error('No Base URL configured'); }
+      if (!modelId) { throw new Error('No model selected'); }
+
+      // Resolve op:// references via `op read` — same as Claude Code's apiKeyHelper would
+      const resolveOp = (val: string): string => {
+        if (!val.startsWith('op://')) { return val; }
+        const { execSync } = require('child_process') as typeof import('child_process');
+        return execSync(`op read '${val}'`, { encoding: 'utf8' }).trim();
+      };
+      const resolvedKey = resolveOp(apiKey);
+      const resolvedToken = resolveOp(authToken);
+
+      const base = baseUrl.replace(/\/v1\/?$/, '').replace(/\/$/, '');
+      const url = base + '/v1/messages';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' };
+      if (resolvedToken) { headers['Authorization'] = `Bearer ${resolvedToken}`; }
+      else if (resolvedKey) { headers['x-api-key'] = resolvedKey; }
+      const body = JSON.stringify({ model: modelId, max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] });
+      const res = await (globalThis as any).fetch(url, { method: 'POST', headers, body });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}${text ? ': ' + text.slice(0, 120) : ''}`);
+      }
+      this._panel.webview.postMessage({ type: 'testModelResult', slot, ok: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this._panel.webview.postMessage({ type: 'testModelResult', slot, ok: false, message });
     }
   }
 

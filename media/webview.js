@@ -417,23 +417,24 @@
     if (provider) {
       document.getElementById('provider-anthropic-key').value = provider.anthropicApiKey || '';
       document.getElementById('provider-proxy-url').value = provider.proxyBaseUrl || '';
-      document.getElementById('provider-proxy-key').value = provider.proxyApiKey || '';
-      document.getElementById('provider-proxy-token').value = provider.proxyAuthToken || '';
+      document.getElementById('provider-proxy-credential').value = provider.proxyCredential ?? provider.proxyAuthToken ?? provider.proxyApiKey ?? '';
       document.getElementById('provider-aws-refresh').value = provider.awsAuthRefresh || '';
     } else {
       document.getElementById('provider-anthropic-key').value = '';
       document.getElementById('provider-proxy-url').value = '';
-      document.getElementById('provider-proxy-key').value = '';
-      document.getElementById('provider-proxy-token').value = '';
+      document.getElementById('provider-proxy-credential').value = '';
       document.getElementById('provider-aws-refresh').value = '';
     }
 
-    // Proxy auth mode: Auth Token vs API Key
-    const useAuthToken = provider && provider.proxyAuthToken;
-    document.querySelectorAll('[data-seg="proxy-auth"]').forEach(btn => {
-      btn.classList.toggle('sel', btn.dataset.val === (useAuthToken ? 'authtoken' : 'apikey'));
+    // Proxy auth mode pill — migrate old separate fields to new combined model
+    var authMode = (provider && provider.proxyAuthMode)
+      || (provider && provider.proxyAuthToken ? 'authtoken' : 'apikey');
+    document.querySelectorAll('[data-pill="proxy-auth"]').forEach(function(btn) {
+      btn.classList.toggle('sel', btn.dataset.val === authMode);
     });
-    showProxyAuthSection(useAuthToken ? 'authtoken' : 'apikey');
+
+    // Refresh op:// hint after value is populated
+    updateCredentialHint();
 
     // AWS config / env info row — pass per-provider awsEnv so each provider shows its own selection
     renderAwsConfigRow(state.awsConfigInfo || null, provider ? provider.awsEnv : undefined);
@@ -505,6 +506,20 @@
       if (nonessentialToggleEl) nonessentialToggleEl.style.pointerEvents = 'none';
     }
 
+    // Restore persisted test state for model pills
+    if (provider && provider.modelTestState && typeVal === 'proxy') {
+      var testSlots = { sonnet: 'provider-model-sonnet', haiku: 'provider-model-haiku', opus: 'provider-model-opus' };
+      Object.keys(testSlots).forEach(function(slot) {
+        var modelId = getModelValue(testSlots[slot]);
+        var savedState = provider.modelTestState[modelId];
+        var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
+        if (btn && savedState) {
+          btn.className = 'btn-test ' + savedState;
+          btn.textContent = savedState === 'ok' ? 'OK' : 'Fail';
+        }
+      });
+    }
+
     openDrawer('provider');
   }
 
@@ -518,18 +533,18 @@
     if (bedrockFetch) bedrockFetch.style.display = type === 'bedrock' ? '' : 'none';
     var proxyFetch = document.getElementById('proxy-fetch-row');
     if (proxyFetch) proxyFetch.style.display = type === 'proxy' ? '' : 'none';
+    // Test pills only shown for proxy (bedrock has its own flow; anthropic is native)
+    document.querySelectorAll('.btn-test').forEach(function(b) {
+      b.style.display = type === 'proxy' ? '' : 'none';
+      b.className = 'btn-test'; b.textContent = 'Test'; b.title = '';
+    });
     // Standalone mode toggle only shown for proxy — bedrock is always-on (handled in resolver),
     // anthropic never applies.
     var standaloneRow = document.getElementById('provider-standalone-row');
     if (standaloneRow) standaloneRow.style.display = type === 'proxy' ? '' : 'none';
   }
 
-  function showProxyAuthSection(mode) {
-    const apiKeyDiv = document.getElementById('proxy-auth-apikey');
-    const tokenDiv = document.getElementById('proxy-auth-token');
-    if (apiKeyDiv) apiKeyDiv.style.display = mode === 'apikey' ? '' : 'none';
-    if (tokenDiv) tokenDiv.style.display = mode === 'authtoken' ? '' : 'none';
-  }
+  function showProxyAuthSection() { /* no-op: single credential field, pill only affects semantics */ }
 
   function rebuildModelSelects(type, provider) {
     const region = document.getElementById('provider-aws-region').value;
@@ -580,7 +595,7 @@
   function fetchProxyModels() {
     const url = document.getElementById('provider-proxy-url').value.trim();
     if (!url) { showToast('Enter a Base URL first', true); return; }
-    const key = document.getElementById('provider-proxy-key').value.trim();
+    const key = document.getElementById('provider-proxy-credential').value.trim();
     const statusEl = document.getElementById('proxy-fetch-status');
     statusEl.textContent = 'Fetching…';
     // The webview sandbox cannot make arbitrary fetch calls — delegate to the extension host
@@ -628,7 +643,7 @@
   }
 
   // ─── Filterable Combobox ──────────────────────────────────────
-  function createCombobox(id, items, selectedValue, allowCustom) {
+  function createCombobox(id, items, selectedValue, allowCustom, slotHint) {
     const wrapper = document.createElement('div');
     wrapper.className = 'combobox';
     wrapper.id = id + '-combobox';
@@ -638,7 +653,9 @@
     input.className = 'combobox-input';
     input.id = id;
     input.autocomplete = 'off';
-    input.placeholder = items.length > 0 ? 'Type to filter (' + items.length + ' items)…' : 'Enter value';
+    input.placeholder = items.length > 0
+      ? (allowCustom ? 'Type to filter (' + items.length + ' items)…' : 'Select from ' + items.length + ' models…')
+      : 'Enter model ID';
     const selectedItem = items.find(function(i) { return i.value === selectedValue; });
     input.value = selectedItem ? selectedItem.label : (selectedValue || '');
     input.dataset.selectedValue = selectedValue || '';
@@ -649,18 +666,36 @@
     function renderOptions(filter) {
       list.innerHTML = '';
       var lc = (filter || '').toLowerCase();
-      var count = 0;
+
+      // Filter
+      var filtered = [];
       for (var i = 0; i < items.length; i++) {
         var item = items[i];
         if (lc && item.label.toLowerCase().indexOf(lc) < 0 && item.value.toLowerCase().indexOf(lc) < 0) continue;
-        if (count >= 50) {
-          var more = document.createElement('div');
-          more.className = 'combobox-option';
-          more.style.color = 'var(--fg-dim)';
-          more.textContent = '… type more to narrow results';
-          list.appendChild(more);
-          break;
+        filtered.push(item);
+      }
+
+      // Sort alphabetically by label
+      filtered.sort(function(a, b) { return a.label.localeCompare(b.label); });
+
+      // Split into matching-slot group and rest when a slotHint is provided and no filter active
+      var top = [], rest = [];
+      if (slotHint && !lc) {
+        var hintLc = slotHint.toLowerCase();
+        for (var j = 0; j < filtered.length; j++) {
+          if (filtered[j].label.toLowerCase().indexOf(hintLc) >= 0 || filtered[j].value.toLowerCase().indexOf(hintLc) >= 0) {
+            top.push(filtered[j]);
+          } else {
+            rest.push(filtered[j]);
+          }
         }
+      } else {
+        rest = filtered;
+      }
+
+      var count = 0;
+      function appendOption(item) {
+        if (count >= 50) { return false; }
         var div = document.createElement('div');
         div.className = 'combobox-option';
         div.dataset.value = item.value;
@@ -679,6 +714,23 @@
         if (item.value === input.dataset.selectedValue) div.classList.add('active');
         list.appendChild(div);
         count++;
+        return true;
+      }
+
+      for (var t = 0; t < top.length; t++) { if (!appendOption(top[t])) break; }
+      if (top.length > 0 && rest.length > 0) {
+        var sep = document.createElement('hr');
+        sep.className = 'combobox-separator';
+        list.appendChild(sep);
+      }
+      for (var r = 0; r < rest.length; r++) { if (!appendOption(rest[r])) break; }
+
+      if (count >= 50) {
+        var more = document.createElement('div');
+        more.className = 'combobox-option';
+        more.style.color = 'var(--fg-dim)';
+        more.textContent = '… type more to narrow results';
+        list.appendChild(more);
       }
       if (allowCustom && filter) {
         var custom = document.createElement('div');
@@ -710,6 +762,10 @@
         wrapper.classList.remove('open');
         if (allowCustom && input.value && !items.find(function(i) { return i.label === input.value; })) {
           input.dataset.selectedValue = input.value;
+        } else if (!allowCustom) {
+          // Snap back to the selected item's label — don't allow free-form text
+          var sel = items.find(function(i) { return i.value === input.dataset.selectedValue; });
+          input.value = sel ? sel.label : (input.dataset.selectedValue || '');
         }
       }
     });
@@ -741,6 +797,12 @@
     return wrapper;
   }
 
+  var SLOT_HINTS = {
+    'provider-model-sonnet': 'sonnet',
+    'provider-model-haiku': 'haiku',
+    'provider-model-opus': 'opus'
+  };
+
   function populateModelSelect(selectId, models, currentValue, showDropdown) {
     var existing = document.getElementById(selectId);
     var comboWrapper = document.getElementById(selectId + '-combobox');
@@ -749,7 +811,7 @@
 
     if (showDropdown && models.length > 0) {
       var items = models.map(function(m) { return { value: m.id, label: m.label }; });
-      var combo = createCombobox(selectId, items, currentValue, true);
+      var combo = createCombobox(selectId, items, currentValue, false, SLOT_HINTS[selectId]);
       target.replaceWith(combo);
     } else {
       var input = document.createElement('input');
@@ -961,6 +1023,18 @@
       showToast('Base URL is required for proxy providers', true); return;
     }
 
+    // Collect model test states from pills (keyed by model ID)
+    var modelTestState = {};
+    ['sonnet', 'haiku', 'opus'].forEach(function(slot) {
+      var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
+      var selectId = 'provider-model-' + slot;
+      var modelId = getModelValue(selectId);
+      if (btn && modelId) {
+        if (btn.classList.contains('ok')) { modelTestState[modelId] = 'ok'; }
+        else if (btn.classList.contains('fail')) { modelTestState[modelId] = 'fail'; }
+      }
+    });
+
     const providerData = {
       name,
       type,
@@ -973,18 +1047,40 @@
         return (sel && sel.offsetParent !== null) ? (sel.value || undefined) : undefined;
       })(),
       proxyBaseUrl: document.getElementById('provider-proxy-url').value || undefined,
-      proxyApiKey: document.querySelector('[data-seg="proxy-auth"][data-val="apikey"]')?.classList.contains('sel')
-        ? (document.getElementById('provider-proxy-key').value || undefined)
-        : undefined,
-      proxyAuthToken: document.querySelector('[data-seg="proxy-auth"][data-val="authtoken"]')?.classList.contains('sel')
-        ? (document.getElementById('provider-proxy-token').value || undefined)
-        : undefined,
+      proxyCredential: document.getElementById('provider-proxy-credential').value || undefined,
+      proxyAuthMode: (document.querySelector('[data-pill="proxy-auth"].sel') || {}).dataset?.val || 'apikey',
       primaryModel: getModelValue('provider-model-sonnet'),
       smallFastModel: getModelValue('provider-model-haiku'),
       opusModel: getModelValue('provider-model-opus'),
+      modelTestState: Object.keys(modelTestState).length > 0 ? modelTestState : undefined,
       disablePromptCaching: document.querySelector('[data-toggle="provider-disable-caching"]')?.classList.contains('on') || false,
       disableLoginPrompt: document.querySelector('[data-toggle="provider-disable-nonessential"]')?.classList.contains('on') || false,
     };
+
+    // Check for untested models on proxy providers — show reminder unless dismissed
+    if (type === 'proxy' && !state.dismissTestReminder) {
+      var untestedSlots = [];
+      ['sonnet', 'haiku', 'opus'].forEach(function(slot) {
+        var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
+        var modelId = getModelValue('provider-model-' + slot);
+        if (modelId && btn && !btn.classList.contains('ok') && !btn.classList.contains('fail')) {
+          untestedSlots.push(slot);
+        }
+      });
+      if (untestedSlots.length > 0 && !saveProviderFromDrawer._skipReminder) {
+        showTestReminder(function(dismiss) {
+          if (dismiss) {
+            state.dismissTestReminder = true;
+            vscode.postMessage({ type: 'setDismissPref', key: 'dismissTestReminder', value: true });
+          }
+          saveProviderFromDrawer._skipReminder = true;
+          saveProviderFromDrawer();
+          saveProviderFromDrawer._skipReminder = false;
+        });
+        return;
+      }
+    }
+    saveProviderFromDrawer._skipReminder = false;
 
     if (editing.providerId) {
       const provider = store.providers.find(p => p.id === editing.providerId);
@@ -1669,30 +1765,123 @@
     if (segName === 'mcp-transport') {
       showMcpTransportSection(segVal);
     }
-    if (segName === 'proxy-auth') {
-      showProxyAuthSection(segVal);
+  });
+
+  // Pill toggle clicks (compact key/token switcher)
+  document.addEventListener('click', function(e) {
+    var pillBtn = e.target.closest('.pill-btn');
+    if (!pillBtn) { return; }
+    var pillName = pillBtn.dataset.pill;
+    var pillVal = pillBtn.dataset.val;
+    pillBtn.closest('.pill-toggle').querySelectorAll('.pill-btn').forEach(function(b) { b.classList.remove('sel'); });
+    pillBtn.classList.add('sel');
+    if (pillName === 'proxy-auth') {
+      showProxyAuthSection(pillVal);
+      resetAllTestPills();
     }
   });
 
-  // Auto-detect OpenRouter URL and switch to Auth Token mode
+  // Auto-detect OpenRouter URL and switch to Auth Token mode; invalidate tests on URL change
   document.getElementById('provider-proxy-url')?.addEventListener('input', function() {
-    const url = this.value;
+    resetAllTestPills();
+    var url = this.value;
     if (/openrouter\.ai/i.test(url)) {
-      const alreadyToken = document.querySelector('[data-seg="proxy-auth"][data-val="authtoken"]')?.classList.contains('sel');
+      var pills = document.querySelectorAll('[data-pill="proxy-auth"]');
+      var alreadyToken = false;
+      pills.forEach(function(b) { if (b.dataset.val === 'authtoken' && b.classList.contains('sel')) { alreadyToken = true; } });
       if (!alreadyToken) {
-        document.querySelectorAll('[data-seg="proxy-auth"]').forEach(b => b.classList.remove('sel'));
-        document.querySelector('[data-seg="proxy-auth"][data-val="authtoken"]')?.classList.add('sel');
+        pills.forEach(function(b) { b.classList.toggle('sel', b.dataset.val === 'authtoken'); });
         showProxyAuthSection('authtoken');
       }
     }
   });
 
+  // Update op:// hint for the credential field
+  function updateCredentialHint() {
+    var inputEl = document.getElementById('provider-proxy-credential');
+    var hint = document.getElementById('proxy-credential-hint');
+    if (!inputEl || !hint) { return; }
+    if (inputEl.value.startsWith('op://')) {
+      hint.innerHTML = '<strong>1Password:</strong> <code>apiKeyHelper: "op read \'' + inputEl.value + '\'"</code>';
+      setReveal(inputEl, true);
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  // Set or clear reveal state on a password input
+  function setReveal(inputEl, on) {
+    inputEl.type = on ? 'text' : 'password';
+    var btn = inputEl.closest('.input-reveal') && inputEl.closest('.input-reveal').querySelector('.btn-eye');
+    if (btn) btn.classList.toggle('revealed', on);
+  }
+
+  document.getElementById('provider-proxy-credential')?.addEventListener('input', function() {
+    updateCredentialHint();
+    resetAllTestPills();
+  });
+
+  // Model test pill clicks
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-test');
+    if (!btn || btn.classList.contains('testing') || btn.classList.contains('ok')) { return; }
+    var selectId = btn.dataset.testModel;
+    var slot = btn.dataset.slot;
+    var modelId = getModelValue(selectId);
+    if (!modelId) { showToast('Select a model first', true); return; }
+    var baseUrl = document.getElementById('provider-proxy-url').value.trim();
+    if (!baseUrl) { showToast('Enter a Base URL first', true); return; }
+    var credMode = (document.querySelector('[data-pill="proxy-auth"].sel') || {}).dataset?.val || 'apikey';
+    var cred = document.getElementById('provider-proxy-credential').value.trim();
+    var apiKey = credMode === 'apikey' ? cred : '';
+    var authToken = credMode === 'authtoken' ? cred : '';
+    btn.className = 'btn-test testing';
+    btn.textContent = 'Testing';
+    vscode.postMessage({ type: 'testModel', baseUrl: baseUrl, apiKey: apiKey, authToken: authToken, modelId: modelId, slot: slot });
+  });
+
+  // Reset ALL test pills (when URL, credential, or auth type changes)
+  function resetAllTestPills() {
+    document.querySelectorAll('.btn-test').forEach(function(b) {
+      b.className = 'btn-test'; b.textContent = 'Test'; b.title = '';
+    });
+  }
+
+  // Reset test pill when the model selection changes (combobox option click, typing, or plain input edit)
+  function resetTestPillForInput(inputEl) {
+    var slot = SLOT_HINTS[inputEl.id];
+    if (!slot) { return; }
+    var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
+    if (btn) { btn.className = 'btn-test'; btn.textContent = 'Test'; btn.title = ''; }
+  }
+  document.addEventListener('click', function(e) {
+    var opt = e.target.closest('.combobox-option');
+    if (!opt) { return; }
+    var inputEl = opt.closest('.combobox') && opt.closest('.combobox').querySelector('input');
+    if (inputEl) { resetTestPillForInput(inputEl); }
+  });
+  document.addEventListener('input', function(e) {
+    var inputEl = e.target;
+    if (inputEl && inputEl.id && SLOT_HINTS[inputEl.id]) { resetTestPillForInput(inputEl); }
+  });
+
+  // Eye-button: toggle password visibility
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-eye');
+    if (!btn) { return; }
+    var inputId = btn.dataset.reveal;
+    var inputEl = inputId && document.getElementById(inputId);
+    if (!inputEl) { return; }
+    // Don't hide when value is op:// — keep visible so user can read the reference
+    if (inputEl.value.startsWith('op://') && inputEl.type === 'text') { return; }
+    setReveal(inputEl, inputEl.type === 'password');
+  });
+
   // Toggle clicks
   document.addEventListener('click', function(e) {
-    const toggle = e.target.closest('.toggle-track');
-    if (toggle) {
-      toggle.classList.toggle('on');
-    }
+    var toggle = e.target.closest('.toggle-track');
+    if (!toggle) { return; }
+    toggle.classList.toggle('on');
   });
 
   // Backdrop click closes drawer
@@ -1773,6 +1962,16 @@
         break;
       }
 
+      case 'testModelResult': {
+        var testBtn = document.querySelector('.btn-test[data-slot="' + msg.slot + '"]');
+        if (testBtn) {
+          testBtn.className = 'btn-test ' + (msg.ok ? 'ok' : 'fail');
+          testBtn.textContent = msg.ok ? 'OK' : 'Fail';
+          testBtn.title = msg.ok ? 'Model responded successfully' : (msg.message || 'Failed');
+        }
+        break;
+      }
+
       case 'awsEnvSwitched': {
         // Update state and refresh the AWS profile combobox + config display
         state.awsProfiles = msg.awsProfiles || ['default'];
@@ -1802,6 +2001,39 @@
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show', 'error'), 2500);
     }
+  }
+
+  // Reminder popup for untested proxy models
+  function showTestReminder(callback) {
+    // Remove any existing reminder
+    var existing = document.getElementById('test-reminder');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'test-reminder';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.15);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg-card);border:1px solid var(--input-border);border-radius:var(--radius);padding:20px 24px;max-width:360px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.25);';
+    box.innerHTML =
+      '<div style="font-size:13px;color:var(--fg);margin-bottom:16px;line-height:1.5">' +
+      'Some models have not been tested for Anthropic API compatibility.<br>Use the <strong>Test</strong> buttons to verify.' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">' +
+      '<button class="btn btn-secondary" id="test-reminder-back">Go back</button>' +
+      '<button class="btn btn-primary" id="test-reminder-save">Save anyway</button>' +
+      '</div>' +
+      '<label style="font-size:11px;color:var(--fg-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">' +
+      '<input type="checkbox" id="test-reminder-dismiss" style="width:auto;accent-color:var(--blue)"> Don\'t show again</label>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    document.getElementById('test-reminder-back').addEventListener('click', function() { overlay.remove(); });
+    document.getElementById('test-reminder-save').addEventListener('click', function() {
+      var dismiss = document.getElementById('test-reminder-dismiss').checked;
+      overlay.remove();
+      callback(dismiss);
+    });
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
   }
 
   // ─── Init ─────────────────────────────────────────────────────

@@ -25,14 +25,21 @@ export interface ProviderProfile {
 
   // Proxy-specific
   proxyBaseUrl?: string;
-  proxyApiKey?: string;       // Sets ANTHROPIC_API_KEY (most proxies)
-  proxyAuthToken?: string;    // Sets ANTHROPIC_AUTH_TOKEN (OpenRouter)
+  proxyCredential?: string;          // The key or token value
+  proxyAuthMode?: 'apikey' | 'authtoken'; // How to send it: x-api-key or Bearer
+  /** @deprecated use proxyCredential + proxyAuthMode */
+  proxyApiKey?: string;
+  /** @deprecated use proxyCredential + proxyAuthMode */
+  proxyAuthToken?: string;
 
   // Model assignments (all provider types)
   primaryModel: string;
   smallFastModel: string;
   opusModel: string;
   disablePromptCaching?: boolean;
+
+  // Model test state (persisted per-model: 'ok' | 'fail')
+  modelTestState?: Record<string, 'ok' | 'fail'>;
 
   // Behavioral
   disableLoginPrompt?: boolean;
@@ -106,12 +113,14 @@ export interface PanelState {
   hasWorkspace: boolean;
   workspacePath?: string;
   workspaceName?: string;
+  dismissTestReminder?: boolean;
 }
 
 // ─── Claude Code's own file format (kept for I/O) ───────────────────
 
 export interface ClaudeCodeSettings {
   $schema?: string;
+  apiKeyHelper?: string;
   env?: Record<string, string>;
   allowedDirectories?: string[];
   awsAuthRefresh?: string;

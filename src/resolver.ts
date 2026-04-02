@@ -25,6 +25,7 @@ export interface ResolvedConfig {
   env: Record<string, string>;
   allowedDirectories: string[];
   awsAuthRefresh?: string;
+  apiKeyHelper?: string;
   mcpServers: Record<string, McpServerConfig>;
 }
 
@@ -43,6 +44,7 @@ export function resolvePreset(
   const provider = store.providers.find(p => p.id === preset.providerId);
   const env: Record<string, string> = {};
   let awsAuthRefresh: string | undefined;
+  let apiKeyHelper: string | undefined;
 
   if (provider) {
     // Reset cross-provider keys so a workspace preset using a different provider than the
@@ -79,24 +81,32 @@ export function resolvePreset(
         break;
       case 'proxy': {
         let baseUrl = provider.proxyBaseUrl || '';
+        // Strip trailing /v1 (users often paste the full endpoint URL)
+        baseUrl = baseUrl.replace(/\/v1\/?$/, '').replace(/\/+$/, '');
         // OpenRouter requires /api in the URL path
         if (/openrouter\.ai/i.test(baseUrl) && !/\/api\b/i.test(baseUrl)) {
-          baseUrl = baseUrl.replace(/\/+$/, '') + '/api';
+          baseUrl = baseUrl + '/api';
         }
         if (baseUrl) { env['ANTHROPIC_BASE_URL'] = baseUrl; }
 
-        // ANTHROPIC_AUTH_TOKEN must always be set when ANTHROPIC_BASE_URL is in use —
-        // Claude Code shows the login prompt whenever AUTH_TOKEN is absent, regardless
-        // of ANTHROPIC_API_KEY.  Use the configured token if given; otherwise 'local'
-        // as a dummy suppressor.  When a proxy API key is also configured, write it as
-        // ANTHROPIC_API_KEY so the proxy receives the x-api-key header it expects.
-        if (provider.proxyAuthToken) {
-          env['ANTHROPIC_AUTH_TOKEN'] = provider.proxyAuthToken;
-        } else if (provider.proxyApiKey) {
-          env['ANTHROPIC_API_KEY'] = provider.proxyApiKey;
-          env['ANTHROPIC_AUTH_TOKEN'] = 'local';   // suppresses login prompt only
+        // Resolve credential: new single-field model (proxyCredential + proxyAuthMode),
+        // with fallback migration for stored data that uses the old separate fields.
+        const cred = provider.proxyCredential
+          ?? provider.proxyAuthToken   // eslint-disable-line deprecation/deprecation
+          ?? provider.proxyApiKey;     // eslint-disable-line deprecation/deprecation
+        const mode = provider.proxyAuthMode
+          ?? (provider.proxyAuthToken ? 'authtoken' : 'apikey'); // eslint-disable-line deprecation/deprecation
+
+        // 1Password: op:// ref → apiKeyHelper (conflicts with AUTH_TOKEN, so skip that)
+        if (cred?.startsWith('op://')) {
+          apiKeyHelper = `op read '${cred}'`;
+        } else if (cred && mode === 'authtoken') {
+          env['ANTHROPIC_AUTH_TOKEN'] = cred;
+        } else if (cred && mode === 'apikey') {
+          env['ANTHROPIC_API_KEY'] = cred;
+          env['ANTHROPIC_AUTH_TOKEN'] = 'local';  // suppresses login prompt
         } else {
-          env['ANTHROPIC_AUTH_TOKEN'] = 'local';
+          env['ANTHROPIC_AUTH_TOKEN'] = 'local';  // keyless — suppress login prompt only
         }
         break;
       }
@@ -154,7 +164,7 @@ export function resolvePreset(
     }
   }
 
-  return { env, allowedDirectories, awsAuthRefresh, mcpServers };
+  return { env, allowedDirectories, awsAuthRefresh, apiKeyHelper, mcpServers };
 }
 
 // ---------------------------------------------------------------------------
@@ -235,6 +245,13 @@ export function applyGlobalConfig(resolved: ResolvedConfig): void {
     delete newSettings.awsAuthRefresh;
   }
 
+  // Set or clear apiKeyHelper (1Password / op-read support)
+  if (resolved.apiKeyHelper) {
+    newSettings.apiKeyHelper = resolved.apiKeyHelper;
+  } else {
+    delete newSettings.apiKeyHelper;
+  }
+
   // Clear deprecated env var keys
   if (newSettings.env) {
     delete newSettings.env['ANTHROPIC_MODEL'];
@@ -268,6 +285,7 @@ export function cleanProjectConfig(workspaceRoot: string): void {
   // Remove fields we manage
   delete settings.allowedDirectories;
   delete settings.awsAuthRefresh;
+  delete settings.apiKeyHelper;
 
   // Only write back if there's still content beyond $schema; otherwise leave file alone
   const remaining = Object.keys(settings).filter(k => k !== '$schema');
@@ -311,6 +329,12 @@ export function applyProjectConfig(
     newSettings.awsAuthRefresh = resolved.awsAuthRefresh;
   } else {
     delete newSettings.awsAuthRefresh;
+  }
+
+  if (resolved.apiKeyHelper) {
+    newSettings.apiKeyHelper = resolved.apiKeyHelper;
+  } else {
+    delete newSettings.apiKeyHelper;
   }
 
   writeProjectSettings(workspaceRoot, newSettings);

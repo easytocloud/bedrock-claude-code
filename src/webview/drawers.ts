@@ -118,7 +118,7 @@ export function renderProviderDrawer(): string {
       <div class="seg-control" id="provider-type-control">
         <button type="button" class="seg-btn" data-seg="provider-type" data-val="anthropic">Anthropic</button>
         <button type="button" class="seg-btn" data-seg="provider-type" data-val="bedrock">Bedrock</button>
-        <button type="button" class="seg-btn" data-seg="provider-type" data-val="proxy">Proxy</button>
+        <button type="button" class="seg-btn" data-seg="provider-type" data-val="proxy">Local / Other</button>
       </div>
     </div>
 
@@ -167,30 +167,32 @@ export function renderProviderDrawer(): string {
       </div>
     </div>
 
-    <!-- Proxy section -->
+    <!-- Local / Other section -->
     <div id="provider-section-proxy" style="display:none">
       <div class="section-heading">
         <span class="section-dot section-dot-orange"></span>
-        PROXY CONFIGURATION
+        LOCAL / OTHER
       </div>
-      <div class="info-box">Works with any OpenAI-compatible API: Ollama, vLLM, LM Studio, LiteLLM, etc. For local models, enable Standalone mode below to prevent Claude Code from contacting Anthropic.</div>
+      <div class="info-box">Works with LiteLLM, OpenRouter, Ollama, vLLM, LM Studio, and any proxy that exposes an Anthropic-compatible API (<code>/v1/messages</code>). Enable Standalone mode below for local models.</div>
       <div class="form-group">
         <label class="form-label">Base URL</label>
         <input type="text" id="provider-proxy-url" placeholder="http://localhost:11434" />
       </div>
       <div class="form-group">
-        <label class="form-label">Authentication</label>
-        <div class="seg-control" id="proxy-auth-control">
-          <button type="button" class="seg-btn sel" data-seg="proxy-auth" data-val="apikey">API Key</button>
-          <button type="button" class="seg-btn" data-seg="proxy-auth" data-val="authtoken">Auth Token</button>
+        <div class="label-row">
+          <label class="form-label">Credential</label>
+          <div class="pill-toggle" id="proxy-auth-pills">
+            <button type="button" class="pill-btn sel" data-pill="proxy-auth" data-val="apikey">API Key</button>
+            <button type="button" class="pill-btn" data-pill="proxy-auth" data-val="authtoken">Token</button>
+          </div>
         </div>
-      </div>
-      <div id="proxy-auth-apikey" class="form-group">
-        <input type="password" id="provider-proxy-key" placeholder="Optional — sets ANTHROPIC_API_KEY" />
-      </div>
-      <div id="proxy-auth-token" class="form-group" style="display:none">
-        <input type="password" id="provider-proxy-token" placeholder="OpenRouter API key — sets ANTHROPIC_AUTH_TOKEN" />
-        <div class="form-hint">Clears ANTHROPIC_API_KEY so Claude Code authenticates via token only (required by OpenRouter)</div>
+        <div class="input-reveal">
+          <input type="password" id="provider-proxy-credential" placeholder="sk-… or op://Vault/Item/field" />
+          <button type="button" class="btn-eye" data-reveal="provider-proxy-credential" title="Show / hide">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
+          </button>
+        </div>
+        <div class="form-hint" id="proxy-credential-hint" style="margin-top:4px"></div>
       </div>
     </div>
 
@@ -212,15 +214,24 @@ export function renderProviderDrawer(): string {
       </div>
 
       <div class="form-group">
-        <label class="form-label">Sonnet (primary)</label>
+        <div class="label-row">
+          <label class="form-label">Sonnet (primary)</label>
+          <button type="button" class="btn-test" data-test-model="provider-model-sonnet" data-slot="sonnet" style="display:none">Test</button>
+        </div>
         <select id="provider-model-sonnet"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">Haiku (small/fast)</label>
+        <div class="label-row">
+          <label class="form-label">Haiku (small/fast)</label>
+          <button type="button" class="btn-test" data-test-model="provider-model-haiku" data-slot="haiku" style="display:none">Test</button>
+        </div>
         <select id="provider-model-haiku"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">Opus</label>
+        <div class="label-row">
+          <label class="form-label">Opus</label>
+          <button type="button" class="btn-test" data-test-model="provider-model-opus" data-slot="opus" style="display:none">Test</button>
+        </div>
         <select id="provider-model-opus"></select>
       </div>
 

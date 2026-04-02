@@ -4,6 +4,25 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.12] — 2026-04-02
+
+### Added
+- **1Password support** — enter an `op://Vault/Item/field` reference in the credential field and the extension writes `apiKeyHelper: "op read '...'"` to `settings.json`. Claude Code resolves the secret at startup via the 1Password CLI.
+- **Model compatibility testing** — each model slot (Sonnet, Haiku, Opus) shows a **Test** pill for Local/Other providers. It sends a minimal `POST /v1/messages` request with `anthropic-version: 2023-06-01` and shows **OK** (green) or **Fail** (red). Test state is persisted per model ID on the provider.
+- **Untested-model reminder** — closing the provider dialog with untested models shows a non-blocking reminder with *Go back*, *Save anyway*, and *Don't show again* options.
+- **Credential reveal button** — eye icon toggles password visibility; auto-reveals when the value is an `op://` reference.
+
+### Changed
+- **"Proxy" renamed to "Local / Other"** — in the provider type selector, section heading, and info text.
+- **"OpenAI-compatible" → "Anthropic-compatible"** — info box now correctly describes the `/v1/messages` API that Claude Code uses.
+- **Single credential field** — API Key and Auth Token share one input with a compact pill toggle (`API Key | Token`). The pill determines which HTTP header is used; the value is always preserved across toggles. Replaces the old two-field layout.
+- **Smarter model dropdowns** — models sorted alphabetically; models matching the slot name (e.g. "sonnet" for the Sonnet field) are listed first with a separator. When models are fetched successfully, the dropdown is selection-only; free-form entry is allowed only when the fetch endpoint is unavailable.
+- **`/v1` stripped from base URL** — users who paste a full endpoint URL (e.g. `https://example.com/v1`) no longer get a double `/v1/v1` path.
+
+### Fixed
+- **F5 launch task** — `preLaunchTask` now correctly references `npm: watch:tsc` instead of `npm: watch`, fixing the "Debug Anyway" timeout popup.
+- **Test invalidation** — changing the base URL, credential, auth type, or provider type resets all test pills. Changing a model selection (dropdown or manual edit) resets that slot's pill.
+
 ## [0.3.11] — 2026-04-01
 
 ### Fixed

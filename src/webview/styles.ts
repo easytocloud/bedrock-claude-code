@@ -492,6 +492,113 @@ export function buildStyles(): string {
       border-radius: var(--radius-sm);
       overflow: hidden;
     }
+    .seg-control-2col { grid-template-columns: repeat(2, 1fr); }
+
+    /* ─── Label row (label + inline action right-aligned) ───────────── */
+    .label-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+    .label-row .form-label { margin: 0; flex: 1; }
+
+    /* ─── Model test pill (test → testing → OK / FAIL) ────────────── */
+    .btn-test {
+      padding: 1px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      background: none;
+      border: 1px solid var(--blue);
+      border-radius: 20px;
+      color: var(--blue);
+      transition: all var(--transition);
+      line-height: 1.6;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .btn-test:hover { background: var(--blue-mid); }
+    .btn-test.testing {
+      animation: test-pulse 0.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .btn-test.ok {
+      border-color: var(--green-accent);
+      color: var(--green-accent);
+      pointer-events: none;
+    }
+    .btn-test.fail {
+      border-color: #e06c75;
+      color: #e06c75;
+      cursor: pointer;          /* clickable again to retry */
+    }
+    .btn-test.fail:hover { background: rgba(224,108,117,0.1); }
+    @keyframes test-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ─── Combobox separator (model groups) ─────────────────────────── */
+    .combobox-separator {
+      border: none;
+      border-top: 1px solid var(--input-border);
+      margin: 4px 10px;
+    }
+
+    /* ─── Pill toggle (compact key/token switcher) ───────────────────── */
+    .pill-toggle {
+      display: flex;
+      border: 1px solid var(--input-border);
+      border-radius: 20px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .pill-btn {
+      padding: 2px 9px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--fg-dim);
+      transition: all var(--transition);
+      line-height: 1.6;
+    }
+    .pill-btn.sel {
+      background: var(--blue-mid);
+      color: var(--blue);
+      font-weight: 600;
+    }
+    .pill-btn:hover:not(.sel) { color: var(--fg); }
+
+    /* ─── Password reveal wrapper ───────────────────────────────────── */
+    .input-reveal {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-reveal input {
+      flex: 1;
+      padding-right: 34px;
+    }
+    .btn-eye {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      color: var(--fg-dim);
+      display: flex;
+      align-items: center;
+      line-height: 1;
+      transition: color var(--transition);
+    }
+    .btn-eye:hover { color: var(--fg); }
+    .btn-eye.revealed { color: var(--blue); }
     .seg-btn {
       padding: 7px 4px;
       text-align: center;

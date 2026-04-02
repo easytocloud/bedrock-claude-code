@@ -8,7 +8,7 @@ A VS Code extension for managing [Claude Code](https://docs.anthropic.com/en/doc
 
 Instead of editing JSON files by hand, this extension lets you build **presets** from three types of building blocks:
 
-- **Providers** — API backends: Anthropic Direct, AWS Bedrock, or any OpenAI-compatible proxy (Ollama, vLLM, LM Studio, LiteLLM, …)
+- **Providers** — API backends: Anthropic Direct, AWS Bedrock, or any Anthropic-compatible proxy (LiteLLM, OpenRouter, Ollama, vLLM, LM Studio, …)
 - **MCP Server Groups** — named collections of MCP servers
 - **Directory Groups** — additional directories Claude Code may access
 
@@ -52,21 +52,22 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 - Claude Code's login/logout commands are automatically disabled when using Bedrock
 - If `$AWS_CONFIG_FILE` is set or `~/.aws/config` is a symlink, the resolved config path is shown as **AWS Config** (read-only). If you use [easytocloud aws-envs](https://github.com/easytocloud/aws-envs), an **AWS Env** dropdown appears instead — each provider stores its own env selection in `coder-profiles.json`, so different providers can point to different AWS environments independently
 
-### Local / Compatible API (Ollama, vLLM, LM Studio, …)
+### Local / Other (Ollama, vLLM, LM Studio, LiteLLM, OpenRouter, …)
 
-- Select provider type **Proxy**, enter the base URL (e.g. `http://localhost:11434`)
+- Select provider type **Local / Other**, enter the base URL (e.g. `http://localhost:11434`)
 - Click **Fetch available models** to discover models from `/v1/models`
   - Single-model endpoints auto-select the model for all tiers
-  - Multi-model endpoints show a dropdown to pick per tier
-- You can also type a model ID manually if the endpoint does not expose `/v1/models`
-- Authentication is mutually exclusive: choose **API Key** (sets `ANTHROPIC_API_KEY`) or **Auth Token** (sets `ANTHROPIC_AUTH_TOKEN` and clears `ANTHROPIC_API_KEY`). If neither is set, a dummy key is written automatically to prevent the login screen
-- **Standalone mode** is on by default for Proxy providers — it blocks all traffic to Anthropic (telemetry, updates, login prompt). Disable it only if your proxy forwards requests to Anthropic directly and you need the Anthropic login flow.
+  - Multi-model endpoints show a selection-only dropdown (sorted alphabetically, with slot-matching models listed first)
+  - If the endpoint does not expose `/v1/models`, the fetch fails gracefully and you can type model IDs manually
+- **Test models** — each model slot has a **Test** pill that sends a minimal request to `POST /v1/messages` to verify Anthropic API compatibility. Results (OK / Fail) are persisted on the provider
+- **Credential** — enter an API key or token directly, or use an `op://Vault/Item/field` 1Password reference. A compact pill toggle switches between **API Key** (`x-api-key` header) and **Token** (`Authorization: Bearer`). The value is preserved when toggling
+- **Standalone mode** is on by default — it blocks all traffic to Anthropic (telemetry, updates, login prompt). Disable it only if your proxy forwards requests to Anthropic directly and you need the Anthropic login flow.
 
 ### OpenRouter
 
-- Select provider type **Proxy**, enter `https://openrouter.ai/api` as the base URL (the `/api` suffix is added automatically if omitted)
-- Choose **Auth Token** and paste your [OpenRouter API key](https://openrouter.ai/settings/keys) — the extension writes `ANTHROPIC_AUTH_TOKEN` and clears `ANTHROPIC_API_KEY` as [required by OpenRouter](https://openrouter.ai/docs/guides/guides/claude-code-integration)
-- Typing an `openrouter.ai` URL automatically switches from API Key to Auth Token mode
+- Select provider type **Local / Other**, enter `https://openrouter.ai` as the base URL (the `/api` suffix is added automatically; `/v1` is stripped if pasted)
+- The auth pill auto-switches to **Token** when an `openrouter.ai` URL is detected. Paste your [OpenRouter API key](https://openrouter.ai/settings/keys) or use an `op://` reference for 1Password
+- Click **Test** on each model slot to verify compatibility before saving
 
 ### Anthropic Direct
 
@@ -80,11 +81,13 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 |---|---|
 | Composable presets | Mix and match providers, MCP servers, and directories |
 | Scope management | Global and per-workspace configurations with inheritance |
-| Provider types | Anthropic Direct, AWS Bedrock, OpenAI-compatible proxy |
+| Provider types | Anthropic Direct, AWS Bedrock, Local / Other (any Anthropic-compatible proxy) |
 | MCP server groups | Reusable named collections of MCP servers (stdio, HTTP, SSE) |
 | Directory groups | Additional directories Claude Code may access |
-| Live model discovery | Fetch available models button queries `/v1/models` from proxy servers; auto-selects single-model endpoints |
-| Filterable dropdowns | Type-to-filter combobox for AWS profiles (100+) and model lists (500+ OpenRouter) — substring match anywhere, keyboard nav, match highlighting |
+| Live model discovery | Fetch available models queries `/v1/models`; auto-selects single-model endpoints |
+| Model compatibility testing | Per-slot **Test** pill verifies the model speaks Anthropic's `/v1/messages` API; results persisted per provider |
+| 1Password support | Enter `op://Vault/Item/field` as the credential — the extension writes `apiKeyHelper` for Claude Code to resolve at startup |
+| Filterable dropdowns | Type-to-filter combobox for AWS profiles (100+) and model lists (500+ OpenRouter) — slot-matching models grouped first, alphabetical sort, keyboard nav, match highlighting |
 | Quick-switch status bar | Click the status bar item to switch presets for global or workspace scope without opening the panel |
 | Import / Export | Share presets between machines or team members — credentials are scrubbed on export, recipients fill in their own |
 | Draft auto-save | Unsaved changes persist across panel close and are restored on re-open |
@@ -97,7 +100,8 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 
 - VS Code 1.98 or later
 - For Bedrock: AWS CLI configured with a named profile (`aws configure --profile <name>`)
-- For Proxy: a running OpenAI-compatible server
+- For Local / Other: a running Anthropic-compatible server (`/v1/messages` endpoint)
+- For 1Password credentials: [1Password CLI](https://developer.1password.com/docs/cli/) (`op`) installed and signed in
 
 ## Extension Settings
 
