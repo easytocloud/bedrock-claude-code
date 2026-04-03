@@ -4,6 +4,19 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.14] — 2026-04-03
+
+### Fixed
+- **Delete buttons now work** — all four delete actions (preset, provider, MCP group, directory group) were silently failing because `window.confirm()` is blocked in VS Code webviews. Confirmation dialogs now use VS Code's native modal warning message.
+
+### Changed
+- **Fetch model buttons show loading state** — "Fetch models from AWS" and "Fetch available models" buttons display a spinner and become non-interactive during the request; reset on success or error.
+- **Combobox keyboard improvements** — Tab closes the dropdown and commits the highlighted selection; Escape closes and blurs.
+- **Standardized spacing scale** — unified margin/padding to a consistent 4/8/12/16/20/24px rhythm across all components.
+- **Button label clarity** — action buttons use clearer verb labels; delete actions have confirmation prompts.
+- **UX/UI polish** — card system unification, softened accent colors, icon consistency (SVG throughout), improved combobox count hints, smooth scroll in dropdowns.
+- **IMPROVEMENTS.md consolidated** — reviewed all 30 identified issues; 4 remain open (ARCH-2, IMPORT-1, IMPORT-3, UX-2), 8 dropped with rationale.
+
 ## [0.3.13] — 2026-04-02
 
 ### Added
@@ -232,7 +245,9 @@ All notable changes to this extension will be documented here.
 - Disable login prompt toggle
 - Dirty indicator (● in panel title when unsaved changes exist)
 
-[Unreleased]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.12...HEAD
+[Unreleased]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.14...HEAD
+[0.3.14]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.13...v0.3.14
+[0.3.13]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.12...v0.3.13
 [0.3.12]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.11...v0.3.12
 [0.3.11]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.10...v0.3.11
 [0.3.10]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.9...v0.3.10

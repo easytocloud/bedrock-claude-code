@@ -42,9 +42,9 @@ export function buildStyles(): string {
       --teal-mid: rgba(42,157,143,0.20);
       --teal-accent: #40c9b4;
 
-      --red: #c74848;
-      --red-dim: rgba(199,72,72,0.10);
-      --red-mid: rgba(199,72,72,0.20);
+      --red: #d96666;
+      --red-dim: rgba(217,102,102,0.10);
+      --red-mid: rgba(217,102,102,0.20);
 
       --border: var(--vscode-panel-border, #3e3e3e);
       --input-bg: var(--vscode-input-background, #333333);
@@ -145,6 +145,30 @@ export function buildStyles(): string {
       align-items: center;
     }
     .btn-icon:hover { color: var(--fg); background: var(--bg-hover); }
+
+    /* ─── Loading State ────────────────────────────────────────────── */
+    .btn-loading {
+      pointer-events: none;
+      opacity: 0.7;
+      position: relative;
+      padding-left: 28px;
+    }
+    .btn-loading::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      margin-top: -6px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: btn-spin 0.6s linear infinite;
+    }
+    @keyframes btn-spin {
+      to { transform: rotate(360deg); }
+    }
 
     /* ─── Disabled State ────────────────────────────────────────────── */
     button:disabled,
@@ -322,18 +346,33 @@ export function buildStyles(): string {
       gap: 12px;
     }
 
-    .preset-card {
+    /* ─── Base Card System ────────────────────────────────────────── */
+    .card {
       background: var(--bg-raised);
       border: 1px solid var(--border);
+      border-left: 4px solid transparent;
       border-radius: var(--radius);
-      padding: 14px;
       cursor: pointer;
-      transition: all var(--transition);
+      transition: background var(--transition), border-color var(--transition);
     }
-    .preset-card:hover {
-      border-color: var(--fg-muted);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    .card:hover { background: var(--bg-hover); }
+    .card-red    { border-left-color: var(--red); }
+    .card-orange { border-left-color: var(--orange-accent); }
+    .card-purple { border-left-color: var(--purple-accent); }
+    .card-green  { border-left-color: var(--green-accent); }
+    .card-new {
+      border-style: dashed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      color: var(--fg-dim);
+      font-size: 13px;
+    }
+    .card-new:hover { color: var(--blue); border-color: var(--blue); }
+
+    .preset-card {
+      padding: 16px;
     }
     .preset-card-header {
       display: flex;
@@ -377,16 +416,9 @@ export function buildStyles(): string {
     .preset-tag.green { background: var(--green-dim); color: var(--green); }
 
     .preset-card-new {
-      border-style: dashed;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       gap: 8px;
-      color: var(--fg-dim);
-      font-size: 13px;
       min-height: 100px;
     }
-    .preset-card-new:hover { color: var(--blue); border-color: var(--blue); }
 
     /* ─── Building Block Chips ─────────────────────────────────────── */
     .bb-chips {
@@ -405,21 +437,8 @@ export function buildStyles(): string {
     .bb-chip {
       display: flex;
       padding: 8px 12px;
-      background: var(--bg-raised);
-      border: 1px solid var(--border);
-      border-left: 3px solid transparent;
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: all var(--transition);
       min-width: 160px;
       max-width: 280px;
-    }
-    .bb-chip.orange { border-left-color: var(--orange-accent); }
-    .bb-chip.purple { border-left-color: var(--purple-accent); }
-    .bb-chip.green { border-left-color: var(--green-accent); }
-    .bb-chip:hover {
-      border-color: var(--fg-muted);
-      background: var(--bg-hover);
     }
     .bb-chip-text { min-width: 0; }
     .bb-chip-name {
@@ -441,12 +460,8 @@ export function buildStyles(): string {
     }
     .bb-chip-spacer { margin-top: 8px; }
     .bb-chip-new {
-      border-style: dashed;
-      color: var(--fg-dim);
-      justify-content: center;
       min-width: 120px;
     }
-    .bb-chip-new:hover { color: var(--blue); border-color: var(--blue); }
     .bb-empty {
       font-size: 12px;
       color: var(--fg-muted);
@@ -468,6 +483,22 @@ export function buildStyles(): string {
       color: var(--fg-dim);
       margin-bottom: 4px;
     }
+    .form-error-message {
+      font-size: 11px;
+      color: var(--red);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .form-error-icon {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
 
     input[type="text"],
     input[type="password"],
@@ -486,6 +517,15 @@ export function buildStyles(): string {
     input:focus, textarea:focus {
       border-color: var(--input-focus);
     }
+    input.input-error,
+    textarea.input-error {
+      border-color: var(--red);
+      background: rgba(217, 102, 102, 0.05);
+    }
+    input.input-error:focus,
+    textarea.input-error:focus {
+      border-color: var(--red);
+    }
     textarea { resize: vertical; min-height: 60px; }
 
     select {
@@ -501,6 +541,13 @@ export function buildStyles(): string {
       cursor: pointer;
     }
     select:focus { border-color: var(--input-focus); }
+    select.input-error {
+      border-color: var(--red);
+      background: rgba(217, 102, 102, 0.05);
+    }
+    select.input-error:focus {
+      border-color: var(--red);
+    }
 
     /* ─── Segmented Control (provider type, transport) ──────────────── */
     .seg-control {

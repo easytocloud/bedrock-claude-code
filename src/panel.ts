@@ -321,6 +321,18 @@ export class ClaudeCodeSettingsPanel {
         await this._testBedrockModel(msg.awsProfile as string, msg.awsRegion as string, msg.awsEnv as string | undefined, msg.modelId as string, msg.slot as string);
         break;
 
+      case 'confirmDelete':
+        vscode.window.showWarningMessage(
+          `Delete "${msg.itemName}"? This cannot be undone.`,
+          { modal: true },
+          'Delete'
+        ).then(choice => {
+          if (choice === 'Delete') {
+            this._panel.webview.postMessage({ type: 'confirmDeleteResult', confirmed: true, deleteId: msg.deleteId });
+          }
+        });
+        break;
+
       case 'setDismissPref':
         await this._context.globalState.update(msg.key as string, msg.value);
         break;

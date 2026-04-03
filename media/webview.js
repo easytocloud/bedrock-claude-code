@@ -3,7 +3,9 @@
  * Loaded as a separate file via <script src="...">.
  * Data is injected by the extension host via window.__DATA__.
  */
+console.log('[WEBVIEW] Script loaded');
 (function() {
+  console.log('[WEBVIEW-IIFE] IIFE started');
   const vscode = acquireVsCodeApi();
 
   // ─── Well-known IDs and model catalogs (injected by extension host) ──
@@ -58,6 +60,55 @@
     if (state && state.store) {
       vscode.postMessage({ type: 'saveDraft', store: state.store });
     }
+  }
+
+  // ─── Form error handling ───────────────────────────────────────
+  function showFieldError(fieldId, errorMessage) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    // Add error class to field
+    field.classList.add('input-error');
+
+    // Find or create error message container
+    let errorContainer = field.nextElementSibling;
+    if (!errorContainer || !errorContainer.classList.contains('form-error-message')) {
+      errorContainer = document.createElement('div');
+      errorContainer.className = 'form-error-message';
+      field.parentNode.insertBefore(errorContainer, field.nextSibling);
+    }
+
+    // Set error message with icon
+    errorContainer.innerHTML = `<span class="form-error-icon">✕</span><span>${escHtml(errorMessage)}</span>`;
+
+    // Scroll field into view
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    field.focus();
+  }
+
+  function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    // Remove error class
+    field.classList.remove('input-error');
+
+    // Remove error message
+    let errorContainer = field.nextElementSibling;
+    if (errorContainer && errorContainer.classList.contains('form-error-message')) {
+      errorContainer.remove();
+    }
+  }
+
+  function clearAllErrors() {
+    // Remove all error classes
+    document.querySelectorAll('.input-error').forEach(el => {
+      el.classList.remove('input-error');
+    });
+    // Remove all error messages
+    document.querySelectorAll('.form-error-message').forEach(el => {
+      el.remove();
+    });
   }
 
   // ─── Region prefix filtering ──────────────────────────────────
@@ -123,7 +174,11 @@
   // ─── Scope card toggle ─────────────────────────────────────────
   function toggleScope(header) {
     const card = header.closest('.scope-card');
-    if (card) card.classList.toggle('collapsed');
+    if (card) {
+      card.classList.toggle('collapsed');
+      const isExpanded = !card.classList.contains('collapsed');
+      header.setAttribute('aria-expanded', isExpanded);
+    }
   }
 
   // ─── Shared chip renderers (used by scope blocks AND building block panels) ──
@@ -144,7 +199,7 @@
     const itemHtml = items.map(i =>
       `<span class="bb-chip-detail${i.spacer ? ' bb-chip-spacer' : ''}">${escHtml(i.text)}</span>`
     ).join('');
-    return `<div class="bb-chip ${color}" data-action="${action}" data-id="${escHtml(id)}">
+    return `<div class="bb-chip card card-${color}" data-action="${action}" data-id="${escHtml(id)}">
       <div class="bb-chip-text">
         <span class="bb-chip-name">${escHtml(name)}</span>
         ${itemHtml}
@@ -263,10 +318,9 @@
     const provSel = document.getElementById('preset-provider');
     provSel.innerHTML = '<option value="">— Select a provider —</option>';
     for (const p of store.providers) {
-      const icon = p.type === 'anthropic' ? '☁️' : p.type === 'bedrock' ? '🔶' : '🔗';
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = icon + ' ' + p.name;
+      opt.textContent = p.name;
       if (preset && preset.providerId === p.id) opt.selected = true;
       provSel.appendChild(opt);
     }
@@ -286,7 +340,7 @@
             <div class="check-item-hint">${escHtml(serverNames)}</div>
           </div>
           <span class="spacer"></span>
-          <button class="btn-icon btn-sm" data-action="edit-mcp-group" data-id="${escHtml(g.id)}">✏️</button>
+          <button class="btn-icon btn-sm" data-action="edit-mcp-group" data-id="${escHtml(g.id)}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5L14.5 4.5M1 15H4L13 6L10 3L1 12V15Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </label>`;
     }
 
@@ -304,7 +358,7 @@
             <div class="check-item-hint">${escHtml(dirNames)}</div>
           </div>
           <span class="spacer"></span>
-          <button class="btn-icon btn-sm" data-action="edit-dir-group" data-id="${escHtml(g.id)}">✏️</button>
+          <button class="btn-icon btn-sm" data-action="edit-dir-group" data-id="${escHtml(g.id)}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5L14.5 4.5M1 15H4L13 6L10 3L1 12V15Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </label>`;
     }
 
@@ -617,7 +671,8 @@
     const key = document.getElementById('provider-proxy-credential').value.trim();
     const statusEl = document.getElementById('proxy-fetch-status');
     statusEl.textContent = 'Fetching…';
-    // The webview sandbox cannot make arbitrary fetch calls — delegate to the extension host
+    const btn = document.querySelector('[data-action="fetch-proxy-models"]');
+    if (btn) btn.classList.add('btn-loading');
     vscode.postMessage({ type: 'fetchLocalModels', baseUrl: url, apiKey: key });
   }
 
@@ -647,6 +702,8 @@
     var region = document.getElementById('provider-aws-region').value;
     var statusEl = document.getElementById('bedrock-fetch-status');
     if (statusEl) statusEl.textContent = 'Fetching from AWS…';
+    var btn = document.querySelector('[data-action="fetch-bedrock-models"]');
+    if (btn) btn.classList.add('btn-loading');
     // Include awsEnv so the backend uses the correct AWS_CONFIG_FILE
     var awsEnv = undefined;
     if (editing.providerId) {
@@ -754,14 +811,14 @@
         var more = document.createElement('div');
         more.className = 'combobox-option';
         more.style.color = 'var(--fg-dim)';
-        more.textContent = '… Showing 50 of ' + rest.length + '. Type to filter.';
+        more.textContent = '… Showing 50 of ' + filtered.length + '. Type to filter.';
         list.appendChild(more);
       }
       if (allowCustom && filter) {
         var custom = document.createElement('div');
         custom.className = 'combobox-option';
         custom.dataset.value = filter;
-        custom.innerHTML = '✏️ Use "' + escHtml(filter) + '"';
+        custom.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5L14.5 4.5M1 15H4L13 6L10 3L1 12V15Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Use "' + escHtml(filter) + '"';
         list.appendChild(custom);
       }
     }
@@ -814,6 +871,17 @@
         }
       } else if (e.key === 'Escape') {
         wrapper.classList.remove('open');
+        input.blur();
+      } else if (e.key === 'Tab') {
+        // Close dropdown and commit active selection on Tab (natural focus flow)
+        if (wrapper.classList.contains('open')) {
+          if (active && active.dataset.value) {
+            input.dataset.selectedValue = active.dataset.value;
+            var tabMatch = items.find(function(i) { return i.value === active.dataset.value; });
+            input.value = tabMatch ? tabMatch.label : active.dataset.value;
+          }
+          wrapper.classList.remove('open');
+        }
       }
     });
 
@@ -887,7 +955,7 @@
           <div class="item-row-detail">${escHtml(s.type)} · ${escHtml(s.url || s.command || '')}</div>
         </div>
         <div class="item-row-actions">
-          <button class="btn-icon btn-sm" data-action="edit-mcp-server-item" data-index="${i}">✏️</button>
+          <button class="btn-icon btn-sm" data-action="edit-mcp-server-item" data-index="${i}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5L14.5 4.5M1 15H4L13 6L10 3L1 12V15Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <button class="btn-icon btn-sm" data-action="remove-mcp-server-item" data-index="${i}">&times;</button>
         </div>
       </div>`).join('');
@@ -938,7 +1006,7 @@
 
     const entries = Object.entries(env);
     if (entries.length === 0) {
-      container.innerHTML = '<div class="empty-state">No variables.</div>';
+      container.innerHTML = '';
       return;
     }
 
@@ -998,12 +1066,19 @@
 
   // ─── Save functions ────────────────────────────────────────────
   function savePresetFromDrawer() {
+    clearAllErrors();
     const store = state.store;
     const name = document.getElementById('preset-name').value.trim();
-    if (!name) { showToast('Preset name is required', true); return; }
+    if (!name) {
+      showFieldError('preset-name', 'Preset name is required');
+      return;
+    }
 
     const providerId = document.getElementById('preset-provider').value;
-    if (!providerId) { showToast('Please select a provider', true); return; }
+    if (!providerId) {
+      showFieldError('preset-provider', 'Please select a provider');
+      return;
+    }
     const mcpGroupIds = Array.from(document.querySelectorAll('[data-mcp-group]:checked')).map(el => el.dataset.mcpGroup);
     const dirGroupIds = Array.from(document.querySelectorAll('[data-dir-group]:checked')).map(el => el.dataset.dirGroup);
 
@@ -1031,6 +1106,7 @@
   }
 
   function saveProviderFromDrawer() {
+    clearAllErrors();
     const store = state.store;
 
     // Default provider: only the API key is editable
@@ -1046,17 +1122,25 @@
     }
 
     const name = document.getElementById('provider-name').value.trim();
-    if (!name) { showToast('Provider name is required', true); return; }
+    if (!name) {
+      showFieldError('provider-name', 'Provider name is required');
+      return;
+    }
 
     const selBtn = document.querySelector('[data-seg="provider-type"].sel');
     const type = selBtn ? selBtn.dataset.val : '';
-    if (!type) { showToast('Please select a provider type', true); return; }
+    if (!type) {
+      showToast('Please select a provider type', true);
+      return;
+    }
 
     if (type === 'bedrock' && !getModelValue('provider-aws-profile').trim()) {
-      showToast('AWS profile is required for Bedrock', true); return;
+      showFieldError('provider-aws-profile', 'AWS profile is required for Bedrock');
+      return;
     }
     if (type === 'proxy' && !document.getElementById('provider-proxy-url').value.trim()) {
-      showToast('Base URL is required for proxy providers', true); return;
+      showFieldError('provider-proxy-url', 'Base URL is required for proxy providers');
+      return;
     }
 
     // Collect model test states from pills (keyed by model ID)
@@ -1150,9 +1234,13 @@
   }
 
   function saveMcpGroupFromDrawer() {
+    clearAllErrors();
     const store = state.store;
     const name = document.getElementById('mcp-group-name').value.trim();
-    if (!name) { showToast('Group name is required', true); return; }
+    if (!name) {
+      showFieldError('mcp-group-name', 'Group name is required');
+      return;
+    }
 
     // Collect servers from the current list (they were stored in a temp array)
     const servers = collectMcpServersFromDOM();
@@ -1184,17 +1272,23 @@
   }
 
   function saveMcpServerFromDrawer() {
+    clearAllErrors();
     const name = document.getElementById('mcp-server-name').value.trim();
-    if (!name) { showToast('Server name is required', true); return; }
+    if (!name) {
+      showFieldError('mcp-server-name', 'Server name is required');
+      return;
+    }
 
     const transportBtn = document.querySelector('[data-seg="mcp-transport"].sel');
     const type = transportBtn ? transportBtn.dataset.val : 'http';
 
     if ((type === 'http' || type === 'sse') && !document.getElementById('mcp-server-url').value.trim()) {
-      showToast('URL is required for HTTP/SSE servers', true); return;
+      showFieldError('mcp-server-url', 'URL is required for HTTP/SSE servers');
+      return;
     }
     if (type === 'stdio' && !document.getElementById('mcp-server-command').value.trim()) {
-      showToast('Command is required for stdio servers', true); return;
+      showFieldError('mcp-server-command', 'Command is required for stdio servers');
+      return;
     }
 
     // For stdio: split command field if it contains spaces (e.g. "npx -y @pkg" → command="npx", args=["-y","@pkg",...])
@@ -1274,7 +1368,10 @@
   function saveDirGroupFromDrawer() {
     const store = state.store;
     const name = document.getElementById('dir-group-name').value.trim();
-    if (!name) { showToast('Group name is required', true); return; }
+    if (!name) {
+      showFieldError('dir-group-name', 'Group name is required');
+      return;
+    }
 
     const dirs = collectDirsFromDOM();
 
@@ -1307,31 +1404,39 @@
   }
 
   // ─── Delete functions ──────────────────────────────────────────
+  let _pendingDeleteId = 0;
+  const _pendingDeletes = {};
+
   function confirmDelete(itemName, callback) {
-    if (!confirm(`Delete "${itemName}"? This cannot be undone.`)) {
-      return;
-    }
-    callback();
+    const deleteId = ++_pendingDeleteId;
+    _pendingDeletes[deleteId] = callback;
+    vscode.postMessage({ type: 'confirmDelete', itemName, deleteId });
   }
 
   function deletePreset() {
     if (!editing.presetId || editing.presetId === DEFAULT_PRESET_ID) return;
-    const store = state.store;
-    store.presets = store.presets.filter(p => p.id !== editing.presetId);
+    const preset = state.store.presets.find(p => p.id === editing.presetId);
+    if (!preset) return;
+    const presetIdToDelete = editing.presetId;
+    confirmDelete(preset.name, () => {
+      if (!presetIdToDelete || presetIdToDelete === DEFAULT_PRESET_ID) return;
+      const store = state.store;
+      store.presets = store.presets.filter(p => p.id !== presetIdToDelete);
 
-    // Clear scope references
-    if (store.globalScope.presetId === editing.presetId) {
-      store.globalScope = { mode: 'manual' };
-    }
-    for (const [key, scope] of Object.entries(store.workspaceScopes)) {
-      if (scope.presetId === editing.presetId) {
-        store.workspaceScopes[key] = { mode: 'inherit' };
+      // Clear scope references
+      if (store.globalScope.presetId === presetIdToDelete) {
+        store.globalScope = { mode: 'manual' };
       }
-    }
+      for (const [key, scope] of Object.entries(store.workspaceScopes)) {
+        if (scope.presetId === presetIdToDelete) {
+          store.workspaceScopes[key] = { mode: 'inherit' };
+        }
+      }
 
-    markDirty();
-    closeTopDrawer();
-    refreshUI();
+      markDirty();
+      closeTopDrawer();
+      refreshUI();
+    });
   }
 
   function deleteProvider() {
@@ -1505,7 +1610,7 @@
         : '';
 
       html += `
-        <div class="preset-card" data-action="edit-preset" data-id="${escHtml(preset.id)}">
+        <div class="preset-card card card-red" data-action="edit-preset" data-id="${escHtml(preset.id)}">
           <div class="preset-card-header">
             <span class="preset-card-name">${escHtml(preset.name)}</span>
             ${isDefault ? '<span class="preset-card-default">Default</span>' : ''}
@@ -1519,7 +1624,7 @@
     }
 
     // Dashed "new" card
-    html += '<div class="preset-card preset-card-new" data-action="new-preset">+ New Preset</div>';
+    html += '<div class="preset-card card card-new card-red" data-action="new-preset">+ New Preset</div>';
 
     grid.innerHTML = html;
   }
@@ -1531,7 +1636,7 @@
     const provChips = document.querySelector('[data-chips="providers"]');
     if (provChips) {
       let html = store.providers.map(p => renderProviderChipHtml(p)).join('');
-      html += '<div class="bb-chip bb-chip-new" data-action="new-provider-standalone">+ New Provider</div>';
+      html += '<div class="bb-chip card card-new card-orange" data-action="new-provider-standalone">+ New Provider</div>';
       provChips.innerHTML = html;
     }
 
@@ -1539,7 +1644,7 @@
     const mcpChips = document.querySelector('[data-chips="mcp-groups"]');
     if (mcpChips) {
       let html = store.mcpGroups.map(g => renderMcpGroupChipHtml(g)).join('');
-      html += '<div class="bb-chip bb-chip-new" data-action="new-mcp-group-standalone">+ New Group</div>';
+      html += '<div class="bb-chip card card-new card-purple" data-action="new-mcp-group-standalone">+ New Group</div>';
       mcpChips.innerHTML = html;
     }
 
@@ -1547,7 +1652,7 @@
     const dirChips = document.querySelector('[data-chips="dir-groups"]');
     if (dirChips) {
       let html = store.directoryGroups.map(g => renderDirGroupChipHtml(g)).join('');
-      html += '<div class="bb-chip bb-chip-new" data-action="new-dir-group-standalone">+ New Group</div>';
+      html += '<div class="bb-chip card card-new card-green" data-action="new-dir-group-standalone">+ New Group</div>';
       dirChips.innerHTML = html;
     }
   }
@@ -1596,10 +1701,15 @@
   // ─── Event delegation ─────────────────────────────────────────
   document.addEventListener('click', function(e) {
     const target = e.target.closest('[data-action]');
-    if (!target) return;
+    if (!target) {
+      console.log('[CLICK-NOMATCH]', e.target.tagName, e.target.className);
+      return;
+    }
 
     const action = target.dataset.action;
     const id = target.dataset.id;
+
+    console.log('[ACTION]', action, { id, presetId: editing.presetId, providerId: editing.providerId });
 
     switch (action) {
       case 'toggle-scope':
@@ -1607,7 +1717,11 @@
         break;
       case 'toggle-panel': {
         const panel = target.closest('.panel-section');
-        if (panel) panel.classList.toggle('collapsed');
+        if (panel) {
+          panel.classList.toggle('collapsed');
+          const isExpanded = !panel.classList.contains('collapsed');
+          target.setAttribute('aria-expanded', isExpanded);
+        }
         break;
       }
       case 'close-drawer':
@@ -1624,11 +1738,9 @@
       case 'save-preset':
         savePresetFromDrawer();
         break;
-      case 'delete-preset': {
-        const preset = state.store.presets.find(p => p.id === editing.presetId);
-        if (preset) confirmDelete(preset.name, deletePreset);
+      case 'delete-preset':
+        deletePreset();
         break;
-      }
       case 'duplicate-preset':
         duplicatePreset();
         break;
@@ -1650,7 +1762,22 @@
         break;
       case 'delete-provider': {
         const provider = state.store.providers.find(p => p.id === editing.providerId);
-        if (provider) confirmDelete(provider.name, deleteProvider);
+        if (provider) {
+          const providerIdToDelete = editing.providerId;
+          confirmDelete(provider.name, () => {
+            if (!providerIdToDelete || providerIdToDelete === DEFAULT_PROVIDER_ID) return;
+            const store = state.store;
+            store.providers = store.providers.filter(p => p.id !== providerIdToDelete);
+            store.presets.forEach(preset => {
+              if (preset.providerId === providerIdToDelete) {
+                preset.providerId = '';
+              }
+            });
+            markDirty();
+            closeTopDrawer();
+            refreshUI();
+          });
+        }
         break;
       }
       case 'duplicate-provider':
@@ -1668,7 +1795,20 @@
         break;
       case 'delete-mcp-group': {
         const group = state.store.mcpGroups.find(g => g.id === editing.mcpGroupId);
-        if (group) confirmDelete(group.name, deleteMcpGroup);
+        if (group) {
+          const mcpGroupIdToDelete = editing.mcpGroupId;
+          confirmDelete(group.name, () => {
+            if (!mcpGroupIdToDelete) return;
+            const store = state.store;
+            store.mcpGroups = store.mcpGroups.filter(g => g.id !== mcpGroupIdToDelete);
+            store.presets.forEach(preset => {
+              preset.mcpGroupIds = preset.mcpGroupIds.filter(id => id !== mcpGroupIdToDelete);
+            });
+            markDirty();
+            closeTopDrawer();
+            refreshUI();
+          });
+        }
         break;
       }
       case 'duplicate-mcp-group':
@@ -1712,8 +1852,21 @@
         saveDirGroupFromDrawer();
         break;
       case 'delete-dir-group': {
-        const group = state.store.dirGroups.find(g => g.id === editing.dirGroupId);
-        if (group) confirmDelete(group.name, deleteDirGroup);
+        const group = state.store.directoryGroups.find(g => g.id === editing.dirGroupId);
+        if (group) {
+          const dirGroupIdToDelete = editing.dirGroupId;
+          confirmDelete(group.name, () => {
+            if (!dirGroupIdToDelete) return;
+            const store = state.store;
+            store.directoryGroups = store.directoryGroups.filter(g => g.id !== dirGroupIdToDelete);
+            store.presets.forEach(preset => {
+              preset.directoryGroupIds = preset.directoryGroupIds.filter(id => id !== dirGroupIdToDelete);
+            });
+            markDirty();
+            closeTopDrawer();
+            refreshUI();
+          });
+        }
         break;
       }
       case 'duplicate-dir-group':
@@ -1935,6 +2088,8 @@
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.btn-test');
     if (!btn || btn.classList.contains('testing') || btn.classList.contains('ok')) { return; }
+    // Skip if this is the MCP server test button (no data-test-model)
+    if (!btn.dataset.testModel) { return; }
     var selectId = btn.dataset.testModel;
     var slot = btn.dataset.slot;
     var modelId = getModelValue(selectId);
@@ -2027,6 +2182,11 @@
     if (e.key === 'Escape' && drawerStack.length > 0) {
       closeTopDrawer();
     }
+    // Enter/Space on collapsible headers
+    if ((e.key === 'Enter' || e.key === ' ') && (e.target.getAttribute('role') === 'button' && e.target.dataset.action === 'toggle-scope' || e.target.dataset.action === 'toggle-panel')) {
+      e.preventDefault();
+      e.target.click();
+    }
   });
 
   // ─── Message handling from extension ──────────────────────────
@@ -2065,6 +2225,8 @@
 
       case 'localModels': {
         const statusEl = document.getElementById('proxy-fetch-status');
+        const fetchBtn = document.querySelector('[data-action="fetch-proxy-models"]');
+        if (fetchBtn) fetchBtn.classList.remove('btn-loading');
         if (msg.models && msg.models.length > 0) {
           applyFetchedProxyModels(msg.models);
         } else {
@@ -2075,11 +2237,15 @@
 
       case 'localModelsError': {
         const statusEl = document.getElementById('proxy-fetch-status');
+        const fetchBtn = document.querySelector('[data-action="fetch-proxy-models"]');
+        if (fetchBtn) fetchBtn.classList.remove('btn-loading');
         if (statusEl) statusEl.textContent = 'Error: ' + (msg.message || 'Unknown error');
         break;
       }
 
       case 'bedrockModels': {
+        const bedrockBtn = document.querySelector('[data-action="fetch-bedrock-models"]');
+        if (bedrockBtn) bedrockBtn.classList.remove('btn-loading');
         if (msg.models && msg.models.length > 0) {
           applyFetchedBedrockModels(msg.models);
         } else {
@@ -2091,6 +2257,8 @@
 
       case 'bedrockModelsError': {
         const s = document.getElementById('bedrock-fetch-status');
+        const bedrockBtn = document.querySelector('[data-action="fetch-bedrock-models"]');
+        if (bedrockBtn) bedrockBtn.classList.remove('btn-loading');
         if (s) s.textContent = 'Error: ' + (msg.message || 'Unknown error');
         break;
       }
@@ -2125,6 +2293,14 @@
           var awsCombo2 = createCombobox('provider-aws-profile', awsItems2, profileToSelect, false);
           awsTarget2.replaceWith(awsCombo2);
         }
+        break;
+      }
+
+      case 'confirmDeleteResult': {
+        if (msg.confirmed && _pendingDeletes[msg.deleteId]) {
+          _pendingDeletes[msg.deleteId]();
+        }
+        delete _pendingDeletes[msg.deleteId];
         break;
       }
 
