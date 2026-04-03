@@ -34,7 +34,6 @@ function drawerShell(id: string, headerHtml: string, bodyHtml: string, footerHtm
 
 export function renderPresetDrawer(): string {
   const header = `
-    <span class="drawer-header-icon">⚡</span>
     <div class="drawer-header-text">
       <div class="drawer-header-title" id="preset-drawer-title">Edit Preset</div>
       <div class="drawer-header-subtitle">Preset</div>
@@ -101,7 +100,6 @@ export function renderProviderDrawer(): string {
   ).join('');
 
   const header = `
-    <span class="drawer-header-icon" id="provider-drawer-icon">☁️</span>
     <div class="drawer-header-text">
       <div class="drawer-header-title" id="provider-drawer-title">Edit Provider</div>
       <div class="drawer-header-subtitle">Provider</div>
@@ -186,7 +184,7 @@ export function renderProviderDrawer(): string {
       </div>
       <div class="form-group">
         <div class="label-row">
-          <label class="form-label">Credential</label>
+          <label class="form-label" for="proxy-auth-pills">Credential</label>
           <div class="pill-toggle" id="proxy-auth-pills">
             <button type="button" class="pill-btn sel" data-pill="proxy-auth" data-val="apikey">API Key</button>
             <button type="button" class="pill-btn" data-pill="proxy-auth" data-val="authtoken">Token</button>
@@ -272,7 +270,6 @@ export function renderProviderDrawer(): string {
 
 export function renderMcpGroupDrawer(): string {
   const header = `
-    <span class="drawer-header-icon">📡</span>
     <div class="drawer-header-text">
       <div class="drawer-header-title" id="mcp-group-drawer-title">Edit MCP Server Group</div>
       <div class="drawer-header-subtitle">MCP server group</div>
@@ -305,7 +302,6 @@ export function renderMcpGroupDrawer(): string {
 
 export function renderMcpServerDrawer(): string {
   const header = `
-    <span class="drawer-header-icon">➕</span>
     <div class="drawer-header-text">
       <div class="drawer-header-title" id="mcp-server-drawer-title">Add MCP Server</div>
       <div class="drawer-header-subtitle">Configure a server</div>
@@ -347,23 +343,14 @@ export function renderMcpServerDrawer(): string {
 
     <!-- Environment Variables -->
     <div class="divider"></div>
-    <div class="section-heading">
-      <span class="section-dot section-dot-purple"></span>
-      ENVIRONMENT VARIABLES
-    </div>
-    <div id="mcp-server-env" class="item-list">
-      <div class="empty-state">No variables configured.</div>
-    </div>
+    <label class="form-label" for="mcp-server-env">Environment variables</label>
+    <div id="mcp-server-env" class="item-list"></div>
     <button type="button" class="add-inline" data-action="add-mcp-env-var">+ Add variable</button>
 
     <!-- Test Connection -->
     <div class="divider"></div>
-    <div class="section-heading">
-      <span class="section-dot section-dot-blue"></span>
-      TEST CONNECTION
-    </div>
     <div class="form-group">
-      <button type="button" class="btn btn-ghost" id="btn-test-mcp" data-action="test-mcp-server">Test</button>
+      <button type="button" class="btn-test" id="btn-test-mcp" data-action="test-mcp-server">Test</button>
       <div id="mcp-test-output" class="form-hint form-hint-mt" style="white-space:pre-wrap"></div>
     </div>
   `;
@@ -382,7 +369,6 @@ export function renderMcpServerDrawer(): string {
 
 export function renderDirectoryGroupDrawer(): string {
   const header = `
-    <span class="drawer-header-icon">📂</span>
     <div class="drawer-header-text">
       <div class="drawer-header-title" id="dir-group-drawer-title">Edit Directory Group</div>
       <div class="drawer-header-subtitle">Additional directory group</div>

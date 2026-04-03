@@ -4,6 +4,18 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.15] — 2026-04-03
+
+### Changed
+- **Drawer headers cleaned up** — removed emoji icons from all drawer headers (preset, provider, MCP group, directory group); consistent with SVG icon system used elsewhere.
+- **ARIA attributes on panels** — all collapsible panel headers and scope cards now have `role="button"`, `tabindex="0"`, and `aria-expanded` for keyboard accessibility.
+- **Card CSS classes** — preset cards, building block chips, and "new" cards use unified `.card` base class with color modifiers.
+- **MCP server drawer simplified** — environment variables and test connection sections use lighter markup.
+
+### Fixed
+- Removed debug `onclick` handler from preset delete button.
+- Added missing `for` attribute on credential label in provider drawer.
+
 ## [0.3.14] — 2026-04-03
 
 ### Fixed
@@ -245,7 +257,8 @@ All notable changes to this extension will be documented here.
 - Disable login prompt toggle
 - Dirty indicator (● in panel title when unsaved changes exist)
 
-[Unreleased]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.14...HEAD
+[Unreleased]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.15...HEAD
+[0.3.15]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.14...v0.3.15
 [0.3.14]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.13...v0.3.14
 [0.3.13]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.12...v0.3.13
 [0.3.12]: https://github.com/easytocloud/bedrock-claude-code/compare/v0.3.11...v0.3.12

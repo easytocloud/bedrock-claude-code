@@ -35,7 +35,7 @@ function renderScopeCard(attrs: {
 
   return `
     <div class="scope-card" data-scope="${scope}">
-      <div class="scope-header" data-action="toggle-scope">
+      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="true" aria-label="Toggle ${scope} scope">
         <div class="scope-indicator ${scope}"></div>
         <div class="scope-title-area">
           <div class="scope-title">
@@ -141,7 +141,7 @@ function renderPresetCard(
   const isDefault = preset.id === DEFAULT_PRESET_ID;
 
   return `
-    <div class="preset-card" data-action="edit-preset" data-id="${esc(preset.id)}">
+    <div class="preset-card card card-red" data-action="edit-preset" data-id="${esc(preset.id)}">
       <div class="preset-card-header">
         <span class="preset-card-name">${esc(preset.name)}</span>
         ${isDefault ? '<span class="preset-card-default">Default</span>' : ''}
@@ -164,7 +164,7 @@ export function renderPresetGrid(state: PanelState): string {
 
   let html = `
     <div class="panel-section" data-panel="presets">
-      <div class="panel-header" data-action="toggle-panel">
+      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="true">
         <div class="panel-indicator red"></div>
         <div class="panel-title-area">
           <div class="panel-title">
@@ -184,7 +184,7 @@ export function renderPresetGrid(state: PanelState): string {
 
   // Dashed "new" card
   html += `
-          <div class="preset-card preset-card-new" data-action="new-preset">+ New Preset</div>`;
+          <div class="preset-card card card-new card-red" data-action="new-preset">+ New Preset</div>`;
 
   html += `
         </div>
@@ -214,7 +214,7 @@ function renderChip(
     .map(i => `<span class="bb-chip-detail${i.spacer ? ' bb-chip-spacer' : ''}">${esc(i.text)}</span>`)
     .join('');
   return `
-    <div class="bb-chip ${color}" data-action="${action}" data-id="${esc(id)}">
+    <div class="bb-chip card card-${color}" data-action="${action}" data-id="${esc(id)}">
       <div class="bb-chip-text">
         <span class="bb-chip-name">${esc(name)}</span>
         ${itemHtml}
@@ -253,7 +253,7 @@ export function renderBuildingBlocks(state: PanelState): string {
 
     <!-- Providers panel -->
     <div class="panel-section" data-panel="providers">
-      <div class="panel-header" data-action="toggle-panel">
+      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="true">
         <div class="panel-indicator orange"></div>
         <div class="panel-title-area">
           <div class="panel-title">
@@ -267,14 +267,14 @@ export function renderBuildingBlocks(state: PanelState): string {
       <div class="panel-body">
         <div class="bb-chips" data-chips="providers">
           ${store.providers.map(p => renderProviderChip(p)).join('')}
-          <div class="bb-chip bb-chip-new" data-action="new-provider-standalone">+ New Provider</div>
+          <div class="bb-chip card card-new card-orange" data-action="new-provider-standalone">+ New Provider</div>
         </div>
       </div>
     </div>
 
     <!-- MCP Server Groups panel -->
     <div class="panel-section" data-panel="mcp-groups">
-      <div class="panel-header" data-action="toggle-panel">
+      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="true">
         <div class="panel-indicator purple"></div>
         <div class="panel-title-area">
           <div class="panel-title">
@@ -288,14 +288,14 @@ export function renderBuildingBlocks(state: PanelState): string {
       <div class="panel-body">
         <div class="bb-chips" data-chips="mcp-groups">
           ${store.mcpGroups.map(g => renderMcpGroupChip(g)).join('')}
-          <div class="bb-chip bb-chip-new" data-action="new-mcp-group-standalone">+ New Group</div>
+          <div class="bb-chip card card-new card-purple" data-action="new-mcp-group-standalone">+ New Group</div>
         </div>
       </div>
     </div>
 
     <!-- Directory Groups panel -->
     <div class="panel-section" data-panel="dir-groups">
-      <div class="panel-header" data-action="toggle-panel">
+      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="true">
         <div class="panel-indicator green"></div>
         <div class="panel-title-area">
           <div class="panel-title">
@@ -309,7 +309,7 @@ export function renderBuildingBlocks(state: PanelState): string {
       <div class="panel-body">
         <div class="bb-chips" data-chips="dir-groups">
           ${store.directoryGroups.map(g => renderDirGroupChip(g)).join('')}
-          <div class="bb-chip bb-chip-new" data-action="new-dir-group-standalone">+ New Group</div>
+          <div class="bb-chip card card-new card-green" data-action="new-dir-group-standalone">+ New Group</div>
         </div>
       </div>
     </div>`;
