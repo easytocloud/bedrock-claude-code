@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal C — Single-Page Stacked Scope Cards</title>
+<style>
+  :root {
+    --bg: #1e1e1e;
+    --bg-light: #252526;
+    --bg-lighter: #2d2d2d;
+    --bg-hover: #363636;
+    --fg: #cccccc;
+    --fg-dim: #888888;
+    --fg-bright: #e0e0e0;
+    --border: #3c3c3c;
+    --accent: #0078d4;
+    --accent-hover: #1a8cee;
+    --danger: #f44747;
+    --warning-bg: rgba(255,165,0,0.08);
+    --warning-border: #e89600;
+    --info-bg: rgba(0,120,212,0.08);
+    --info-border: #0078d4;
+    --input-bg: #3c3c3c;
+    --input-border: #555;
+    --radius: 6px;
+    --global-color: #4aa3e8;
+    --global-bg: rgba(0,120,212,0.04);
+    --global-border: #0078d4;
+    --project-color: #e8a830;
+    --project-bg: rgba(232,150,0,0.04);
+    --project-border: #e89600;
+    --local-color: #50c878;
+    --local-bg: rgba(80,200,120,0.04);
+    --local-border: #50c878;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--fg); }
+
+  /* ── Header ── */
+  .page-header { padding: 16px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 10; display: flex; align-items: center; gap: 16px; }
+  .page-header h1 { font-size: 18px; font-weight: 600; color: var(--fg-bright); }
+  .page-header .jump-links { margin-left: auto; display: flex; gap: 4px; }
+  .jump-link { padding: 4px 10px; font-size: 11px; border-radius: 12px; cursor: pointer; text-decoration: none; border: 1px solid var(--border); color: var(--fg-dim); background: none; }
+  .jump-link:hover { border-color: var(--fg-dim); color: var(--fg); }
+  .jump-link.global { border-color: var(--global-border); color: var(--global-color); }
+  .jump-link.project { border-color: var(--project-border); color: var(--project-color); }
+  .jump-link.local { border-color: var(--local-border); color: var(--local-color); }
+
+  /* ── Scrollable content ── */
+  .scroll-area { padding: 20px 24px 100px; max-width: 900px; margin: 0 auto; }
+
+  /* ── Scope Card ── */
+  .scope-card { border-radius: var(--radius); overflow: hidden; margin-bottom: 24px; border: 1px solid var(--border); }
+  .scope-card.global { border-color: color-mix(in srgb, var(--global-border) 40%, var(--border)); }
+  .scope-card.project { border-color: color-mix(in srgb, var(--project-border) 40%, var(--border)); }
+  .scope-card.local { border-color: color-mix(in srgb, var(--local-border) 40%, var(--border)); }
+
+  .scope-card-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .scope-card.global .scope-card-header { background: var(--global-bg); border-left: 4px solid var(--global-border); }
+  .scope-card.project .scope-card-header { background: var(--project-bg); border-left: 4px solid var(--project-border); }
+  .scope-card.local .scope-card-header { background: var(--local-bg); border-left: 4px solid var(--local-border); }
+  .scope-card-header .scope-icon { font-size: 16px; }
+  .scope-card-header .scope-label { font-weight: 700; font-size: 14px; }
+  .scope-card.global .scope-card-header .scope-label { color: var(--global-color); }
+  .scope-card.project .scope-card-header .scope-label { color: var(--project-color); }
+  .scope-card.local .scope-card-header .scope-label { color: var(--local-color); }
+  .scope-card-header .scope-file { font-size: 11px; font-family: 'SF Mono', Monaco, Consolas, monospace; color: var(--fg-dim); }
+  .scope-card-header .scope-profile-badge { margin-left: auto; font-size: 11px; padding: 3px 10px; border-radius: 12px; background: var(--bg-lighter); border: 1px solid var(--border); color: var(--fg-dim); }
+  .scope-card-header .chevron { margin-left: 8px; font-size: 12px; color: var(--fg-dim); transition: transform 0.2s; }
+  .scope-card.collapsed .chevron { transform: rotate(-90deg); }
+  .scope-card.collapsed .scope-card-body { display: none; }
+
+  .scope-card-body { padding: 16px; background: var(--bg-light); }
+
+  /* ── Inline tabs within scope card ── */
+  .card-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .card-tab { padding: 8px 16px; font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--fg-dim); background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
+  .card-tab:hover { color: var(--fg); }
+  .card-tab.active { color: var(--fg-bright); border-bottom-color: var(--accent); }
+  .card-tab-content { display: none; }
+  .card-tab-content.visible { display: block; }
+
+  /* ── Provider selector (compact inline) ── */
+  .provider-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .provider-pill { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: 2px solid var(--border); border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; background: none; color: var(--fg); font-family: inherit; }
+  .provider-pill:hover { border-color: var(--fg-dim); }
+  .provider-pill.selected { border-color: var(--accent); background: var(--info-bg); }
+  .provider-pill .pill-icon { font-size: 14px; }
+  .provider-pill.none { border-style: dashed; color: var(--fg-dim); font-weight: 400; font-style: italic; }
+  .provider-pill.none.selected { border-color: var(--fg-dim); background: none; }
+
+  /* ── Config section ── */
+  .config-section { padding: 12px 14px; background: var(--bg-lighter); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; }
+  .config-section h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--fg-dim); margin-bottom: 10px; }
+  .form-group { margin-bottom: 12px; }
+  .form-group:last-child { margin-bottom: 0; }
+  .form-group label { display: block; font-size: 11px; font-weight: 600; color: var(--fg-dim); margin-bottom: 4px; }
+  .form-group input, .form-group select { width: 100%; padding: 7px 10px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: 4px; font-size: 12px; font-family: inherit; }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* ── Model row (compact) ── */
+  .model-row { display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .model-row .model-label { font-size: 11px; color: var(--fg-dim); text-align: right; font-weight: 600; }
+  .model-row select { padding: 6px 8px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: 4px; font-size: 12px; }
+
+  /* ── MCP ── */
+  .mcp-item { display: flex; align-items: center; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 4px; gap: 8px; font-size: 12px; }
+  .mcp-item .name { font-weight: 600; }
+  .mcp-item .type-badge { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bg-hover); color: var(--fg-dim); text-transform: uppercase; }
+  .mcp-item .detail { color: var(--fg-dim); font-size: 11px; margin-left: 4px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mcp-item .actions { display: flex; gap: 4px; }
+  .mcp-item .actions button { padding: 2px 6px; font-size: 10px; background: none; border: 1px solid var(--border); color: var(--fg-dim); border-radius: 3px; cursor: pointer; }
+  .mcp-item .actions button:hover { color: var(--fg); border-color: var(--fg-dim); }
+  .dir-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .dir-item input { flex: 1; padding: 6px 8px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: 4px; font-size: 12px; }
+  .dir-item button { padding: 4px 8px; font-size: 11px; background: none; border: 1px solid var(--border); color: var(--fg-dim); border-radius: 3px; cursor: pointer; }
+  .dir-item button:hover { color: var(--fg); border-color: var(--fg-dim); }
+  .add-btn { display: inline-block; padding: 6px 12px; font-size: 11px; background: none; border: 1px dashed var(--border); color: var(--fg-dim); border-radius: 4px; cursor: pointer; margin-top: 4px; }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .callout { padding: 10px 12px; border-radius: 4px; font-size: 11px; line-height: 1.5; margin-bottom: 12px; }
+  .callout.info { background: var(--info-bg); border-left: 3px solid var(--info-border); }
+  .callout.warning { background: var(--warning-bg); border-left: 3px solid var(--warning-border); }
+  .callout.inherit { background: rgba(80,200,120,0.05); border-left: 3px solid var(--local-border); color: var(--fg-dim); font-style: italic; }
+
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .toggle-row label { font-size: 12px; color: var(--fg); cursor: pointer; }
+  .toggle { position: relative; width: 34px; height: 18px; background: var(--input-border); border-radius: 9px; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+  .toggle.on { background: var(--accent); }
+  .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* ── Profiles Section ── */
+  .profiles-section { margin-bottom: 24px; }
+  .profiles-section h2 { font-size: 14px; font-weight: 600; color: var(--fg-bright); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .profile-bar { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px; background: var(--bg-light); border: 1px solid var(--border); border-radius: var(--radius); }
+  .profile-tag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 14px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--bg-lighter); transition: all 0.15s; }
+  .profile-tag:hover { border-color: var(--accent); }
+  .profile-tag.editing { border-color: var(--accent); background: var(--info-bg); }
+  .profile-tag .tag-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .profile-tag .tag-dot.anthropic { background: #d4a574; }
+  .profile-tag .tag-dot.bedrock { background: #ff9900; }
+  .profile-tag .tag-dot.proxy { background: #50c878; }
+  .profile-tag .tag-scopes { display: flex; gap: 2px; margin-left: 4px; }
+  .mini-badge { font-size: 8px; width: 14px; height: 14px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .mini-badge.g { background: rgba(0,120,212,0.2); color: var(--global-color); }
+  .mini-badge.p { background: rgba(232,150,0,0.2); color: var(--project-color); }
+  .mini-badge.l { background: rgba(80,200,120,0.2); color: var(--local-color); }
+  .profile-add { border-style: dashed; color: var(--fg-dim); }
+  .profile-add:hover { color: var(--accent); }
+
+  /* ── Effective Config Summary ── */
+  .effective-summary { padding: 12px 16px; background: var(--bg-light); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px; }
+  .effective-summary h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--fg-dim); margin-bottom: 10px; }
+  .eff-grid { display: grid; grid-template-columns: 120px 1fr 80px; gap: 4px 12px; font-size: 12px; }
+  .eff-grid .eff-label { color: var(--fg-dim); }
+  .eff-grid .eff-value { color: var(--fg-bright); font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 11px; }
+  .eff-grid .eff-source { text-align: right; }
+  .eff-grid .eff-source .src-badge { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+  .eff-grid .eff-source .src-badge.g { background: rgba(0,120,212,0.15); color: var(--global-color); }
+  .eff-grid .eff-source .src-badge.p { background: rgba(232,150,0,0.15); color: var(--project-color); }
+  .eff-grid .eff-source .src-badge.l { background: rgba(80,200,120,0.15); color: var(--local-color); }
+
+  /* ── Save bar ── */
+  .save-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 24px; background: var(--bg-light); border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; z-index: 20; }
+  .save-bar .btn-primary { padding: 8px 20px; background: var(--accent); border: none; color: #fff; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; }
+  .save-bar .btn-primary:hover { background: var(--accent-hover); }
+  .save-bar .btn-secondary { padding: 8px 14px; background: var(--bg-lighter); border: 1px solid var(--border); color: var(--fg); border-radius: var(--radius); cursor: pointer; font-size: 12px; }
+  .save-bar .btn-secondary:hover { background: var(--bg-hover); }
+  .save-bar .status { flex: 1; text-align: right; font-size: 12px; color: var(--fg-dim); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="page-header">
+  <h1>Claude Code Settings</h1>
+  <div class="jump-links">
+    <a class="jump-link global" href="#card-global" onclick="expandCard('global')">🏠 Global</a>
+    <a class="jump-link project" href="#card-project" onclick="expandCard('project')">📁 Project</a>
+    <a class="jump-link local" href="#card-local" onclick="expandCard('local')">🔒 Local</a>
+  </div>
+</div>
+
+<div class="scroll-area">
+
+  <!-- ═══ PROFILES BAR ═══ -->
+  <div class="profiles-section">
+    <h2>⚙ Provider Profiles</h2>
+    <div class="profile-bar">
+      <div class="profile-tag editing" onclick="editProfile(this)">
+        <span class="tag-dot bedrock"></span>
+        Bedrock EU
+        <span class="tag-scopes"><span class="mini-badge g">G</span></span>
+      </div>
+      <div class="profile-tag" onclick="editProfile(this)">
+        <span class="tag-dot bedrock"></span>
+        Bedrock US
+        <span class="tag-scopes"><span class="mini-badge p">P</span></span>
+      </div>
+      <div class="profile-tag" onclick="editProfile(this)">
+        <span class="tag-dot anthropic"></span>
+        Anthropic Direct
+      </div>
+      <div class="profile-tag" onclick="editProfile(this)">
+        <span class="tag-dot proxy"></span>
+        Local Ollama
+        <span class="tag-scopes"><span class="mini-badge l">L</span></span>
+      </div>
+      <div class="profile-tag profile-add">+ New</div>
+    </div>
+  </div>
+
+  <!-- ═══ EFFECTIVE CONFIGURATION ═══ -->
+  <div class="effective-summary">
+    <h3>Effective Configuration (what Claude Code sees)</h3>
+    <div class="eff-grid">
+      <span class="eff-label">Provider</span>
+      <span class="eff-value">AWS Bedrock</span>
+      <span class="eff-source"><span class="src-badge g">Global</span></span>
+
+      <span class="eff-label">Region</span>
+      <span class="eff-value">eu-west-1</span>
+      <span class="eff-source"><span class="src-badge g">Global</span></span>
+
+      <span class="eff-label">Sonnet Model</span>
+      <span class="eff-value">eu.anthropic.claude-sonnet-4-6</span>
+      <span class="eff-source"><span class="src-badge g">Global</span></span>
+
+      <span class="eff-label">Haiku Model</span>
+      <span class="eff-value">eu.anthropic.claude-haiku-4-5-20251001-v1:0</span>
+      <span class="eff-source"><span class="src-badge g">Global</span></span>
+
+      <span class="eff-label">Opus Model</span>
+      <span class="eff-value">eu.anthropic.claude-opus-4-6-v1</span>
+      <span class="eff-source"><span class="src-badge g">Global</span></span>
+
+      <span class="eff-label">MCP Servers</span>
+      <span class="eff-value">context7, claude-vscode + project-db</span>
+      <span class="eff-source"><span class="src-badge g">G</span> <span class="src-badge p">P</span></span>
+
+      <span class="eff-label">Directories</span>
+      <span class="eff-value">~/Developer, /tmp/build-artifacts</span>
+      <span class="eff-source"><span class="src-badge g">G</span> <span class="src-badge p">P</span></span>
+    </div>
+  </div>
+
+  <!-- ═══ GLOBAL SCOPE CARD ═══ -->
+  <div class="scope-card global" id="card-global">
+    <div class="scope-card-header" onclick="toggleCard(this)">
+      <span class="scope-icon">🏠</span>
+      <span class="scope-label">Global</span>
+      <span class="scope-file">~/.claude/settings.json</span>
+      <span class="scope-profile-badge">Bedrock EU</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="scope-card-body">
+      <div class="card-tabs">
+        <button class="card-tab active" onclick="switchCardTab(this, 'global-provider')">Provider & Models</button>
+        <button class="card-tab" onclick="switchCardTab(this, 'global-mcp')">MCP Servers</button>
+        <button class="card-tab" onclick="switchCardTab(this, 'global-dirs')">Directories</button>
+      </div>
+
+      <!-- Provider & Models -->
+      <div class="card-tab-content visible" id="global-provider">
+        <div class="provider-row">
+          <button class="provider-pill" onclick="selectProv(this, 'anthropic', 'global')">
+            <span class="pill-icon">☁️</span> Anthropic
+          </button>
+          <button class="provider-pill selected" onclick="selectProv(this, 'bedrock', 'global')">
+            <span class="pill-icon">🔶</span> Bedrock
+          </button>
+          <button class="provider-pill" onclick="selectProv(this, 'proxy', 'global')">
+            <span class="pill-icon">🔗</span> Proxy
+          </button>
+        </div>
+
+        <div id="global-cfg-bedrock" class="config-section">
+          <h4>AWS Bedrock</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>AWS Profile</label>
+              <select><option>default</option><option selected>bedrock-dev</option><option>prod-account</option></select>
+            </div>
+            <div class="form-group">
+              <label>AWS Region</label>
+              <select><option>us-east-1</option><option selected>eu-west-1</option><option>eu-central-1</option></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Credential Refresh</label>
+            <input type="text" placeholder="e.g. aws sso login --profile bedrock-dev">
+          </div>
+        </div>
+        <div id="global-cfg-anthropic" class="config-section hidden">
+          <h4>Anthropic API</h4>
+          <div class="form-group"><label>API Key</label><input type="password" placeholder="sk-ant-..."></div>
+        </div>
+        <div id="global-cfg-proxy" class="config-section hidden">
+          <h4>Proxy / Self-Hosted</h4>
+          <div class="form-group"><label>Base URL</label><input type="text" placeholder="http://localhost:11434"></div>
+          <div class="form-group"><label>API Key (optional)</label><input type="password" placeholder="Bearer token"></div>
+        </div>
+
+        <div class="config-section">
+          <h4>Models</h4>
+          <div class="model-row">
+            <span class="model-label">Sonnet</span>
+            <select><option selected>eu.anthropic.claude-sonnet-4-6</option><option>eu.anthropic.claude-sonnet-4-5-20250514-v1:0</option><option>Custom...</option></select>
+          </div>
+          <div class="model-row">
+            <span class="model-label">Haiku</span>
+            <select><option selected>eu.anthropic.claude-haiku-4-5-20251001-v1:0</option><option>anthropic.claude-3-haiku-20240307-v1:0</option><option>Custom...</option></select>
+          </div>
+          <div class="model-row">
+            <span class="model-label">Opus</span>
+            <select><option selected>eu.anthropic.claude-opus-4-6-v1</option><option>Custom...</option></select>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            <label>Disable prompt caching</label>
+          </div>
+        </div>
+
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 11px; color: var(--fg-dim);">Save as profile:</span>
+          <input type="text" placeholder="Name..." style="flex:1; padding: 5px 8px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: 4px; font-size: 11px;">
+          <button class="add-btn" style="margin: 0;">Save</button>
+        </div>
+      </div>
+
+      <!-- MCP -->
+      <div class="card-tab-content" id="global-mcp">
+        <div class="callout info">User-scope MCP servers stored in ~/.claude.json — available in all projects.</div>
+        <div class="mcp-item">
+          <span class="name">context7</span>
+          <span class="type-badge">http</span>
+          <span class="detail">https://mcp.context7.com/mcp</span>
+          <div class="actions"><button>Edit</button><button>Del</button></div>
+        </div>
+        <div class="mcp-item">
+          <span class="name">claude-vscode</span>
+          <span class="type-badge">stdio</span>
+          <span class="detail">npx @anthropic/claude-vscode-mcp</span>
+          <div class="actions"><button>Edit</button><button>Del</button></div>
+        </div>
+        <button class="add-btn">+ Add MCP Server</button>
+      </div>
+
+      <!-- Directories -->
+      <div class="card-tab-content" id="global-dirs">
+        <div class="callout info">Global directories accessible across all projects.</div>
+        <div class="dir-item">
+          <input type="text" value="/Users/erik/Developer">
+          <button>Browse</button>
+          <button>×</button>
+        </div>
+        <button class="add-btn">+ Add Directory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROJECT SCOPE CARD ═══ -->
+  <div class="scope-card project" id="card-project">
+    <div class="scope-card-header" onclick="toggleCard(this)">
+      <span class="scope-icon">📁</span>
+      <span class="scope-label">Project</span>
+      <span class="scope-file">.claude/settings.json · .mcp.json</span>
+      <span class="scope-profile-badge" style="opacity: 0.5; font-style: italic;">inherits Global</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="scope-card-body">
+      <div class="card-tabs">
+        <button class="card-tab active" onclick="switchCardTab(this, 'project-provider')">Provider & Models</button>
+        <button class="card-tab" onclick="switchCardTab(this, 'project-mcp')">MCP Servers</button>
+        <button class="card-tab" onclick="switchCardTab(this, 'project-dirs')">Directories</button>
+      </div>
+
+      <div class="card-tab-content visible" id="project-provider">
+        <div class="provider-row">
+          <button class="provider-pill none selected" onclick="selectProv(this, 'none', 'project')">
+            Inherit from Global
+          </button>
+          <button class="provider-pill" onclick="selectProv(this, 'anthropic', 'project')">
+            <span class="pill-icon">☁️</span> Anthropic
+          </button>
+          <button class="provider-pill" onclick="selectProv(this, 'bedrock', 'project')">
+            <span class="pill-icon">🔶</span> Bedrock
+          </button>
+          <button class="provider-pill" onclick="selectProv(this, 'proxy', 'project')">
+            <span class="pill-icon">🔗</span> Proxy
+          </button>
+        </div>
+        <div class="callout inherit">This scope inherits provider &amp; models from Global (Bedrock EU — eu-west-1).</div>
+        <div id="project-cfg-bedrock" class="config-section hidden"><h4>AWS Bedrock</h4><div class="form-row"><div class="form-group"><label>AWS Profile</label><select><option>default</option><option>prod-account</option></select></div><div class="form-group"><label>AWS Region</label><select><option selected>us-east-1</option><option>eu-west-1</option></select></div></div></div>
+        <div id="project-cfg-anthropic" class="config-section hidden"><h4>Anthropic API</h4><div class="form-group"><label>API Key</label><input type="password" placeholder="sk-ant-..."></div></div>
+        <div id="project-cfg-proxy" class="config-section hidden"><h4>Proxy</h4><div class="form-group"><label>Base URL</label><input type="text" placeholder="http://localhost:11434"></div><div class="form-group"><label>API Key (optional)</label><input type="password" placeholder=""></div></div>
+      </div>
+
+      <div class="card-tab-content" id="project-mcp">
+        <div class="callout info">Project MCP servers stored in .mcp.json — shared with team via git.</div>
+        <div class="mcp-item">
+          <span class="name">project-db</span>
+          <span class="type-badge">stdio</span>
+          <span class="detail">node ./scripts/db-mcp.js</span>
+          <div class="actions"><button>Edit</button><button>Del</button></div>
+        </div>
+        <button class="add-btn">+ Add MCP Server</button>
+      </div>
+
+      <div class="card-tab-content" id="project-dirs">
+        <div class="callout info">Project directories are merged with global directories.</div>
+        <div class="dir-item">
+          <input type="text" value="/tmp/build-artifacts">
+          <button>Browse</button>
+          <button>×</button>
+        </div>
+        <button class="add-btn">+ Add Directory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LOCAL SCOPE CARD ═══ -->
+  <div class="scope-card local" id="card-local">
+    <div class="scope-card-header" onclick="toggleCard(this)">
+      <span class="scope-icon">🔒</span>
+      <span class="scope-label">Local Override</span>
+      <span class="scope-file">.claude/settings.local.json (gitignored)</span>
+      <span class="scope-profile-badge">Local Ollama</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="scope-card-body">
+      <div class="card-tabs">
+        <button class="card-tab active" onclick="switchCardTab(this, 'local-provider')">Provider & Models</button>
+        <button class="card-tab" onclick="switchCardTab(this, 'local-mcp')">MCP Servers</button>
+        <button class="card-tab" onclick="switchCardTab(this, 'local-dirs')">Directories</button>
+      </div>
+
+      <div class="card-tab-content visible" id="local-provider">
+        <div class="callout info">Local overrides are gitignored — personal settings for this project only. Overrides Project → Global.</div>
+        <div class="provider-row">
+          <button class="provider-pill none" onclick="selectProv(this, 'none', 'local')">
+            Inherit
+          </button>
+          <button class="provider-pill" onclick="selectProv(this, 'anthropic', 'local')">
+            <span class="pill-icon">☁️</span> Anthropic
+          </button>
+          <button class="provider-pill" onclick="selectProv(this, 'bedrock', 'local')">
+            <span class="pill-icon">🔶</span> Bedrock
+          </button>
+          <button class="provider-pill selected" onclick="selectProv(this, 'proxy', 'local')">
+            <span class="pill-icon">🔗</span> Proxy
+          </button>
+        </div>
+
+        <div id="local-cfg-proxy" class="config-section">
+          <h4>Proxy / Self-Hosted</h4>
+          <div class="form-group"><label>Base URL</label><input type="text" value="http://localhost:11434"></div>
+          <div class="form-group"><label>API Key (optional)</label><input type="password" placeholder=""></div>
+        </div>
+        <div id="local-cfg-bedrock" class="config-section hidden"><h4>AWS Bedrock</h4><div class="form-row"><div class="form-group"><label>AWS Profile</label><select><option>default</option></select></div><div class="form-group"><label>AWS Region</label><select><option>us-east-1</option></select></div></div></div>
+        <div id="local-cfg-anthropic" class="config-section hidden"><h4>Anthropic API</h4><div class="form-group"><label>API Key</label><input type="password" placeholder="sk-ant-..."></div></div>
+
+        <div class="config-section">
+          <h4>Models</h4>
+          <div class="model-row"><span class="model-label">Sonnet</span><select><option selected>llama3:latest</option><option>Custom...</option></select></div>
+          <div class="model-row"><span class="model-label">Haiku</span><select><option selected>llama3:latest</option><option>Custom...</option></select></div>
+          <div class="model-row"><span class="model-label">Opus</span><select><option selected>llama3:latest</option><option>Custom...</option></select></div>
+        </div>
+      </div>
+
+      <div class="card-tab-content" id="local-mcp">
+        <div class="callout info">Local MCP servers override project-level servers of the same name.</div>
+        <button class="add-btn">+ Add MCP Server</button>
+      </div>
+
+      <div class="card-tab-content" id="local-dirs">
+        <div class="callout info">Additional directories for your local environment only.</div>
+        <button class="add-btn">+ Add Directory</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Save bar -->
+<div class="save-bar">
+  <button class="btn-primary" onclick="showStatus('All scopes saved')">Save All</button>
+  <button class="btn-secondary">Reload</button>
+  <button class="btn-secondary">Open Global</button>
+  <button class="btn-secondary">Open Project</button>
+  <span class="status" id="saveStatus"></span>
+</div>
+
+<script>
+function toggleCard(header) {
+  header.closest('.scope-card').classList.toggle('collapsed');
+}
+function expandCard(scope) {
+  const card = document.getElementById('card-' + scope);
+  card.classList.remove('collapsed');
+  // small delay for smooth scroll
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+function switchCardTab(btn, contentId) {
+  const body = btn.closest('.scope-card-body');
+  body.querySelectorAll('.card-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  body.querySelectorAll('.card-tab-content').forEach(c => c.classList.remove('visible'));
+  document.getElementById(contentId).classList.add('visible');
+}
+function selectProv(el, provider, scope) {
+  const row = el.closest('.provider-row');
+  row.querySelectorAll('.provider-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  ['anthropic','bedrock','proxy'].forEach(p => {
+    const cfg = document.getElementById(scope + '-cfg-' + p);
+    if (cfg) cfg.classList.toggle('hidden', p !== provider);
+  });
+  // Hide inherit callout when a provider is explicitly chosen
+  const inherit = el.closest('.card-tab-content')?.querySelector('.callout.inherit');
+  if (inherit) inherit.classList.toggle('hidden', provider !== 'none');
+}
+function editProfile(el) {
+  document.querySelectorAll('.profile-tag').forEach(t => t.classList.remove('editing'));
+  el.classList.add('editing');
+}
+function showStatus(msg) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = '✓ ' + msg;
+  el.style.color = '#50c878';
+  setTimeout(() => { el.textContent = ''; }, 3000);
+}
+</script>
+</body>
+</html>

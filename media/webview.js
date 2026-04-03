@@ -20,6 +20,7 @@
   let state = null;  // PanelState
   let dirty = false;
   let drawerStack = [];
+  const drawerScrollPositions = {};  // Track scroll position per drawer
 
   // Editing context — which item is currently open in a drawer
   const editing = {
@@ -83,18 +84,29 @@
     drawer.classList.add('open');
     backdrop.classList.add('open');
 
-    // Auto-focus first autofocus input
+    // Auto-focus first autofocus input and restore scroll position
     setTimeout(() => {
+      const body = drawer.querySelector('.drawer-body');
+      if (body && drawerScrollPositions[id]) {
+        body.scrollTop = drawerScrollPositions[id];
+      }
       const af = drawer.querySelector('[autofocus]') || drawer.querySelector('input:not([type=hidden])');
       if (af) af.focus();
-    }, 300);
+    }, 250);
   }
 
   function closeTopDrawer() {
     if (drawerStack.length === 0) return;
     const id = drawerStack.pop();
     const drawer = document.getElementById('drawer-' + id);
-    if (drawer) drawer.classList.remove('open');
+    if (drawer) {
+      // Save scroll position before closing
+      const body = drawer.querySelector('.drawer-body');
+      if (body) {
+        drawerScrollPositions[id] = body.scrollTop;
+      }
+      drawer.classList.remove('open');
+    }
 
     if (drawerStack.length === 0) {
       const backdrop = document.getElementById('drawer-backdrop');
@@ -742,7 +754,7 @@
         var more = document.createElement('div');
         more.className = 'combobox-option';
         more.style.color = 'var(--fg-dim)';
-        more.textContent = '… type more to narrow results';
+        more.textContent = '… Showing 50 of ' + rest.length + '. Type to filter.';
         list.appendChild(more);
       }
       if (allowCustom && filter) {
@@ -864,7 +876,7 @@
     if (!container) return;
 
     if (servers.length === 0) {
-      container.innerHTML = '<div class="empty-state">No servers yet. Add your first server below.</div>';
+      container.innerHTML = '<div class="empty-state">No servers.</div>';
       return;
     }
 
@@ -901,12 +913,23 @@
     // Env vars
     renderMcpEnvVars(server ? (server.env || {}) : {});
 
+    // Reset test button and output
+    var btn = document.getElementById('btn-test-mcp');
+    var out = document.getElementById('mcp-test-output');
+    if (btn) { btn.textContent = 'Test'; btn.disabled = false; }
+    if (out) { out.textContent = ''; }
+
     openDrawer('mcp-server');
   }
 
   function showMcpTransportSection(transport) {
     document.getElementById('mcp-transport-url').style.display = (transport === 'http' || transport === 'sse') ? '' : 'none';
     document.getElementById('mcp-transport-stdio').style.display = transport === 'stdio' ? '' : 'none';
+    // Reset test button when transport changes
+    var btn = document.getElementById('btn-test-mcp');
+    var out = document.getElementById('mcp-test-output');
+    if (btn) { btn.textContent = 'Test'; btn.disabled = false; }
+    if (out) { out.textContent = ''; }
   }
 
   function renderMcpEnvVars(env) {
@@ -915,7 +938,7 @@
 
     const entries = Object.entries(env);
     if (entries.length === 0) {
-      container.innerHTML = '<div class="empty-state">No variables configured.</div>';
+      container.innerHTML = '<div class="empty-state">No variables.</div>';
       return;
     }
 
@@ -957,7 +980,7 @@
     if (!container) return;
 
     if (dirs.length === 0) {
-      container.innerHTML = '<div class="empty-state">No directories yet.</div>';
+      container.innerHTML = '<div class="empty-state">No directories.</div>';
       return;
     }
 
@@ -1223,6 +1246,29 @@
       }
     });
     return Object.keys(env).length > 0 ? env : undefined;
+  }
+
+  function testMcpServer() {
+    var btn = document.getElementById('btn-test-mcp');
+    var output = document.getElementById('mcp-test-output');
+    var transportBtn = document.querySelector('[data-seg="mcp-transport"].sel');
+    var type = transportBtn ? transportBtn.dataset.val : 'http';
+    var url = document.getElementById('mcp-server-url').value.trim();
+    var rawCmd = document.getElementById('mcp-server-command').value.trim();
+    var parts = rawCmd.split(/\s+/);
+    var command = parts[0] || rawCmd;
+    var extraArgs = parts.slice(1);
+    var textareaArgs = document.getElementById('mcp-server-args').value.split('\n').map(s => s.trim()).filter(Boolean);
+    var args = extraArgs.concat(textareaArgs);
+    var env = collectMcpEnvFromDOM();
+
+    if (btn) { btn.textContent = 'Testing…'; btn.disabled = true; }
+    if (output) { output.textContent = ''; }
+
+    vscode.postMessage({
+      type: 'testMcpServer',
+      server: { type: type, url: url || undefined, command: command || undefined, args: args.length ? args : undefined, env: env }
+    });
   }
 
   function saveDirGroupFromDrawer() {
@@ -1639,6 +1685,9 @@
       case 'save-mcp-server':
         saveMcpServerFromDrawer();
         break;
+      case 'test-mcp-server':
+        testMcpServer();
+        break;
       case 'edit-dir-group':
         openDirGroupDrawer(id);
         break;
@@ -1856,6 +1905,17 @@
     updateAnthropicCredentialHint();
   });
 
+  // Reset MCP test output when URL or command fields change
+  function resetMcpTest() {
+    var btn = document.getElementById('btn-test-mcp');
+    var out = document.getElementById('mcp-test-output');
+    if (btn) { btn.textContent = 'Test'; btn.disabled = false; }
+    if (out) { out.textContent = ''; }
+  }
+  document.getElementById('mcp-server-url')?.addEventListener('input', resetMcpTest);
+  document.getElementById('mcp-server-command')?.addEventListener('input', resetMcpTest);
+  document.getElementById('mcp-server-args')?.addEventListener('input', resetMcpTest);
+
   // Model test pill clicks
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.btn-test');
@@ -2049,6 +2109,18 @@
           var awsItems2 = state.awsProfiles.map(function(p) { return { value: p, label: p }; });
           var awsCombo2 = createCombobox('provider-aws-profile', awsItems2, profileToSelect, false);
           awsTarget2.replaceWith(awsCombo2);
+        }
+        break;
+      }
+
+      case 'testMcpResult': {
+        var btn2 = document.getElementById('btn-test-mcp');
+        var out2 = document.getElementById('mcp-test-output');
+        if (btn2) { btn2.textContent = 'Test'; btn2.disabled = false; }
+        if (msg.ok) {
+          if (out2) out2.textContent = 'Connected ✓\n\nTools (' + msg.tools.length + '):\n' + msg.tools.map(t => '  • ' + t).join('\n');
+        } else {
+          if (out2) out2.textContent = 'Error: ' + (msg.message || 'Unknown error');
         }
         break;
       }

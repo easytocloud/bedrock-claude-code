@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Settings</title>
+<style>
+  /* ═══════════════════════════════════════════════════
+     DESIGN TOKENS
+     ═══════════════════════════════════════════════════ */
+  :root {
+    --bg:          #1e1e1e;
+    --bg-raised:   #252526;
+    --bg-surface:  #2d2d2d;
+    --bg-hover:    #363636;
+    --bg-active:   #3e3e3e;
+
+    --fg:          #cccccc;
+    --fg-dim:      #999999;
+    --fg-muted:    #666666;
+    --fg-bright:   #e8e8e8;
+    --fg-white:    #ffffff;
+
+    --border:      #333333;
+    --border-light:#444444;
+
+    --blue:        #3b9eff;
+    --blue-dim:    rgba(59,158,255,0.10);
+    --blue-mid:    rgba(59,158,255,0.18);
+    --orange:      #e8973e;
+    --orange-dim:  rgba(232,151,62,0.10);
+    --orange-mid:  rgba(232,151,62,0.18);
+    --green:       #4ec970;
+    --green-dim:   rgba(78,201,112,0.10);
+    --purple:      #b48eda;
+    --purple-dim:  rgba(180,142,218,0.10);
+    --red:         #f44747;
+    --red-dim:     rgba(244,71,71,0.08);
+
+    --input-bg:    #333333;
+    --input-border:#4a4a4a;
+    --input-focus: var(--blue);
+
+    --radius:      8px;
+    --radius-sm:   5px;
+    --radius-lg:   12px;
+    --radius-pill: 100px;
+
+    --shadow:      0 8px 32px rgba(0,0,0,0.4);
+    --shadow-sm:   0 2px 8px rgba(0,0,0,0.3);
+
+    --transition:  0.18s ease;
+    --drawer-width: 440px;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     RESET & BASE
+     ═══════════════════════════════════════════════════ */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 13px;
+    line-height: 1.5;
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--blue-mid); }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* ═══════════════════════════════════════════════════
+     LAYOUT
+     ═══════════════════════════════════════════════════ */
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* Header */
+  .app-header {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    background: var(--bg-raised);
+  }
+  .app-logo { display: flex; align-items: center; gap: 10px; }
+  .app-logo svg { width: 22px; height: 22px; }
+  .app-logo h1 { font-size: 14px; font-weight: 600; color: var(--fg-bright); letter-spacing: -0.2px; }
+  .header-spacer { flex: 1; }
+  .header-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all var(--transition);
+  }
+  .header-btn.secondary {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    color: var(--fg);
+  }
+  .header-btn.secondary:hover { background: var(--bg-hover); }
+  .header-btn.primary {
+    background: var(--blue);
+    border: none;
+    color: var(--fg-white);
+    font-weight: 600;
+  }
+  .header-btn.primary:hover { filter: brightness(1.1); }
+  .save-status { font-size: 12px; color: var(--green); opacity: 0; transition: opacity 0.3s; }
+  .save-status.show { opacity: 1; }
+
+  /* Main scroll area */
+  .main { flex: 1; overflow-y: auto; }
+  .main-inner { max-width: 820px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  /* ═══════════════════════════════════════════════════
+     SCOPE CARDS (the two big top-level cards)
+     ═══════════════════════════════════════════════════ */
+  .scope-card {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    transition: border-color var(--transition);
+  }
+  .scope-card:hover { border-color: var(--border-light); }
+
+  .scope-card-header {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--transition);
+  }
+  .scope-card-header:hover { background: var(--bg-hover); }
+  .scope-card.global .scope-card-header { background: var(--blue-dim); border-bottom: 1px solid rgba(59,158,255,0.12); }
+  .scope-card.project .scope-card-header { background: var(--orange-dim); border-bottom: 1px solid rgba(232,151,62,0.12); }
+
+  .scope-icon { font-size: 20px; line-height: 1; }
+  .scope-text { flex: 1; }
+  .scope-title { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
+  .scope-card.global .scope-title { color: var(--blue); }
+  .scope-card.project .scope-title { color: var(--orange); }
+  .scope-subtitle { font-size: 11px; color: var(--fg-dim); margin-top: 1px; font-family: 'SF Mono', Monaco, Consolas, monospace; }
+
+  .scope-status {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+  }
+  .scope-card.global .scope-status { background: var(--blue-mid); color: var(--blue); }
+  .scope-card.project .scope-status { background: var(--orange-mid); color: var(--orange); }
+  .scope-card.project .scope-status.inherit { background: var(--bg-surface); color: var(--fg-dim); font-weight: 400; font-style: italic; }
+
+  .chevron {
+    color: var(--fg-muted);
+    transition: transform 0.25s ease;
+    font-size: 11px;
+  }
+  .scope-card.collapsed .chevron { transform: rotate(-90deg); }
+  .scope-card.collapsed .scope-card-body { display: none; }
+
+  .scope-card-body { padding: 18px; background: var(--bg-raised); }
+
+  /* ═══════════════════════════════════════════════════
+     SETUP BLOCK (provider/mcp/dirs within a scope card)
+     ═══════════════════════════════════════════════════ */
+  .setup-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .setup-block {
+    padding: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+  }
+  .setup-block:hover {
+    border-color: var(--border-light);
+    background: var(--bg-hover);
+  }
+  .setup-block:active { background: var(--bg-active); }
+
+  .setup-block-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+  .sb-icon { font-size: 14px; }
+  .sb-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--fg-dim);
+  }
+  .sb-edit {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--fg-muted);
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .setup-block:hover .sb-edit { opacity: 1; }
+
+  .setup-block-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-bright);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .setup-block-detail {
+    font-size: 11px;
+    color: var(--fg-dim);
+    line-height: 1.4;
+  }
+  .setup-block-detail code {
+    font-size: 10px;
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+  }
+
+  .setup-block-empty {
+    text-align: center;
+    padding: 20px 14px;
+  }
+  .setup-block-empty .sb-empty-icon {
+    font-size: 24px;
+    margin-bottom: 6px;
+    opacity: 0.5;
+  }
+  .setup-block-empty .sb-empty-text {
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .setup-block-empty .sb-empty-action {
+    font-size: 11px;
+    color: var(--blue);
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  /* Tags inside blocks */
+  .setup-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+    margin-right: 3px;
+    margin-bottom: 3px;
+  }
+  .setup-tag.mcp { background: var(--purple-dim); color: var(--purple); }
+  .setup-tag.dir { background: var(--green-dim); color: var(--green); }
+
+  /* Scope profile selector row */
+  .profile-assign {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .profile-assign label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fg-dim);
+    white-space: nowrap;
+  }
+  .profile-assign select {
+    flex: 1;
+    padding: 7px 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--fg);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .profile-assign select:focus { outline: none; border-color: var(--input-focus); }
+  .profile-assign .pa-or {
+    font-size: 11px;
+    color: var(--fg-muted);
+  }
+  .profile-assign .pa-link {
+    font-size: 11px;
+    color: var(--blue);
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .profile-assign .pa-link:hover { text-decoration: underline; }
+
+  /* ═══════════════════════════════════════════════════
+     PRESETS SECTION
+     ═══════════════════════════════════════════════════ */
+  .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    margin-top: 8px;
+  }
+  .section-heading h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--fg-bright);
+    letter-spacing: -0.1px;
+  }
+  .section-heading .sh-line { flex: 1; height: 1px; background: var(--border); }
+  .section-heading .sh-action {
+    font-size: 11px;
+    color: var(--fg-muted);
+    cursor: pointer;
+    background: none;
+    border: 1px dashed var(--border);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-family: inherit;
+    transition: all var(--transition);
+  }
+  .section-heading .sh-action:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  .section-help {
+    font-size: 12px;
+    color: var(--fg-dim);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .preset-card {
+    padding: 14px 16px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .preset-card:hover { border-color: var(--border-light); background: var(--bg-surface); }
+  .preset-card:active { background: var(--bg-hover); }
+
+  .preset-top { display: flex; align-items: center; gap: 8px; }
+  .preset-name { font-size: 13px; font-weight: 600; color: var(--fg-bright); flex: 1; }
+  .preset-scope-badges { display: flex; gap: 3px; }
+  .preset-scope-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+  .preset-scope-badge.global { background: var(--blue-dim); color: var(--blue); }
+  .preset-scope-badge.project { background: var(--orange-dim); color: var(--orange); }
+
+  .preset-composition { display: flex; flex-wrap: wrap; gap: 4px; }
+  .preset-chip {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+  }
+  .preset-chip .chip-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .preset-chip.provider { background: var(--orange-dim); color: var(--orange); }
+  .preset-chip.provider .chip-dot { background: var(--orange); }
+  .preset-chip.mcp { background: var(--purple-dim); color: var(--purple); }
+  .preset-chip.mcp .chip-dot { background: var(--purple); }
+  .preset-chip.dir { background: var(--green-dim); color: var(--green); }
+  .preset-chip.dir .chip-dot { background: var(--green); }
+
+  /* ═══════════════════════════════════════════════════
+     DRAWER (slide-out editor)
+     ═══════════════════════════════════════════════════ */
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    backdrop-filter: blur(2px);
+  }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--drawer-width);
+    background: var(--bg);
+    border-left: 1px solid var(--border);
+    z-index: 101;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow);
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    background: var(--bg-raised);
+  }
+  .drawer-header .dh-icon { font-size: 18px; }
+  .drawer-header .dh-text { flex: 1; }
+  .drawer-header .dh-title { font-size: 15px; font-weight: 700; color: var(--fg-bright); letter-spacing: -0.2px; }
+  .drawer-header .dh-subtitle { font-size: 11px; color: var(--fg-dim); margin-top: 1px; }
+  .drawer-close {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: none;
+    color: var(--fg-dim);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+  }
+  .drawer-close:hover { background: var(--bg-hover); color: var(--fg); }
+
+  .drawer-body { flex: 1; overflow-y: auto; padding: 20px; }
+
+  .drawer-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    background: var(--bg-raised);
+  }
+  .btn {
+    padding: 8px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all var(--transition);
+  }
+  .btn-blue { background: var(--blue); border: none; color: var(--fg-white); }
+  .btn-blue:hover { filter: brightness(1.1); }
+  .btn-ghost { background: none; border: 1px solid var(--border-light); color: var(--fg); }
+  .btn-ghost:hover { background: var(--bg-hover); }
+  .btn-danger { background: none; border: 1px solid var(--red); color: var(--red); margin-left: auto; }
+  .btn-danger:hover { background: var(--red-dim); }
+
+  /* ═══════════════════════════════════════════════════
+     DRAWER FORM ELEMENTS
+     ═══════════════════════════════════════════════════ */
+  .d-group { margin-bottom: 18px; }
+  .d-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fg);
+    margin-bottom: 6px;
+  }
+  .d-group .d-hint {
+    font-size: 11px;
+    color: var(--fg-dim);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .d-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--fg);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color var(--transition);
+  }
+  .d-input:focus { outline: none; border-color: var(--input-focus); }
+  .d-input::placeholder { color: var(--fg-muted); }
+  .d-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Provider type cards */
+  .d-provider-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .d-prov {
+    padding: 12px 10px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-align: center;
+    transition: all var(--transition);
+    background: none;
+    font-family: inherit;
+    color: var(--fg);
+  }
+  .d-prov:hover { border-color: var(--border-light); background: var(--bg-hover); }
+  .d-prov.selected { border-color: var(--blue); background: var(--blue-dim); }
+  .d-prov .dp-icon { font-size: 22px; margin-bottom: 4px; }
+  .d-prov .dp-name { font-size: 11px; font-weight: 700; }
+  .d-prov .dp-desc { font-size: 10px; color: var(--fg-dim); margin-top: 1px; }
+
+  /* Section within drawer */
+  .d-section {
+    padding: 14px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+  }
+  .d-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--fg-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .d-section-title .dst-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .d-section-title .dst-dot.orange { background: var(--orange); }
+  .d-section-title .dst-dot.purple { background: var(--purple); }
+  .d-section-title .dst-dot.green { background: var(--green); }
+
+  /* Model rows */
+  .d-model-row {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 6px 10px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .d-model-label { font-size: 12px; color: var(--fg-dim); text-align: right; font-weight: 600; }
+
+  /* Info callout */
+  .d-info {
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .d-info.blue { background: var(--blue-dim); color: var(--fg); }
+  .d-info .d-info-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .d-info code {
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+
+  /* Composition slot (in preset drawer) */
+  .d-comp-slot { margin-bottom: 14px; }
+  .d-comp-slot-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .d-comp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .d-comp-dot.orange { background: var(--orange); }
+  .d-comp-dot.purple { background: var(--purple); }
+  .d-comp-dot.green { background: var(--green); }
+  .d-comp-slot-label { font-size: 12px; font-weight: 600; color: var(--fg); }
+  .d-comp-slot-hint { font-size: 11px; color: var(--fg-dim); margin-left: auto; }
+
+  /* Checkbox options */
+  .d-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .d-option:hover { background: var(--bg-hover); }
+  .d-option input[type="checkbox"] { accent-color: var(--blue); width: 15px; height: 15px; }
+  .d-option .do-text { flex: 1; }
+  .d-option .do-name { font-size: 12px; font-weight: 600; }
+  .d-option .do-detail { font-size: 10px; color: var(--fg-dim); }
+  .d-option .do-edit {
+    font-size: 10px;
+    color: var(--fg-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition);
+    background: none;
+    border: none;
+    font-family: inherit;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .d-option:hover .do-edit { opacity: 1; }
+  .d-option .do-edit:hover { color: var(--blue); }
+
+  /* Preview in slot */
+  .d-comp-preview {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    color: var(--fg-dim);
+    line-height: 1.5;
+  }
+
+  /* MCP server items */
+  .d-srv {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 4px;
+    gap: 8px;
+  }
+  .d-srv .ds-name { font-size: 12px; font-weight: 600; }
+  .d-srv .ds-badge {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: var(--radius-pill);
+    background: var(--purple-dim);
+    color: var(--purple);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .d-srv .ds-url { font-size: 10px; color: var(--fg-dim); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .d-srv .ds-btns { display: flex; gap: 4px; }
+  .d-srv .ds-btns button {
+    padding: 3px 7px;
+    font-size: 10px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--fg-dim);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .d-srv .ds-btns button:hover { color: var(--fg); border-color: var(--border-light); }
+
+  .d-dir {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .d-dir input {
+    flex: 1;
+    padding: 6px 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--fg);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+  }
+  .d-dir button {
+    padding: 5px 8px;
+    font-size: 10px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--fg-dim);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .d-dir button:hover { color: var(--fg); border-color: var(--border-light); }
+
+  .d-add {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 11px;
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--fg-dim);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-top: 6px;
+    font-family: inherit;
+    transition: all var(--transition);
+  }
+  .d-add:hover { border-color: var(--blue); color: var(--blue); }
+
+  .d-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .d-toggle-row label { font-size: 12px; color: var(--fg); cursor: pointer; }
+  .d-toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: var(--input-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background var(--transition);
+    flex-shrink: 0;
+  }
+  .d-toggle.on { background: var(--blue); }
+  .d-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform var(--transition);
+  }
+  .d-toggle.on::after { transform: translateX(16px); }
+
+  .d-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══════════ HEADER ═══════════ -->
+  <div class="app-header">
+    <div class="app-logo">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#3b9eff" opacity="0.3"/><path d="M2 17l10 5 10-5" stroke="#3b9eff" stroke-width="1.5" fill="none"/><path d="M2 12l10 5 10-5" stroke="#3b9eff" stroke-width="1.5" fill="none"/></svg>
+      <h1>Claude Code Settings</h1>
+    </div>
+    <div class="header-spacer"></div>
+    <span class="save-status" id="saveStatus">Saved</span>
+    <button class="header-btn secondary" onclick="location.reload()">Reload</button>
+    <button class="header-btn primary" onclick="doSave()">Save All</button>
+  </div>
+
+  <div class="main">
+    <div class="main-inner">
+
+      <!-- ═══════════ GLOBAL SCOPE ═══════════ -->
+      <div class="scope-card global" id="scope-global">
+        <div class="scope-card-header" onclick="toggleScope(this)">
+          <span class="scope-icon">🏠</span>
+          <div class="scope-text">
+            <div class="scope-title">Global</div>
+            <div class="scope-subtitle">~/.claude/settings.json</div>
+          </div>
+          <span class="scope-status">Main Setup</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="scope-card-body">
+          <div class="profile-assign">
+            <label>Preset:</label>
+            <select>
+              <option value="">Configure manually below</option>
+              <option value="main" selected>Main Setup</option>
+              <option value="work">Work Project</option>
+              <option value="offline">Offline / Local</option>
+            </select>
+            <span class="pa-or">or</span>
+            <a class="pa-link" onclick="openDrawer('preset-main')">edit preset</a>
+          </div>
+          <div class="setup-row">
+            <div class="setup-block" onclick="openDrawer('provider-bedrock-eu')">
+              <div class="setup-block-header">
+                <span class="sb-icon">🔶</span>
+                <span class="sb-label">Provider</span>
+                <span class="sb-edit">Edit &rarr;</span>
+              </div>
+              <div class="setup-block-value">AWS Bedrock</div>
+              <div class="setup-block-detail">
+                <code>eu-west-1</code> &middot; bedrock-dev<br>
+                Sonnet 4.6 &middot; Haiku 4.5 &middot; Opus 4.6
+              </div>
+            </div>
+            <div class="setup-block" onclick="openDrawer('mcp-default')">
+              <div class="setup-block-header">
+                <span class="sb-icon">📡</span>
+                <span class="sb-label">MCP Servers</span>
+                <span class="sb-edit">Edit &rarr;</span>
+              </div>
+              <div class="setup-block-value">Default Servers</div>
+              <div class="setup-block-detail">
+                <span class="setup-tag mcp">context7</span>
+                <span class="setup-tag mcp">claude-vscode</span>
+              </div>
+            </div>
+            <div class="setup-block" onclick="openDrawer('dir-dev')">
+              <div class="setup-block-header">
+                <span class="sb-icon">📂</span>
+                <span class="sb-label">Directories</span>
+                <span class="sb-edit">Edit &rarr;</span>
+              </div>
+              <div class="setup-block-value">Dev Directories</div>
+              <div class="setup-block-detail">
+                <span class="setup-tag dir">~/Developer</span>
+                <span class="setup-tag dir">~/.config</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ PROJECT SCOPE ═══════════ -->
+      <div class="scope-card project" id="scope-project">
+        <div class="scope-card-header" onclick="toggleScope(this)">
+          <span class="scope-icon">📁</span>
+          <div class="scope-text">
+            <div class="scope-title">Project</div>
+            <div class="scope-subtitle">.claude/settings.json &middot; .mcp.json</div>
+          </div>
+          <span class="scope-status">Work Project</span>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="scope-card-body">
+          <div class="profile-assign">
+            <label>Preset:</label>
+            <select>
+              <option value="">Inherit from Global</option>
+              <option value="main">Main Setup</option>
+              <option value="work" selected>Work Project</option>
+              <option value="offline">Offline / Local</option>
+            </select>
+            <span class="pa-or">or</span>
+            <a class="pa-link" onclick="openDrawer('preset-work')">edit preset</a>
+          </div>
+          <div class="setup-row">
+            <div class="setup-block" onclick="openDrawer('provider-bedrock-eu')">
+              <div class="setup-block-header">
+                <span class="sb-icon">🔶</span>
+                <span class="sb-label">Provider</span>
+                <span class="sb-edit">Edit &rarr;</span>
+              </div>
+              <div class="setup-block-value">AWS Bedrock</div>
+              <div class="setup-block-detail">
+                <code>eu-west-1</code> &middot; bedrock-dev<br>
+                Sonnet 4.6 &middot; Haiku 4.5 &middot; Opus 4.6
+              </div>
+            </div>
+            <div class="setup-block" onclick="openDrawer('mcp-dataeng')">
+              <div class="setup-block-header">
+                <span class="sb-icon">📡</span>
+                <span class="sb-label">MCP Servers</span>
+                <span class="sb-edit">Edit &rarr;</span>
+              </div>
+              <div class="setup-block-value">Default + Data Eng</div>
+              <div class="setup-block-detail">
+                <span class="setup-tag mcp">context7</span>
+                <span class="setup-tag mcp">claude-vscode</span>
+                <span class="setup-tag mcp">project-db</span>
+                <span class="setup-tag mcp">s3-browser</span>
+              </div>
+            </div>
+            <div class="setup-block" onclick="openDrawer('dir-work')">
+              <div class="setup-block-header">
+                <span class="sb-icon">📂</span>
+                <span class="sb-label">Directories</span>
+                <span class="sb-edit">Edit &rarr;</span>
+              </div>
+              <div class="setup-block-value">Dev + Work Dirs</div>
+              <div class="setup-block-detail">
+                <span class="setup-tag dir">~/Developer</span>
+                <span class="setup-tag dir">~/.config</span>
+                <span class="setup-tag dir">/opt/company</span>
+                <span class="setup-tag dir">/tmp/build</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ PRESETS ═══════════ -->
+      <div class="section-heading">
+        <h2>Presets</h2>
+        <span class="sh-line"></span>
+        <button class="sh-action" onclick="alert('New Preset')">+ New preset</button>
+      </div>
+      <p class="section-help">
+        A preset bundles a provider, MCP servers, and directories into a reusable configuration.
+        Assign a preset to a scope above, or configure each scope manually.
+      </p>
+
+      <div class="preset-grid">
+        <div class="preset-card" onclick="openDrawer('preset-main')">
+          <div class="preset-top">
+            <span class="preset-name">Main Setup</span>
+            <div class="preset-scope-badges">
+              <span class="preset-scope-badge global">Global</span>
+            </div>
+          </div>
+          <div class="preset-composition">
+            <span class="preset-chip provider"><span class="chip-dot"></span> Bedrock EU</span>
+            <span class="preset-chip mcp"><span class="chip-dot"></span> Default Servers</span>
+            <span class="preset-chip dir"><span class="chip-dot"></span> Dev Dirs</span>
+          </div>
+        </div>
+        <div class="preset-card" onclick="openDrawer('preset-work')">
+          <div class="preset-top">
+            <span class="preset-name">Work Project</span>
+            <div class="preset-scope-badges">
+              <span class="preset-scope-badge project">Project</span>
+            </div>
+          </div>
+          <div class="preset-composition">
+            <span class="preset-chip provider"><span class="chip-dot"></span> Bedrock EU</span>
+            <span class="preset-chip mcp"><span class="chip-dot"></span> Default</span>
+            <span class="preset-chip mcp"><span class="chip-dot"></span> Data Eng</span>
+            <span class="preset-chip dir"><span class="chip-dot"></span> Dev + Work</span>
+          </div>
+        </div>
+        <div class="preset-card" onclick="openDrawer('preset-offline')">
+          <div class="preset-top">
+            <span class="preset-name">Offline / Local</span>
+          </div>
+          <div class="preset-composition">
+            <span class="preset-chip provider"><span class="chip-dot"></span> Local Ollama</span>
+            <span class="preset-chip mcp"><span class="chip-dot"></span> Minimal</span>
+            <span class="preset-chip dir"><span class="chip-dot"></span> Dev Dirs</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ BACKDROP ═══════════ -->
+<div class="drawer-backdrop" id="backdrop" onclick="closeDrawer()"></div>
+
+<!-- ═══════════ DRAWER: Provider - Bedrock EU ═══════════ -->
+<div class="drawer" id="drawer-provider-bedrock-eu">
+  <div class="drawer-header">
+    <span class="dh-icon">🔶</span>
+    <div class="dh-text">
+      <div class="dh-title">Bedrock EU</div>
+      <div class="dh-subtitle">Provider profile</div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="d-group">
+      <label>Profile name</label>
+      <input class="d-input" type="text" value="Bedrock EU">
+    </div>
+
+    <div class="d-group">
+      <label>Provider type</label>
+      <div class="d-provider-grid">
+        <button class="d-prov" onclick="selProv(this)"><div class="dp-icon">☁️</div><div class="dp-name">Anthropic</div><div class="dp-desc">Direct API</div></button>
+        <button class="d-prov selected" onclick="selProv(this)"><div class="dp-icon">🔶</div><div class="dp-name">Bedrock</div><div class="dp-desc">Via AWS</div></button>
+        <button class="d-prov" onclick="selProv(this)"><div class="dp-icon">🔗</div><div class="dp-name">Proxy</div><div class="dp-desc">Self-hosted</div></button>
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title"><span class="dst-dot orange"></span> AWS Configuration</div>
+      <div class="d-info blue">
+        <span class="d-info-icon">ℹ</span>
+        <span>Bedrock mode automatically sets <code>CLAUDE_CODE_USE_BEDROCK=1</code> and disables the Anthropic login prompt.</span>
+      </div>
+      <div class="d-row">
+        <div class="d-group"><label>AWS Profile</label><select class="d-input"><option>default</option><option selected>bedrock-dev</option><option>prod-account</option></select></div>
+        <div class="d-group"><label>AWS Region</label><select class="d-input"><option>us-east-1</option><option selected>eu-west-1</option><option>eu-central-1</option><option>ap-southeast-1</option></select></div>
+      </div>
+      <div class="d-group">
+        <label>Credential refresh command</label>
+        <input class="d-input" type="text" placeholder="e.g. aws sso login --profile bedrock-dev">
+        <div class="d-hint">Optional command to refresh AWS credentials before use.</div>
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title"><span class="dst-dot orange"></span> Models</div>
+      <div class="d-model-row"><span class="d-model-label">Sonnet</span><select class="d-input"><option selected>eu.anthropic.claude-sonnet-4-6</option><option>eu.anthropic.claude-sonnet-4-5-20250514-v1:0</option><option>Custom…</option></select></div>
+      <div class="d-model-row"><span class="d-model-label">Haiku</span><select class="d-input"><option selected>eu.anthropic.claude-haiku-4-5-20251001-v1:0</option><option>anthropic.claude-3-haiku-20240307-v1:0</option><option>Custom…</option></select></div>
+      <div class="d-model-row"><span class="d-model-label">Opus</span><select class="d-input"><option selected>eu.anthropic.claude-opus-4-6-v1</option><option>Custom…</option></select></div>
+      <div class="d-toggle-row">
+        <div class="d-toggle" onclick="this.classList.toggle('on')"></div>
+        <label>Disable prompt caching</label>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-blue" onclick="closeDrawer()">Done</button>
+    <button class="btn btn-ghost" onclick="alert('Duplicate')">Duplicate</button>
+    <button class="btn btn-danger" onclick="alert('Delete')">Delete</button>
+  </div>
+</div>
+
+<!-- ═══════════ DRAWER: MCP - Default Servers ═══════════ -->
+<div class="drawer" id="drawer-mcp-default">
+  <div class="drawer-header">
+    <span class="dh-icon">📡</span>
+    <div class="dh-text"><div class="dh-title">Default Servers</div><div class="dh-subtitle">MCP server group</div></div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="d-group"><label>Group name</label><input class="d-input" type="text" value="Default Servers"></div>
+    <div class="d-info blue"><span class="d-info-icon">ℹ</span><span>Servers in this group become available whenever a preset using it is active.</span></div>
+    <div class="d-srv"><span class="ds-name">context7</span><span class="ds-badge">HTTP</span><span class="ds-url">https://mcp.context7.com/mcp</span><span class="ds-btns"><button>Edit</button><button>Del</button></span></div>
+    <div class="d-srv"><span class="ds-name">claude-vscode</span><span class="ds-badge">stdio</span><span class="ds-url">npx @anthropic/claude-vscode-mcp</span><span class="ds-btns"><button>Edit</button><button>Del</button></span></div>
+    <button class="d-add">+ Add server</button>
+  </div>
+  <div class="drawer-footer"><button class="btn btn-blue" onclick="closeDrawer()">Done</button><button class="btn btn-ghost">Duplicate</button><button class="btn btn-danger">Delete</button></div>
+</div>
+
+<!-- ═══════════ DRAWER: MCP - Data Eng ═══════════ -->
+<div class="drawer" id="drawer-mcp-dataeng">
+  <div class="drawer-header">
+    <span class="dh-icon">📡</span>
+    <div class="dh-text"><div class="dh-title">Default + Data Engineering</div><div class="dh-subtitle">Combined MCP servers for this scope</div></div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="d-info blue"><span class="d-info-icon">ℹ</span><span>This scope uses two MCP groups merged together. Edit the groups individually or manage them in the preset.</span></div>
+    <div class="d-section">
+      <div class="d-section-title"><span class="dst-dot purple"></span> From: Default Servers</div>
+      <div class="d-srv"><span class="ds-name">context7</span><span class="ds-badge">HTTP</span><span class="ds-url">https://mcp.context7.com/mcp</span><span class="ds-btns"><button>Edit</button></span></div>
+      <div class="d-srv"><span class="ds-name">claude-vscode</span><span class="ds-badge">stdio</span><span class="ds-url">npx @anthropic/claude-vscode-mcp</span><span class="ds-btns"><button>Edit</button></span></div>
+    </div>
+    <div class="d-section">
+      <div class="d-section-title"><span class="dst-dot purple"></span> From: Data Engineering</div>
+      <div class="d-srv"><span class="ds-name">project-db</span><span class="ds-badge">stdio</span><span class="ds-url">node ./scripts/db-mcp.js</span><span class="ds-btns"><button>Edit</button></span></div>
+      <div class="d-srv"><span class="ds-name">s3-browser</span><span class="ds-badge">stdio</span><span class="ds-url">npx @aws/s3-mcp-server</span><span class="ds-btns"><button>Edit</button></span></div>
+    </div>
+  </div>
+  <div class="drawer-footer"><button class="btn btn-blue" onclick="closeDrawer()">Done</button></div>
+</div>
+
+<!-- ═══════════ DRAWER: Directories - Dev ═══════════ -->
+<div class="drawer" id="drawer-dir-dev">
+  <div class="drawer-header">
+    <span class="dh-icon">📂</span>
+    <div class="dh-text"><div class="dh-title">Dev Directories</div><div class="dh-subtitle">Directory group</div></div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="d-group"><label>Group name</label><input class="d-input" type="text" value="Dev Directories"></div>
+    <div class="d-info blue"><span class="d-info-icon">ℹ</span><span>These directories will be accessible to Claude Code when this group is active.</span></div>
+    <div class="d-dir"><input type="text" value="/Users/erik/Developer"><button>Browse</button><button>×</button></div>
+    <div class="d-dir"><input type="text" value="/Users/erik/.config"><button>Browse</button><button>×</button></div>
+    <button class="d-add">+ Add directory</button>
+  </div>
+  <div class="drawer-footer"><button class="btn btn-blue" onclick="closeDrawer()">Done</button><button class="btn btn-ghost">Duplicate</button><button class="btn btn-danger">Delete</button></div>
+</div>
+
+<!-- ═══════════ DRAWER: Directories - Work ═══════════ -->
+<div class="drawer" id="drawer-dir-work">
+  <div class="drawer-header">
+    <span class="dh-icon">📂</span>
+    <div class="dh-text"><div class="dh-title">Dev + Work Directories</div><div class="dh-subtitle">Combined directories for this scope</div></div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="d-info blue"><span class="d-info-icon">ℹ</span><span>This scope merges two directory groups together.</span></div>
+    <div class="d-section"><div class="d-section-title"><span class="dst-dot green"></span> From: Dev Directories</div><div class="d-dir"><input type="text" value="/Users/erik/Developer" readonly style="opacity:0.7"><button>→</button></div><div class="d-dir"><input type="text" value="/Users/erik/.config" readonly style="opacity:0.7"><button>→</button></div></div>
+    <div class="d-section"><div class="d-section-title"><span class="dst-dot green"></span> From: Work Projects</div><div class="d-dir"><input type="text" value="/opt/company/repos" readonly style="opacity:0.7"><button>→</button></div><div class="d-dir"><input type="text" value="/tmp/build-artifacts" readonly style="opacity:0.7"><button>→</button></div></div>
+  </div>
+  <div class="drawer-footer"><button class="btn btn-blue" onclick="closeDrawer()">Done</button></div>
+</div>
+
+<!-- ═══════════ DRAWER: Preset - Main Setup ═══════════ -->
+<div class="drawer" id="drawer-preset-main">
+  <div class="drawer-header">
+    <span class="dh-icon">⚡</span>
+    <div class="dh-text"><div class="dh-title">Main Setup</div><div class="dh-subtitle">Preset</div></div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="d-group"><label>Preset name</label><input class="d-input" type="text" value="Main Setup"></div>
+
+    <hr class="d-divider">
+
+    <!-- Provider -->
+    <div class="d-comp-slot">
+      <div class="d-comp-slot-header">
+        <span class="d-comp-dot orange"></span>
+        <span class="d-comp-slot-label">Provider</span>
+        <span class="d-comp-slot-hint">pick one</span>
+      </div>
+      <select class="d-input">
+        <option value="">— None —</option>
+        <option selected>🔶 Bedrock EU — eu-west-1</option>
+        <option>🔶 Bedrock US — us-east-1</option>
+        <option>☁️ Anthropic Direct</option>
+        <option>🔗 Local Ollama</option>
+      </select>
+      <div class="d-comp-preview">Sonnet: eu.anthropic.claude-sonnet-4-6<br>Haiku: eu.anthropic.claude-haiku-4-5-…<br>Opus: eu.anthropic.claude-opus-4-6-v1</div>
+    </div>
+
+    <!-- MCP -->
+    <div class="d-comp-slot">
+      <div class="d-comp-slot-header">
+        <span class="d-comp-dot purple"></span>
+        <span class="d-comp-slot-label">MCP Servers</span>
+        <span class="d-comp-slot-hint">pick one or more</span>
+      </div>
+      <label class="d-option"><input type="checkbox" checked><div class="do-text"><div class="do-name">Default Servers</div><div class="do-detail">context7, claude-vscode</div></div><button class="do-edit" onclick="event.stopPropagation();openDrawer('mcp-default')">Edit →</button></label>
+      <label class="d-option"><input type="checkbox"><div class="do-text"><div class="do-name">Data Engineering</div><div class="do-detail">project-db, s3-browser</div></div><button class="do-edit" onclick="event.stopPropagation()">Edit →</button></label>
+      <label class="d-option"><input type="checkbox"><div class="do-text"><div class="do-name">Minimal</div><div class="do-detail">(no servers)</div></div></label>
+    </div>
+
+    <!-- Directories -->
+    <div class="d-comp-slot">
+      <div class="d-comp-slot-header">
+        <span class="d-comp-dot green"></span>
+        <span class="d-comp-slot-label">Directories</span>
+        <span class="d-comp-slot-hint">pick one or more</span>
+      </div>
+      <label class="d-option"><input type="checkbox" checked><div class="do-text"><div class="do-name">Dev Directories</div><div class="do-detail">~/Developer, ~/.config</div></div><button class="do-edit" onclick="event.stopPropagation();openDrawer('dir-dev')">Edit →</button></label>
+      <label class="d-option"><input type="checkbox"><div class="do-text"><div class="do-name">Work Projects</div><div class="do-detail">/opt/company, /tmp/build</div></div><button class="do-edit" onclick="event.stopPropagation()">Edit →</button></label>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-blue" onclick="closeDrawer()">Done</button>
+    <button class="btn btn-ghost">Duplicate</button>
+    <button class="btn btn-danger">Delete</button>
+  </div>
+</div>
+
+<!-- ═══════════ DRAWER: Preset - Work ═══════════ -->
+<div class="drawer" id="drawer-preset-work">
+  <div class="drawer-header">
+    <span class="dh-icon">⚡</span>
+    <div class="dh-text"><div class="dh-title">Work Project</div><div class="dh-subtitle">Preset</div></div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="d-group"><label>Preset name</label><input class="d-input" type="text" value="Work Project"></div>
+    <hr class="d-divider">
+    <div class="d-comp-slot"><div class="d-comp-slot-header"><span class="d-comp-dot orange"></span><span class="d-comp-slot-label">Provider</span><span class="d-comp-slot-hint">pick one</span></div><select class="d-input"><option>— None —</option><option selected>🔶 Bedrock EU — eu-west-1</option><option>🔶 Bedrock US — us-east-1</option><option>☁️ Anthropic Direct</option><option>🔗 Local Ollama</option></select></div>
+    <div class="d-comp-slot"><div class="d-comp-slot-header"><span class="d-comp-dot purple"></span><span class="d-comp-slot-label">MCP Servers</span><span class="d-comp-slot-hint">pick one or more</span></div><label class="d-option"><input type="checkbox" checked><div class="do-text"><div class="do-name">Default Servers</div><div class="do-detail">context7, claude-vscode</div></div></label><label class="d-option"><input type="checkbox" checked><div class="do-text"><div class="do-name">Data Engineering</div><div class="do-detail">project-db, s3-browser</div></div></label><label class="d-option"><input type="checkbox"><div class="do-text"><div class="do-name">Minimal</div><div class="do-detail">(no servers)</div></div></label></div>
+    <div class="d-comp-slot"><div class="d-comp-slot-header"><span class="d-comp-dot green"></span><span class="d-comp-slot-label">Directories</span><span class="d-comp-slot-hint">pick one or more</span></div><label class="d-option"><input type="checkbox" checked><div class="do-text"><div class="do-name">Dev Directories</div><div class="do-detail">~/Developer, ~/.config</div></div></label><label class="d-option"><input type="checkbox" checked><div class="do-text"><div class="do-name">Work Projects</div><div class="do-detail">/opt/company, /tmp/build</div></div></label></div>
+  </div>
+  <div class="drawer-footer"><button class="btn btn-blue" onclick="closeDrawer()">Done</button><button class="btn btn-ghost">Duplicate</button><button class="btn btn-danger">Delete</button></div>
+</div>
+
+<!-- ═══════════ DRAWER: Preset - Offline ═══════════ -->
+<div class="drawer" id="drawer-preset-offline">
+  <div class="drawer-header">
+    <span class="dh-icon">⚡</span>
+    <div class="dh-text"><div class="dh-title">Offline / Local</div><div class="dh-subtitle">Preset</div></div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="d-group"><label>Preset name</label><input class="d-input" type="text" value="Offline / Local"></div>
+    <hr class="d-divider">
+    <div class="d-comp-slot"><div class="d-comp-slot-header"><span class="d-comp-dot orange"></span><span class="d-comp-slot-label">Provider</span><span class="d-comp-slot-hint">pick one</span></div><select class="d-input"><option>— None —</option><option>🔶 Bedrock EU</option><option>🔶 Bedrock US</option><option>☁️ Anthropic Direct</option><option selected>🔗 Local Ollama — localhost:11434</option></select></div>
+    <div class="d-comp-slot"><div class="d-comp-slot-header"><span class="d-comp-dot purple"></span><span class="d-comp-slot-label">MCP Servers</span></div><label class="d-option"><input type="checkbox"><div class="do-text"><div class="do-name">Default Servers</div></div></label><label class="d-option"><input type="checkbox"><div class="do-text"><div class="do-name">Data Engineering</div></div></label><label class="d-option"><input type="checkbox" checked><div class="do-text"><div class="do-name">Minimal</div><div class="do-detail">(no servers)</div></div></label></div>
+    <div class="d-comp-slot"><div class="d-comp-slot-header"><span class="d-comp-dot green"></span><span class="d-comp-slot-label">Directories</span></div><label class="d-option"><input type="checkbox" checked><div class="do-text"><div class="do-name">Dev Directories</div></div></label><label class="d-option"><input type="checkbox"><div class="do-text"><div class="do-name">Work Projects</div></div></label></div>
+  </div>
+  <div class="drawer-footer"><button class="btn btn-blue" onclick="closeDrawer()">Done</button><button class="btn btn-ghost">Duplicate</button><button class="btn btn-danger">Delete</button></div>
+</div>
+
+<script>
+/* ═══════════ DRAWER ═══════════ */
+let openDrawerId = null;
+
+function openDrawer(id) {
+  closeDrawer();
+  const drawer = document.getElementById('drawer-' + id);
+  const backdrop = document.getElementById('backdrop');
+  if (!drawer) return;
+  requestAnimationFrame(() => {
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+  });
+  openDrawerId = id;
+}
+
+function closeDrawer() {
+  document.querySelectorAll('.drawer.open').forEach(d => d.classList.remove('open'));
+  document.getElementById('backdrop').classList.remove('open');
+  openDrawerId = null;
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+/* ═══════════ SCOPE TOGGLE ═══════════ */
+function toggleScope(header) {
+  header.closest('.scope-card').classList.toggle('collapsed');
+}
+
+/* ═══════════ PROVIDER SELECT ═══════════ */
+function selProv(el) {
+  el.closest('.d-provider-grid').querySelectorAll('.d-prov').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+/* ═══════════ SAVE ═══════════ */
+function doSave() {
+  const status = document.getElementById('saveStatus');
+  status.textContent = '✓ Saved';
+  status.classList.add('show');
+  setTimeout(() => status.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

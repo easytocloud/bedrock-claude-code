@@ -7,7 +7,7 @@ import { getClaudeSettingsPath } from './claudeSettings';
 import { readAwsProfiles, readAwsProfilesFrom, getAwsConfigInfo } from './awsConfig';
 import { readProfileStore, writeProfileStore, createEmptyStore, generateId } from './profiles';
 import { applyAllScopes } from './resolver';
-import { PanelState, ProfileStore } from './types';
+import { PanelState, ProfileStore, McpServerEntry } from './types';
 import { ANTHROPIC_DEFAULTS } from './models';
 import { buildHtml } from './webview/index';
 import { refreshStatusBar, setRefreshHook } from './statusBar';
@@ -19,7 +19,6 @@ import { refreshStatusBar, setRefreshHook } from './statusBar';
 import { readClaudeSettings } from './claudeSettings';
 import { readUserMcpServers, ensureOnboardingComplete } from './claudeJson';
 import { readProjectMcpServers } from './mcpJson';
-import { McpServerEntry } from './types';
 import { MANAGED_ENV_KEYS } from './models';
 
 function migrateExistingSettings(workspaceRoot: string | undefined): ProfileStore {
@@ -330,6 +329,10 @@ export class ClaudeCodeSettingsPanel {
         await this._fetchBedrockModels(msg.awsProfile as string, msg.awsRegion as string, msg.awsEnv as string | undefined);
         break;
 
+      case 'testMcpServer':
+        await this._testMcpServer(msg.server as McpServerEntry);
+        break;
+
       case 'switchAwsEnv': {
         // User selected a different aws-env — store it on the provider (per-provider,
         // no symlink mutation) and reload profiles from the target config.
@@ -531,6 +534,38 @@ export class ClaudeCodeSettingsPanel {
     } catch (err) {
       const message = err instanceof Error ? err.message.split('\n')[0] : String(err);
       this._panel.webview.postMessage({ type: 'testModelResult', slot, ok: false, message });
+    }
+  }
+
+  private async _testMcpServer(server: McpServerEntry): Promise<void> {
+    try {
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      let transport;
+
+      if (server.type === 'stdio') {
+        const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
+        transport = new StdioClientTransport({
+          command: server.command!,
+          args: server.args,
+          env: server.env ? { ...process.env, ...server.env } : undefined,
+        });
+      } else if (server.type === 'sse') {
+        const { SSEClientTransport } = require('@modelcontextprotocol/sdk/client/sse.js');
+        transport = new SSEClientTransport(new URL(server.url!));
+      } else {
+        const { StreamableHTTPClientTransport } = require('@modelcontextprotocol/sdk/client/streamableHttp.js');
+        transport = new StreamableHTTPClientTransport(new URL(server.url!));
+      }
+
+      const client = new Client({ name: 'bedrock-claude-code-test', version: '1.0' });
+      await client.connect(transport);
+      const result = await client.listTools();
+      await client.close();
+      const tools = (result.tools || []).map((t: { name: string }) => t.name);
+      this._panel.webview.postMessage({ type: 'testMcpResult', ok: true, tools });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this._panel.webview.postMessage({ type: 'testMcpResult', ok: false, message });
     }
   }
 

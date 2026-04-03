@@ -99,7 +99,7 @@ export function buildStyles(): string {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: var(--radius-sm);
       border: 1px solid transparent;
       font-size: 12px;
@@ -124,7 +124,7 @@ export function buildStyles(): string {
       background: transparent;
       color: var(--fg-dim);
       border: none;
-      padding: 6px 10px;
+      padding: 6px 12px;
     }
     .btn-ghost:hover { color: var(--fg); background: var(--bg-hover); }
     .btn-danger {
@@ -133,7 +133,7 @@ export function buildStyles(): string {
       border-color: var(--red);
     }
     .btn-danger:hover { background: var(--red-dim); }
-    .btn-sm { padding: 3px 8px; font-size: 11px; }
+    .btn-sm { padding: 6px 12px; font-size: 11px; }
     .btn-icon {
       background: transparent;
       border: none;
@@ -145,6 +145,25 @@ export function buildStyles(): string {
       align-items: center;
     }
     .btn-icon:hover { color: var(--fg); background: var(--bg-hover); }
+
+    /* ─── Disabled State ────────────────────────────────────────────── */
+    button:disabled,
+    input:disabled,
+    textarea:disabled,
+    select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ─── Focus Indicators (Keyboard Navigation) ────────────────────── */
+    .btn:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible,
+    .seg-btn:focus-visible {
+      outline: 2px solid var(--input-focus);
+      outline-offset: 2px;
+    }
 
     /* ─── Scope Cards ───────────────────────────────────────────────── */
     .scope-section { margin-bottom: 8px; }
@@ -531,11 +550,11 @@ export function buildStyles(): string {
       pointer-events: none;
     }
     .btn-test.fail {
-      border-color: #e06c75;
-      color: #e06c75;
+      border-color: var(--red);
+      color: var(--red);
       cursor: pointer;          /* clickable again to retry */
     }
-    .btn-test.fail:hover { background: rgba(224,108,117,0.1); }
+    .btn-test.fail:hover { background: var(--red-dim); }
     @keyframes test-pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.3; }
@@ -557,7 +576,7 @@ export function buildStyles(): string {
       flex-shrink: 0;
     }
     .pill-btn {
-      padding: 2px 9px;
+      padding: 4px 10px;
       font-size: 11px;
       font-family: inherit;
       cursor: pointer;
@@ -568,7 +587,7 @@ export function buildStyles(): string {
       line-height: 1.6;
     }
     .pill-btn.sel {
-      background: var(--blue-mid);
+      background: rgba(59,158,255,0.35);
       color: var(--blue);
       font-weight: 600;
     }
@@ -697,6 +716,7 @@ export function buildStyles(): string {
     .section-dot-green  { background: var(--green-accent); }
     .section-subtitle   { color: var(--fg-dim); font-weight: 400; text-transform: none; }
     .form-hint-mt   { margin-top: 6px; }
+    .form-hint-sm   { margin-top: 4px; }
     .form-hint-flex { flex: 1; margin: 0 12px; }
     .env-key-input  { width: 40%; display: inline-block; margin-right: 4px; }
     .env-val-input  { width: 55%; display: inline-block; }
@@ -771,7 +791,7 @@ export function buildStyles(): string {
       z-index: 200;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.2s ease, visibility 0.2s ease;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
     }
     .drawer-backdrop.open {
       opacity: 1;
@@ -924,6 +944,7 @@ export function buildStyles(): string {
       right: 0;
       max-height: 200px;
       overflow-y: auto;
+      scroll-behavior: smooth;
       background: var(--bg-surface);
       border: 1px solid var(--input-border);
       border-top: none;
@@ -951,9 +972,9 @@ export function buildStyles(): string {
     /* ─── Empty State ───────────────────────────────────────────────── */
     .empty-state {
       text-align: center;
-      padding: 24px;
-      color: var(--fg-dim);
-      font-size: 12px;
+      padding: 16px;
+      color: var(--fg);
+      font-size: 13px;
     }
 
     /* ─── Inline Add Button ─────────────────────────────────────────── */

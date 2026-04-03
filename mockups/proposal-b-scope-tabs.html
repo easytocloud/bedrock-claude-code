@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal B — Scope-First Tabs with Inline Profile</title>
+<style>
+  :root {
+    --bg: #1e1e1e;
+    --bg-light: #252526;
+    --bg-lighter: #2d2d2d;
+    --bg-hover: #363636;
+    --fg: #cccccc;
+    --fg-dim: #888888;
+    --fg-bright: #e0e0e0;
+    --border: #3c3c3c;
+    --accent: #0078d4;
+    --accent-hover: #1a8cee;
+    --danger: #f44747;
+    --warning-bg: rgba(255,165,0,0.08);
+    --warning-border: #e89600;
+    --info-bg: rgba(0,120,212,0.08);
+    --info-border: #0078d4;
+    --input-bg: #3c3c3c;
+    --input-border: #555;
+    --radius: 6px;
+    --global-color: #4aa3e8;
+    --global-bg: rgba(0,120,212,0.06);
+    --global-border: #0078d4;
+    --project-color: #e8a830;
+    --project-bg: rgba(232,150,0,0.06);
+    --project-border: #e89600;
+    --local-color: #50c878;
+    --local-bg: rgba(80,200,120,0.06);
+    --local-border: #50c878;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--fg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Header ── */
+  .header { padding: 16px 24px 0; flex-shrink: 0; }
+  .header h1 { font-size: 18px; font-weight: 600; color: var(--fg-bright); }
+
+  /* ── Scope Tab Bar ── */
+  .scope-tab-bar { display: flex; padding: 16px 24px 0; gap: 0; flex-shrink: 0; }
+  .scope-tab-btn { position: relative; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--bg-light); border: 1px solid var(--border); border-bottom: none; border-radius: var(--radius) var(--radius) 0 0; color: var(--fg-dim); display: flex; align-items: center; gap: 8px; margin-right: -1px; transition: all 0.15s; }
+  .scope-tab-btn:hover { color: var(--fg); background: var(--bg-lighter); }
+  .scope-tab-btn .tab-icon { font-size: 15px; }
+  .scope-tab-btn .tab-path { font-size: 10px; font-family: 'SF Mono', Monaco, Consolas, monospace; opacity: 0.5; margin-left: 4px; }
+  .scope-tab-btn.active { z-index: 2; }
+  .scope-tab-btn.active.global { background: var(--global-bg); border-color: var(--global-border); color: var(--global-color); border-bottom: 2px solid var(--global-bg); }
+  .scope-tab-btn.active.project { background: var(--project-bg); border-color: var(--project-border); color: var(--project-color); border-bottom: 2px solid var(--project-bg); }
+  .scope-tab-btn.active.local { background: var(--local-bg); border-color: var(--local-border); color: var(--local-color); border-bottom: 2px solid var(--local-bg); }
+  .scope-tab-btn::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; }
+  .scope-tab-btn.active.global::after { background: var(--global-border); top: -1px; bottom: auto; }
+  .scope-tab-btn.active.project::after { background: var(--project-border); top: -1px; bottom: auto; }
+  .scope-tab-btn.active.local::after { background: var(--local-border); top: -1px; bottom: auto; }
+
+  /* ── Scope Banner ── */
+  .scope-banner { padding: 10px 24px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .scope-banner .banner-path { font-weight: 400; font-family: 'SF Mono', Monaco, Consolas, monospace; opacity: 0.7; }
+  .scope-banner.global { background: var(--global-bg); border-bottom: 2px solid var(--global-border); color: var(--global-color); }
+  .scope-banner.project { background: var(--project-bg); border-bottom: 2px solid var(--project-border); color: var(--project-color); }
+  .scope-banner.local { background: var(--local-bg); border-bottom: 2px solid var(--local-border); color: var(--local-color); }
+
+  /* ── Content Tabs (sub-navigation) ── */
+  .content-tabs { display: flex; padding: 0 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg-light); }
+  .content-tab { padding: 10px 18px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--fg-dim); background: none; border-top: none; border-left: none; border-right: none; }
+  .content-tab:hover { color: var(--fg); }
+  .content-tab.active { color: var(--fg-bright); border-bottom-color: var(--accent); }
+
+  /* ── Scrollable content ── */
+  .scroll-area { flex: 1; overflow-y: auto; padding: 20px 24px 100px; }
+
+  /* ── Forms ── */
+  .section { margin-bottom: 28px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--fg-dim); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--fg-dim); margin-bottom: 6px; }
+  .form-group input, .form-group select { width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* ── Provider Selector ── */
+  .provider-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .provider-option { position: relative; padding: 14px 16px; border: 2px solid var(--border); border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.15s; }
+  .provider-option:hover { border-color: var(--fg-dim); background: var(--bg-hover); }
+  .provider-option.selected { border-color: var(--accent); background: var(--info-bg); }
+  .provider-option .radio { width: 16px; height: 16px; border: 2px solid var(--fg-dim); border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .provider-option.selected .radio { border-color: var(--accent); }
+  .provider-option.selected .radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .provider-option .prov-icon { font-size: 22px; }
+  .provider-option .prov-text .prov-name { font-size: 13px; font-weight: 600; }
+  .provider-option .prov-text .prov-desc { font-size: 11px; color: var(--fg-dim); }
+
+  /* ── Conditional Config Sections ── */
+  .config-box { padding: 16px; background: var(--bg-light); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; }
+  .config-box h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--fg-dim); margin-bottom: 14px; }
+
+  /* ── Model Cards ── */
+  .model-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .model-card { padding: 14px; background: var(--bg-light); border: 1px solid var(--border); border-radius: var(--radius); }
+  .model-card .mc-role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--fg-dim); margin-bottom: 8px; }
+  .model-card select { width: 100%; padding: 8px 10px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: var(--radius); font-size: 12px; }
+  .model-card .mc-custom { margin-top: 8px; }
+  .model-card .mc-custom input { width: 100%; padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: var(--radius); font-size: 12px; }
+
+  /* ── MCP / Directories ── */
+  .mcp-card { display: flex; align-items: center; padding: 10px 14px; background: var(--bg-lighter); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; gap: 10px; }
+  .mcp-card .mcp-name { font-size: 13px; font-weight: 600; }
+  .mcp-card .mcp-detail { font-size: 11px; color: var(--fg-dim); margin-left: 4px; }
+  .mcp-card .mcp-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; background: var(--bg-hover); color: var(--fg-dim); text-transform: uppercase; margin-left: auto; }
+  .mcp-card .mcp-actions { display: flex; gap: 4px; margin-left: 8px; }
+  .mcp-card .mcp-actions button { padding: 4px 8px; font-size: 11px; background: none; border: 1px solid var(--border); color: var(--fg-dim); border-radius: 4px; cursor: pointer; }
+  .mcp-card .mcp-actions button:hover { color: var(--fg); border-color: var(--fg-dim); }
+  .dir-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .dir-row input { flex: 1; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: var(--radius); font-size: 13px; }
+  .dir-row button { padding: 6px 10px; font-size: 12px; background: none; border: 1px solid var(--border); color: var(--fg-dim); border-radius: 4px; cursor: pointer; white-space: nowrap; }
+  .dir-row button:hover { border-color: var(--fg-dim); color: var(--fg); }
+  .add-btn { padding: 8px 16px; font-size: 12px; background: none; border: 1px dashed var(--border); color: var(--fg-dim); border-radius: var(--radius); cursor: pointer; margin-top: 6px; }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .callout { padding: 12px 16px; border-radius: var(--radius); font-size: 12px; line-height: 1.5; margin-bottom: 16px; }
+  .callout.info { background: var(--info-bg); border-left: 3px solid var(--info-border); }
+  .callout.warning { background: var(--warning-bg); border-left: 3px solid var(--warning-border); }
+
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .toggle-row label { font-size: 13px; color: var(--fg); cursor: pointer; }
+  .toggle { position: relative; width: 38px; height: 20px; background: var(--input-border); border-radius: 10px; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+  .toggle.on { background: var(--accent); }
+  .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
+  .toggle.on::after { transform: translateX(18px); }
+
+  /* ── Profiles popover (for management) ── */
+  .profiles-manage { padding: 16px; background: var(--bg-light); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; }
+  .profiles-manage h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--fg-dim); margin-bottom: 12px; }
+  .profile-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-lighter); border: 1px solid var(--border); border-radius: 16px; font-size: 12px; margin-right: 6px; margin-bottom: 6px; cursor: pointer; }
+  .profile-chip:hover { border-color: var(--accent); }
+  .profile-chip .chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .profile-chip .chip-dot.anthropic { background: #d4a574; }
+  .profile-chip .chip-dot.bedrock { background: #ff9900; }
+  .profile-chip .chip-dot.proxy { background: #50c878; }
+  .profile-chip .chip-edit { font-size: 10px; color: var(--fg-dim); margin-left: 4px; }
+  .profile-chip .chip-edit:hover { color: var(--accent); }
+
+  /* ── Save bar ── */
+  .save-bar { padding: 12px 24px; background: var(--bg-light); border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .save-bar .btn-primary { padding: 8px 20px; background: var(--accent); border: none; color: #fff; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; }
+  .save-bar .btn-primary:hover { background: var(--accent-hover); }
+  .save-bar .btn-secondary { padding: 8px 16px; background: var(--bg-lighter); border: 1px solid var(--border); color: var(--fg); border-radius: var(--radius); cursor: pointer; font-size: 13px; }
+  .save-bar .btn-secondary:hover { background: var(--bg-hover); }
+  .save-bar .status { flex: 1; text-align: right; font-size: 12px; color: var(--fg-dim); }
+
+  .hidden { display: none !important; }
+
+  /* ── Scope content panels ── */
+  .scope-panel { display: none; }
+  .scope-panel.visible { display: block; }
+  .content-panel { display: none; }
+  .content-panel.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Claude Code Settings</h1>
+</div>
+
+<!-- ═══ SCOPE TAB BAR ═══ -->
+<div class="scope-tab-bar">
+  <button class="scope-tab-btn active global" onclick="switchScope('global', this)">
+    <span class="tab-icon">🏠</span> Global
+    <span class="tab-path">~/.claude/</span>
+  </button>
+  <button class="scope-tab-btn project" onclick="switchScope('project', this)">
+    <span class="tab-icon">📁</span> Project
+    <span class="tab-path">.claude/</span>
+  </button>
+  <button class="scope-tab-btn local" onclick="switchScope('local', this)">
+    <span class="tab-icon">🔒</span> Local
+    <span class="tab-path">.claude/*.local.*</span>
+  </button>
+  <button class="scope-tab-btn" onclick="switchScope('profiles', this)" style="margin-left: auto;">
+    ⚙ Manage Profiles
+  </button>
+</div>
+
+<!-- ═══ SCOPE BANNER ═══ -->
+<div class="scope-banner global" id="scopeBanner">
+  🏠 GLOBAL SCOPE
+  <span class="banner-path">— Changes write to ~/.claude/settings.json</span>
+</div>
+
+<!-- ═══ CONTENT TABS ═══ -->
+<div class="content-tabs" id="contentTabs">
+  <button class="content-tab active" onclick="switchContent('provider', this)">Provider & Models</button>
+  <button class="content-tab" onclick="switchContent('mcp', this)">MCP Servers</button>
+  <button class="content-tab" onclick="switchContent('dirs', this)">Directories</button>
+  <button class="content-tab" onclick="switchContent('help', this)">Help</button>
+</div>
+
+<div class="scroll-area">
+
+  <!-- ═══ GLOBAL scope ═══ -->
+  <div class="scope-panel visible" id="scope-global">
+
+    <!-- Provider & Models -->
+    <div class="content-panel visible" data-tab="provider">
+      <div class="section">
+        <div class="section-title">Provider</div>
+        <div class="provider-selector">
+          <div class="provider-option" onclick="selectProviderB(this, 'anthropic', 'global')">
+            <span class="radio"></span>
+            <span class="prov-icon">☁️</span>
+            <div class="prov-text">
+              <div class="prov-name">Anthropic</div>
+              <div class="prov-desc">Direct API</div>
+            </div>
+          </div>
+          <div class="provider-option selected" onclick="selectProviderB(this, 'bedrock', 'global')">
+            <span class="radio"></span>
+            <span class="prov-icon">🔶</span>
+            <div class="prov-text">
+              <div class="prov-name">AWS Bedrock</div>
+              <div class="prov-desc">Via AWS account</div>
+            </div>
+          </div>
+          <div class="provider-option" onclick="selectProviderB(this, 'proxy', 'global')">
+            <span class="radio"></span>
+            <span class="prov-icon">🔗</span>
+            <div class="prov-text">
+              <div class="prov-name">Proxy / URL</div>
+              <div class="prov-desc">Self-hosted</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bedrock config -->
+        <div class="config-box" id="global-config-bedrock">
+          <h3>AWS Bedrock</h3>
+          <div class="callout info">Bedrock mode automatically enables <code>CLAUDE_CODE_USE_BEDROCK</code> and disables the Anthropic login prompt.</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>AWS Profile</label>
+              <select><option>default</option><option selected>bedrock-dev</option><option>prod-account</option></select>
+            </div>
+            <div class="form-group">
+              <label>AWS Region</label>
+              <select><option>us-east-1</option><option selected>eu-west-1</option><option>eu-central-1</option><option>ap-southeast-1</option></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Credential Refresh Command</label>
+            <input type="text" placeholder="e.g. aws sso login --profile bedrock-dev">
+          </div>
+        </div>
+
+        <!-- Anthropic config (hidden) -->
+        <div class="config-box hidden" id="global-config-anthropic">
+          <h3>Anthropic API</h3>
+          <div class="form-group">
+            <label>API Key</label>
+            <input type="password" placeholder="sk-ant-...">
+          </div>
+          <div class="callout info">Uses Anthropic's API directly. Get your key at console.anthropic.com.</div>
+        </div>
+
+        <!-- Proxy config (hidden) -->
+        <div class="config-box hidden" id="global-config-proxy">
+          <h3>Proxy / Self-Hosted</h3>
+          <div class="form-group">
+            <label>Base URL</label>
+            <input type="text" placeholder="http://localhost:11434">
+          </div>
+          <div class="form-group">
+            <label>API Key (optional)</label>
+            <input type="password" placeholder="Bearer token">
+          </div>
+          <div class="callout info">Works with any OpenAI-compatible API (Ollama, vLLM, LM Studio, LiteLLM).</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Models</div>
+        <div class="model-cards">
+          <div class="model-card">
+            <div class="mc-role">Primary (Sonnet)</div>
+            <select>
+              <option selected>eu.anthropic.claude-sonnet-4-6</option>
+              <option>eu.anthropic.claude-sonnet-4-5-20250514-v1:0</option>
+              <option>Custom model ID...</option>
+            </select>
+          </div>
+          <div class="model-card">
+            <div class="mc-role">Small/Fast (Haiku)</div>
+            <select>
+              <option selected>eu.anthropic.claude-haiku-4-5-20251001-v1:0</option>
+              <option>anthropic.claude-3-haiku-20240307-v1:0</option>
+              <option>Custom model ID...</option>
+            </select>
+          </div>
+          <div class="model-card">
+            <div class="mc-role">Complex (Opus)</div>
+            <select>
+              <option selected>eu.anthropic.claude-opus-4-6-v1</option>
+              <option>Custom model ID...</option>
+            </select>
+          </div>
+        </div>
+        <div class="toggle-row" style="margin-top: 14px;">
+          <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          <label>Disable prompt caching</label>
+        </div>
+      </div>
+
+      <!-- Save as profile -->
+      <div class="config-box" style="border: 1px dashed var(--border); background: none; margin-top: 8px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 12px; color: var(--fg-dim);">Save this provider+model configuration as a reusable profile:</span>
+          <input type="text" placeholder="Profile name..." style="flex:1; padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--fg); border-radius: var(--radius); font-size: 12px;">
+          <button style="padding: 6px 14px; background: var(--bg-lighter); border: 1px solid var(--border); color: var(--fg); border-radius: var(--radius); font-size: 12px; cursor: pointer; white-space: nowrap;">Save Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MCP Servers -->
+    <div class="content-panel" data-tab="mcp">
+      <div class="section">
+        <div class="section-title">MCP Servers (Global — ~/.claude.json)</div>
+        <div class="mcp-card">
+          <span class="mcp-name">context7</span>
+          <span class="mcp-detail">— https://mcp.context7.com/mcp</span>
+          <span class="mcp-badge">http</span>
+          <div class="mcp-actions"><button>Edit</button><button>Delete</button></div>
+        </div>
+        <div class="mcp-card">
+          <span class="mcp-name">claude-vscode</span>
+          <span class="mcp-detail">— npx @anthropic/claude-vscode-mcp</span>
+          <span class="mcp-badge">stdio</span>
+          <div class="mcp-actions"><button>Edit</button><button>Delete</button></div>
+        </div>
+        <button class="add-btn">+ Add MCP Server</button>
+      </div>
+    </div>
+
+    <!-- Directories -->
+    <div class="content-panel" data-tab="dirs">
+      <div class="section">
+        <div class="section-title">Allowed Directories (Global)</div>
+        <div class="callout info">Directories listed here will be accessible to Claude Code across all projects.</div>
+        <div class="dir-row">
+          <input type="text" value="/Users/erik/Developer">
+          <button>Browse</button>
+          <button>×</button>
+        </div>
+        <button class="add-btn">+ Add Directory</button>
+      </div>
+    </div>
+
+    <!-- Help -->
+    <div class="content-panel" data-tab="help">
+      <div class="section">
+        <div class="section-title">Help & Reference</div>
+        <div class="callout info" style="margin-bottom: 16px;">
+          <strong>Scope Precedence</strong> (highest to lowest):<br>
+          🔒 Local (.claude/settings.local.json) — personal project override, gitignored<br>
+          📁 Project (.claude/settings.json) — shared with team via git<br>
+          🏠 Global (~/.claude/settings.json) — your default for all projects
+        </div>
+        <div class="callout info" style="margin-bottom: 16px;">
+          <strong>Profiles</strong> let you save provider+model configurations and quickly apply them to any scope.
+          Use "Manage Profiles" to create, edit, and delete profiles.
+        </div>
+        <div class="callout warning">
+          <strong>Model Reset:</strong> When switching providers, models are reset to avoid accidental cross-provider model selection.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROJECT scope (similar structure, different data) ═══ -->
+  <div class="scope-panel" id="scope-project">
+    <div class="content-panel visible" data-tab="provider">
+      <div class="section">
+        <div class="section-title">Provider</div>
+        <div class="callout info">Leave unset to inherit from Global scope (currently: Bedrock EU).</div>
+        <div class="provider-selector">
+          <div class="provider-option" onclick="selectProviderB(this, 'anthropic', 'project')">
+            <span class="radio"></span><span class="prov-icon">☁️</span>
+            <div class="prov-text"><div class="prov-name">Anthropic</div><div class="prov-desc">Direct API</div></div>
+          </div>
+          <div class="provider-option" onclick="selectProviderB(this, 'bedrock', 'project')">
+            <span class="radio"></span><span class="prov-icon">🔶</span>
+            <div class="prov-text"><div class="prov-name">AWS Bedrock</div><div class="prov-desc">Via AWS account</div></div>
+          </div>
+          <div class="provider-option" onclick="selectProviderB(this, 'proxy', 'project')">
+            <span class="radio"></span><span class="prov-icon">🔗</span>
+            <div class="prov-text"><div class="prov-name">Proxy / URL</div><div class="prov-desc">Self-hosted</div></div>
+          </div>
+        </div>
+        <div class="config-box hidden" id="project-config-bedrock">
+          <h3>AWS Bedrock</h3>
+          <div class="form-row">
+            <div class="form-group"><label>AWS Profile</label><select><option>default</option><option>bedrock-dev</option><option>prod-account</option></select></div>
+            <div class="form-group"><label>AWS Region</label><select><option selected>us-east-1</option><option>eu-west-1</option></select></div>
+          </div>
+        </div>
+        <div class="config-box hidden" id="project-config-anthropic">
+          <h3>Anthropic API</h3>
+          <div class="form-group"><label>API Key</label><input type="password" placeholder="sk-ant-..."></div>
+        </div>
+        <div class="config-box hidden" id="project-config-proxy">
+          <h3>Proxy / Self-Hosted</h3>
+          <div class="form-group"><label>Base URL</label><input type="text" placeholder="http://localhost:11434"></div>
+          <div class="form-group"><label>API Key (optional)</label><input type="password" placeholder="Bearer token"></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Models</div>
+        <div class="callout warning">No provider selected for this scope — models inherited from Global.</div>
+        <div class="model-cards" style="opacity: 0.4; pointer-events: none;">
+          <div class="model-card"><div class="mc-role">Primary (Sonnet)</div><select><option>(inherited)</option></select></div>
+          <div class="model-card"><div class="mc-role">Small/Fast (Haiku)</div><select><option>(inherited)</option></select></div>
+          <div class="model-card"><div class="mc-role">Complex (Opus)</div><select><option>(inherited)</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-panel" data-tab="mcp">
+      <div class="section">
+        <div class="section-title">MCP Servers (Project — .mcp.json)</div>
+        <div class="mcp-card">
+          <span class="mcp-name">project-db</span>
+          <span class="mcp-detail">— node ./scripts/db-mcp.js</span>
+          <span class="mcp-badge">stdio</span>
+          <div class="mcp-actions"><button>Edit</button><button>Delete</button></div>
+        </div>
+        <button class="add-btn">+ Add MCP Server</button>
+      </div>
+    </div>
+
+    <div class="content-panel" data-tab="dirs">
+      <div class="section">
+        <div class="section-title">Allowed Directories (Project)</div>
+        <div class="dir-row">
+          <input type="text" value="/tmp/build-artifacts">
+          <button>Browse</button><button>×</button>
+        </div>
+        <button class="add-btn">+ Add Directory</button>
+      </div>
+    </div>
+
+    <div class="content-panel" data-tab="help">
+      <div class="section"><div class="section-title">Help</div><div class="callout info">Same help content as Global scope.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ LOCAL scope ═══ -->
+  <div class="scope-panel" id="scope-local">
+    <div class="content-panel visible" data-tab="provider">
+      <div class="section">
+        <div class="section-title">Provider (Local Override)</div>
+        <div class="callout info">Local overrides are stored in <code>.claude/settings.local.json</code> and are gitignored.
+          Use this for personal settings on shared projects. Leave empty to inherit from Project → Global.</div>
+        <div class="provider-selector">
+          <div class="provider-option" onclick="selectProviderB(this, 'anthropic', 'local')">
+            <span class="radio"></span><span class="prov-icon">☁️</span>
+            <div class="prov-text"><div class="prov-name">Anthropic</div><div class="prov-desc">Direct API</div></div>
+          </div>
+          <div class="provider-option" onclick="selectProviderB(this, 'bedrock', 'local')">
+            <span class="radio"></span><span class="prov-icon">🔶</span>
+            <div class="prov-text"><div class="prov-name">AWS Bedrock</div><div class="prov-desc">Via AWS account</div></div>
+          </div>
+          <div class="provider-option selected" onclick="selectProviderB(this, 'proxy', 'local')">
+            <span class="radio"></span><span class="prov-icon">🔗</span>
+            <div class="prov-text"><div class="prov-name">Proxy / URL</div><div class="prov-desc">Self-hosted</div></div>
+          </div>
+        </div>
+        <div class="config-box" id="local-config-proxy">
+          <h3>Proxy / Self-Hosted</h3>
+          <div class="form-group"><label>Base URL</label><input type="text" value="http://localhost:11434"></div>
+          <div class="form-group"><label>API Key (optional)</label><input type="password" placeholder="Bearer token"></div>
+        </div>
+        <div class="config-box hidden" id="local-config-bedrock"><h3>AWS Bedrock</h3><div class="form-row"><div class="form-group"><label>AWS Profile</label><select><option>default</option></select></div><div class="form-group"><label>AWS Region</label><select><option>us-east-1</option></select></div></div></div>
+        <div class="config-box hidden" id="local-config-anthropic"><h3>Anthropic API</h3><div class="form-group"><label>API Key</label><input type="password" placeholder="sk-ant-..."></div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Models</div>
+        <div class="model-cards">
+          <div class="model-card"><div class="mc-role">Primary (Sonnet)</div><select><option selected>llama3:latest</option><option>Custom model ID...</option></select></div>
+          <div class="model-card"><div class="mc-role">Small/Fast (Haiku)</div><select><option selected>llama3:latest</option><option>Custom model ID...</option></select></div>
+          <div class="model-card"><div class="mc-role">Complex (Opus)</div><select><option selected>llama3:latest</option><option>Custom model ID...</option></select></div>
+        </div>
+      </div>
+    </div>
+    <div class="content-panel" data-tab="mcp"><div class="section"><div class="section-title">MCP Servers (Local)</div><div class="callout info">Local MCP servers override project-level servers of the same name.</div><button class="add-btn">+ Add MCP Server</button></div></div>
+    <div class="content-panel" data-tab="dirs"><div class="section"><div class="section-title">Allowed Directories (Local)</div><button class="add-btn">+ Add Directory</button></div></div>
+    <div class="content-panel" data-tab="help"><div class="section"><div class="section-title">Help</div><div class="callout info">Same help content.</div></div></div>
+  </div>
+
+  <!-- ═══ PROFILES management ═══ -->
+  <div class="scope-panel" id="scope-profiles">
+    <div class="section">
+      <div class="section-title">Saved Profiles</div>
+      <div class="callout info">Profiles are stored in <code>~/.claude/provider-profiles.json</code>. Apply a profile to quickly configure any scope.</div>
+      <div style="margin: 16px 0;">
+        <div class="profile-chip"><span class="chip-dot bedrock"></span> Bedrock EU <span class="chip-edit">✎</span></div>
+        <div class="profile-chip"><span class="chip-dot bedrock"></span> Bedrock US <span class="chip-edit">✎</span></div>
+        <div class="profile-chip"><span class="chip-dot anthropic"></span> Anthropic Direct <span class="chip-edit">✎</span></div>
+        <div class="profile-chip"><span class="chip-dot proxy"></span> Local Ollama <span class="chip-edit">✎</span></div>
+      </div>
+      <button class="add-btn">+ Create New Profile</button>
+    </div>
+    <div class="section" style="margin-top: 24px;">
+      <div class="section-title">Apply Profile to Scope</div>
+      <div class="form-row" style="grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end;">
+        <div class="form-group" style="margin:0">
+          <label>Profile</label>
+          <select><option>Bedrock EU</option><option>Bedrock US</option><option>Anthropic Direct</option><option>Local Ollama</option></select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Target Scope</label>
+          <select><option>🏠 Global</option><option>📁 Project</option><option>🔒 Local</option></select>
+        </div>
+        <button style="padding: 8px 16px; background: var(--accent); border: none; color: #fff; border-radius: var(--radius); cursor: pointer; font-size: 13px; margin-bottom: 0;">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save bar -->
+<div class="save-bar">
+  <button class="btn-primary" onclick="showStatus('Saved')">Save</button>
+  <button class="btn-secondary">Reload</button>
+  <button class="btn-secondary">Open settings.json</button>
+  <span class="status" id="saveStatus"></span>
+</div>
+
+<script>
+const bannerTexts = {
+  global:   { icon: '🏠', label: 'GLOBAL SCOPE', path: '— Changes write to ~/.claude/settings.json', cls: 'global' },
+  project:  { icon: '📁', label: 'PROJECT SCOPE', path: '— Changes write to .claude/settings.json', cls: 'project' },
+  local:    { icon: '🔒', label: 'LOCAL SCOPE', path: '— Changes write to .claude/settings.local.json (gitignored)', cls: 'local' },
+  profiles: { icon: '⚙', label: 'PROFILE MANAGEMENT', path: '— Stored in ~/.claude/provider-profiles.json', cls: 'global' },
+};
+let currentScope = 'global';
+
+function switchScope(scope, btn) {
+  document.querySelectorAll('.scope-tab-btn').forEach(b => { b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.scope-panel').forEach(p => p.classList.remove('visible'));
+  document.getElementById('scope-' + scope).classList.add('visible');
+  const b = bannerTexts[scope];
+  const banner = document.getElementById('scopeBanner');
+  banner.className = 'scope-banner ' + b.cls;
+  banner.innerHTML = b.icon + ' ' + b.label + ' <span class="banner-path">' + b.path + '</span>';
+  const tabs = document.getElementById('contentTabs');
+  tabs.style.display = scope === 'profiles' ? 'none' : 'flex';
+  currentScope = scope;
+  // Reset content tabs to first
+  if (scope !== 'profiles') {
+    document.querySelectorAll('#contentTabs .content-tab').forEach((t,i) => t.classList.toggle('active', i === 0));
+    const panel = document.getElementById('scope-' + scope);
+    panel.querySelectorAll('.content-panel').forEach((p,i) => p.classList.toggle('visible', i === 0));
+  }
+}
+
+function switchContent(tab, btn) {
+  document.querySelectorAll('#contentTabs .content-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.getElementById('scope-' + currentScope);
+  panel.querySelectorAll('.content-panel').forEach(p => {
+    p.classList.toggle('visible', p.dataset.tab === tab);
+  });
+}
+
+function selectProviderB(el, provider, scope) {
+  const selector = el.closest('.provider-selector');
+  selector.querySelectorAll('.provider-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  ['anthropic','bedrock','proxy'].forEach(p => {
+    const box = document.getElementById(scope + '-config-' + p);
+    if (box) box.classList.toggle('hidden', p !== provider);
+  });
+}
+
+function showStatus(msg) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = '✓ ' + msg;
+  el.style.color = '#50c878';
+  setTimeout(() => { el.textContent = ''; }, 3000);
+}
+</script>
+</body>
+</html>

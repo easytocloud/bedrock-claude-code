@@ -42,7 +42,7 @@ export function renderPresetDrawer(): string {
 
   const body = `
     <div class="form-group">
-      <label class="form-label">Preset name</label>
+      <label class="form-label" for="preset-name">Preset name</label>
       <input type="text" id="preset-name" placeholder="e.g. Staging, Client Work, Hackathon" />
     </div>
 
@@ -86,7 +86,7 @@ export function renderPresetDrawer(): string {
     <button class="btn btn-primary" data-action="save-preset">Done</button>
     <button class="btn btn-ghost" data-action="duplicate-preset">Duplicate</button>
     <span class="spacer"></span>
-    <button class="btn btn-danger btn-sm" data-action="delete-preset">Delete</button>`;
+    <button class="btn btn-danger" data-action="delete-preset">Delete</button>`;
 
   return drawerShell('preset', header, body, footer);
 }
@@ -109,12 +109,12 @@ export function renderProviderDrawer(): string {
 
   const body = `
     <div class="form-group">
-      <label class="form-label">Provider name</label>
+      <label class="form-label" for="provider-name">Provider name</label>
       <input type="text" id="provider-name" placeholder="e.g. Bedrock US, Company API, Local vLLM" />
     </div>
 
     <div class="form-group">
-      <label class="form-label">Provider type</label>
+      <label class="form-label" for="provider-type-control">Provider type</label>
       <div class="seg-control" id="provider-type-control">
         <button type="button" class="seg-btn" data-seg="provider-type" data-val="anthropic">Anthropic</button>
         <button type="button" class="seg-btn" data-seg="provider-type" data-val="bedrock">Bedrock</button>
@@ -130,14 +130,14 @@ export function renderProviderDrawer(): string {
       </div>
       <div class="info-box">Uses Anthropic's API directly. Enter an API key from <strong>console.anthropic.com</strong>, or use a 1Password <code>op://</code> reference. Without a key, you'll need to <code>/login</code> with an Anthropic Max or Pro plan.</div>
       <div class="form-group">
-        <label class="form-label">API Key <span style="opacity:0.5">(optional)</span></label>
+        <label class="form-label" for="provider-anthropic-key">API Key <span style="opacity:0.5">(optional)</span></label>
         <div class="input-reveal">
           <input type="password" id="provider-anthropic-key" placeholder="sk-ant-… or op://Vault/Item/field" />
           <button type="button" class="btn-eye" data-reveal="provider-anthropic-key" title="Show / hide">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
           </button>
         </div>
-        <div class="form-hint" id="anthropic-credential-hint" style="margin-top:4px"></div>
+        <div class="form-hint form-hint-sm" id="anthropic-credential-hint"></div>
       </div>
     </div>
 
@@ -154,21 +154,21 @@ export function renderProviderDrawer(): string {
         <div id="provider-aws-config-value" class="form-hint"></div>
       </div>
       <div class="form-group" id="provider-aws-env-row" style="display:none">
-        <label class="form-label">AWS Env</label>
+        <label class="form-label" for="provider-aws-env">AWS Env</label>
         <select id="provider-aws-env"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">AWS Profile</label>
+        <label class="form-label" for="provider-aws-profile">AWS Profile</label>
         <select id="provider-aws-profile"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">AWS Region</label>
+        <label class="form-label" for="provider-aws-region">AWS Region</label>
         <select id="provider-aws-region">
           ${regionOptions}
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Credential refresh command</label>
+        <label class="form-label" for="provider-aws-refresh">Credential refresh command</label>
         <input type="text" id="provider-aws-refresh" placeholder="e.g. aws sso login --profile my-profile (optional)" />
       </div>
     </div>
@@ -181,7 +181,7 @@ export function renderProviderDrawer(): string {
       </div>
       <div class="info-box">Works with LiteLLM, OpenRouter, Ollama, vLLM, LM Studio, and any proxy that exposes an Anthropic-compatible API (<code>/v1/messages</code>). Enable Standalone mode below for local models.</div>
       <div class="form-group">
-        <label class="form-label">Base URL</label>
+        <label class="form-label" for="provider-proxy-url">Base URL</label>
         <input type="text" id="provider-proxy-url" placeholder="http://localhost:11434" />
       </div>
       <div class="form-group">
@@ -198,7 +198,7 @@ export function renderProviderDrawer(): string {
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
           </button>
         </div>
-        <div class="form-hint" id="proxy-credential-hint" style="margin-top:4px"></div>
+        <div class="form-hint form-hint-sm" id="proxy-credential-hint"></div>
       </div>
     </div>
 
@@ -221,21 +221,21 @@ export function renderProviderDrawer(): string {
 
       <div class="form-group">
         <div class="label-row">
-          <label class="form-label">Sonnet (primary)</label>
+          <label class="form-label" for="provider-model-sonnet">Sonnet (primary)</label>
           <button type="button" class="btn-test" data-test-model="provider-model-sonnet" data-slot="sonnet" style="display:none">Test</button>
         </div>
         <select id="provider-model-sonnet"></select>
       </div>
       <div class="form-group">
         <div class="label-row">
-          <label class="form-label">Haiku (small/fast)</label>
+          <label class="form-label" for="provider-model-haiku">Haiku (small/fast)</label>
           <button type="button" class="btn-test" data-test-model="provider-model-haiku" data-slot="haiku" style="display:none">Test</button>
         </div>
         <select id="provider-model-haiku"></select>
       </div>
       <div class="form-group">
         <div class="label-row">
-          <label class="form-label">Opus</label>
+          <label class="form-label" for="provider-model-opus">Opus</label>
           <button type="button" class="btn-test" data-test-model="provider-model-opus" data-slot="opus" style="display:none">Test</button>
         </div>
         <select id="provider-model-opus"></select>
@@ -280,7 +280,7 @@ export function renderMcpGroupDrawer(): string {
 
   const body = `
     <div class="form-group">
-      <label class="form-label">Group name</label>
+      <label class="form-label" for="mcp-group-name">Group name</label>
       <input type="text" id="mcp-group-name" placeholder="e.g. Database Tools, CI/CD, Frontend Dev" />
     </div>
     <div class="info-box">Servers in this group become available whenever a preset using it is active.</div>
@@ -313,12 +313,12 @@ export function renderMcpServerDrawer(): string {
 
   const body = `
     <div class="form-group">
-      <label class="form-label">Server name</label>
+      <label class="form-label" for="mcp-server-name">Server name</label>
       <input type="text" id="mcp-server-name" placeholder="e.g. my-database, github-tools" />
     </div>
 
     <div class="form-group">
-      <label class="form-label">Transport type</label>
+      <label class="form-label" for="mcp-transport-control">Transport type</label>
       <div class="seg-control" id="mcp-transport-control">
         <button type="button" class="seg-btn sel" data-seg="mcp-transport" data-val="http">HTTP</button>
         <button type="button" class="seg-btn" data-seg="mcp-transport" data-val="sse">SSE</button>
@@ -328,18 +328,18 @@ export function renderMcpServerDrawer(): string {
 
     <!-- HTTP/SSE section -->
     <div id="mcp-transport-url" class="form-group">
-      <label class="form-label">URL</label>
+      <label class="form-label" for="mcp-server-url">URL</label>
       <input type="text" id="mcp-server-url" placeholder="https://example.com/mcp" />
     </div>
 
     <!-- stdio section -->
     <div id="mcp-transport-stdio" style="display:none">
       <div class="form-group">
-        <label class="form-label">Command</label>
+        <label class="form-label" for="mcp-server-command">Command</label>
         <input type="text" id="mcp-server-command" placeholder="e.g. npx" />
       </div>
       <div class="form-group">
-        <label class="form-label">Arguments</label>
+        <label class="form-label" for="mcp-server-args">Arguments</label>
         <div class="form-hint">One per line (optional)</div>
         <textarea id="mcp-server-args" rows="3" placeholder="-y&#10;@modelcontextprotocol/server-github"></textarea>
       </div>
@@ -355,6 +355,17 @@ export function renderMcpServerDrawer(): string {
       <div class="empty-state">No variables configured.</div>
     </div>
     <button type="button" class="add-inline" data-action="add-mcp-env-var">+ Add variable</button>
+
+    <!-- Test Connection -->
+    <div class="divider"></div>
+    <div class="section-heading">
+      <span class="section-dot section-dot-blue"></span>
+      TEST CONNECTION
+    </div>
+    <div class="form-group">
+      <button type="button" class="btn btn-ghost" id="btn-test-mcp" data-action="test-mcp-server">Test</button>
+      <div id="mcp-test-output" class="form-hint form-hint-mt" style="white-space:pre-wrap"></div>
+    </div>
   `;
 
   const footer = `
@@ -379,7 +390,7 @@ export function renderDirectoryGroupDrawer(): string {
 
   const body = `
     <div class="form-group">
-      <label class="form-label">Group name</label>
+      <label class="form-label" for="dir-group-name">Group name</label>
       <input type="text" id="dir-group-name" placeholder="e.g. Work Projects, Data Lake, Shared Libs" />
     </div>
     <div class="info-box">These additional directories will be accessible to Claude Code when a preset using this group is active.</div>
