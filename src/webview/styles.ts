@@ -241,12 +241,15 @@ export function buildStyles(): string {
     .scope-badge.orange { background: var(--orange-dim); color: var(--orange); }
     .scope-badge.teal { background: var(--teal-dim); color: var(--teal); }
 
-    .scope-chevron {
-      color: var(--fg-muted);
-      transition: transform var(--transition);
-      font-size: 22px;
+    /* Scope cards reuse the hamburger → X toggle */
+    .scope-card .panel-toggle span { background: var(--fg-muted); }
+    .scope-card:not(.collapsed) .panel-toggle span:nth-child(1) {
+      top: 7px; transform: rotate(45deg);
     }
-    .scope-card.collapsed .scope-chevron { transform: rotate(-90deg); }
+    .scope-card:not(.collapsed) .panel-toggle span:nth-child(2) { opacity: 0; }
+    .scope-card:not(.collapsed) .panel-toggle span:nth-child(3) {
+      top: 7px; transform: rotate(-45deg);
+    }
     .scope-card.collapsed .scope-body { display: none; }
 
     .scope-body {
@@ -313,12 +316,41 @@ export function buildStyles(): string {
     .panel-badge.orange { background: var(--orange-dim); color: var(--orange); }
     .panel-badge.purple { background: var(--purple-dim); color: var(--purple); }
     .panel-badge.green { background: var(--green-dim); color: var(--green); }
-    .panel-chevron {
-      color: var(--fg-muted);
-      font-size: 22px;
-      transition: transform var(--transition);
+    /* Hamburger → X toggle icon */
+    .panel-toggle {
+      width: 20px;
+      height: 16px;
+      position: relative;
+      flex-shrink: 0;
+      cursor: pointer;
     }
-    .panel-section.collapsed .panel-chevron { transform: rotate(-90deg); }
+    .panel-toggle span {
+      display: block;
+      position: absolute;
+      height: 2px;
+      width: 100%;
+      background: var(--fg-muted);
+      border-radius: 2px;
+      left: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease, top 0.25s ease;
+    }
+    .panel-toggle span:nth-child(1) { top: 0; }
+    .panel-toggle span:nth-child(2) { top: 7px; }
+    .panel-toggle span:nth-child(3) { top: 14px; }
+
+    /* Expanded state: X */
+    .panel-section:not(.collapsed) .panel-toggle span:nth-child(1) {
+      top: 7px;
+      transform: rotate(45deg);
+    }
+    .panel-section:not(.collapsed) .panel-toggle span:nth-child(2) {
+      opacity: 0;
+    }
+    .panel-section:not(.collapsed) .panel-toggle span:nth-child(3) {
+      top: 7px;
+      transform: rotate(-45deg);
+    }
+
     .panel-section.collapsed .panel-body { display: none; }
     .panel-body {
       padding: 0 16px 16px;
@@ -337,6 +369,19 @@ export function buildStyles(): string {
       color: var(--fg-dim);
       margin-bottom: 4px;
     }
+
+    /* ─── Intro Banner ──────────────────────────────────────────────── */
+    .intro-banner {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 20px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--fg-dim);
+    }
+    .intro-banner strong { color: var(--fg); font-weight: 600; }
 
     /* ─── Preset Grid ───────────────────────────────────────────────── */
 

@@ -34,8 +34,8 @@ function renderScopeCard(attrs: {
   ].filter(Boolean).join('');
 
   return `
-    <div class="scope-card" data-scope="${scope}">
-      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="true" aria-label="Toggle ${scope} scope">
+    <div class="scope-card collapsed" data-scope="${scope}">
+      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle ${scope} scope">
         <div class="scope-indicator ${scope}"></div>
         <div class="scope-title-area">
           <div class="scope-title">
@@ -44,7 +44,7 @@ function renderScopeCard(attrs: {
           </div>
           <div class="scope-subtitle">${esc(subtitle)}</div>
         </div>
-        <span class="scope-chevron">&#9662;</span>
+        <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="scope-body">
         <div class="scope-preset-row">
@@ -163,17 +163,20 @@ export function renderPresetGrid(state: PanelState): string {
   const count = store.presets.length;
 
   let html = `
-    <div class="panel-section" data-panel="presets">
-      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="true">
+    <div class="canvas-heading">Presets</div>
+    <div class="canvas-hint">A preset combines one provider with optional MCP server groups and directory groups into a reusable configuration. Assign presets to scopes above.</div>
+
+    <div class="panel-section collapsed" data-panel="presets">
+      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="false">
         <div class="panel-indicator red"></div>
         <div class="panel-title-area">
           <div class="panel-title">
             Presets
             <span class="panel-badge red">${count}</span>
           </div>
-          <div class="panel-subtitle">A preset bundles a provider, MCP servers, and directories into a reusable configuration.</div>
+          <div class="panel-subtitle">Reusable configurations to assign to scopes.</div>
         </div>
-        <span class="panel-chevron">&#9662;</span>
+        <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="panel-body">
         <div class="preset-grid" data-grid="presets">`;
@@ -249,20 +252,20 @@ export function renderBuildingBlocks(state: PanelState): string {
 
   return `
     <div class="canvas-heading">Building Blocks</div>
-    <div class="canvas-hint">Create and manage providers, MCP server groups, and directory groups. Use them in presets above.</div>
+    <div class="canvas-hint">Create and manage the building blocks that make up presets: providers, MCP server groups, and directory groups.</div>
 
     <!-- Providers panel -->
-    <div class="panel-section" data-panel="providers">
-      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="true">
+    <div class="panel-section collapsed" data-panel="providers">
+      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="false">
         <div class="panel-indicator orange"></div>
         <div class="panel-title-area">
           <div class="panel-title">
             Providers
             <span class="panel-badge orange">${provCount}</span>
           </div>
-          <div class="panel-subtitle">API backends — Anthropic, AWS Bedrock, or custom proxy endpoints.</div>
+          <div class="panel-subtitle">API backends — Anthropic, AWS Bedrock, or Local / Other.</div>
         </div>
-        <span class="panel-chevron">&#9662;</span>
+        <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="panel-body">
         <div class="bb-chips" data-chips="providers">
@@ -273,17 +276,17 @@ export function renderBuildingBlocks(state: PanelState): string {
     </div>
 
     <!-- MCP Server Groups panel -->
-    <div class="panel-section" data-panel="mcp-groups">
-      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="true">
+    <div class="panel-section collapsed" data-panel="mcp-groups">
+      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="false">
         <div class="panel-indicator purple"></div>
         <div class="panel-title-area">
           <div class="panel-title">
             MCP Server Groups
             <span class="panel-badge purple">${mcpCount}</span>
           </div>
-          <div class="panel-subtitle">Named collections of MCP servers to attach to presets.</div>
+          <div class="panel-subtitle">Named collections of MCP servers to include in presets.</div>
         </div>
-        <span class="panel-chevron">&#9662;</span>
+        <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="panel-body">
         <div class="bb-chips" data-chips="mcp-groups">
@@ -294,8 +297,8 @@ export function renderBuildingBlocks(state: PanelState): string {
     </div>
 
     <!-- Directory Groups panel -->
-    <div class="panel-section" data-panel="dir-groups">
-      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="true">
+    <div class="panel-section collapsed" data-panel="dir-groups">
+      <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="false">
         <div class="panel-indicator green"></div>
         <div class="panel-title-area">
           <div class="panel-title">
@@ -304,7 +307,7 @@ export function renderBuildingBlocks(state: PanelState): string {
           </div>
           <div class="panel-subtitle">Additional directories Claude Code is allowed to access.</div>
         </div>
-        <span class="panel-chevron">&#9662;</span>
+        <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="panel-body">
         <div class="bb-chips" data-chips="dir-groups">

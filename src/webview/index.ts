@@ -46,6 +46,12 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
       <button class="btn btn-primary btn-sm" data-action="save-all">Save All</button>
     </div>
 
+    <!-- Intro -->
+    <div class="intro-banner">
+      <strong>How it works:</strong> Create <strong>providers</strong>, <strong>MCP server groups</strong>, and <strong>directory groups</strong> as building blocks.
+      Combine them into <strong>presets</strong>, then assign a preset to the <strong>global</strong> or <strong>workspace</strong> scope.
+    </div>
+
     <!-- Scope Cards -->
     ${scopeCards}
 

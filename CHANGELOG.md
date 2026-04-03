@@ -4,6 +4,18 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.16] — 2026-04-03
+
+### Added
+- **Intro banner** — brief "How it works" explanation at the top of the settings panel, guiding users through the providers → presets → scopes workflow.
+- **Presets section heading** — Presets now has its own canvas heading and descriptive subtitle, visually separated from the Building Blocks section.
+
+### Changed
+- **Hamburger → X toggle icons** — panel chevrons replaced with animated hamburger menu icons that transition to an X when the panel is expanded.
+- **Accordion behavior** — only one content panel (Presets, Providers, MCP Server Groups, Directory Groups) can be open at a time; expanding one collapses the others.
+- **Panels start collapsed** — all panels and scope cards open in collapsed state for a cleaner initial view.
+- **Consistent wording** — panel subtitles and hints updated to use consistent terminology (providers, MCP server groups, directory groups) throughout.
+
 ## [0.3.15] — 2026-04-03
 
 ### Changed

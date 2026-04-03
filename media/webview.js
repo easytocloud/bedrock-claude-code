@@ -1718,9 +1718,18 @@ console.log('[WEBVIEW] Script loaded');
       case 'toggle-panel': {
         const panel = target.closest('.panel-section');
         if (panel) {
-          panel.classList.toggle('collapsed');
-          const isExpanded = !panel.classList.contains('collapsed');
-          target.setAttribute('aria-expanded', isExpanded);
+          const wasCollapsed = panel.classList.contains('collapsed');
+          // Accordion: collapse all other panel-sections first
+          document.querySelectorAll('.panel-section').forEach(function(p) {
+            p.classList.add('collapsed');
+            var hdr = p.querySelector('.panel-header');
+            if (hdr) hdr.setAttribute('aria-expanded', 'false');
+          });
+          // Toggle the clicked panel
+          if (wasCollapsed) {
+            panel.classList.remove('collapsed');
+            target.setAttribute('aria-expanded', 'true');
+          }
         }
         break;
       }
