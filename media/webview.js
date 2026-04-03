@@ -329,7 +329,7 @@
     if (dupBtn) dupBtn.style.display = isDefault ? 'none' : '';
 
     const saveBtn = document.querySelector('[data-action="save-preset"]');
-    if (saveBtn) saveBtn.textContent = isNew ? 'Create Preset' : 'Done';
+    if (saveBtn) saveBtn.textContent = isNew ? 'Create Preset' : 'Save';
 
     openDrawer('preset');
   }
@@ -507,7 +507,7 @@
     if (dupProvBtn) dupProvBtn.style.display = isDefaultProv ? 'none' : '';
 
     const saveBtn = document.querySelector('[data-action="save-provider"]');
-    if (saveBtn) saveBtn.textContent = isNew ? 'Create Provider' : 'Done';
+    if (saveBtn) saveBtn.textContent = isNew ? 'Create Provider' : 'Save';
 
     showProviderSections(typeVal);
     if (typeVal) rebuildModelSelects(typeVal, provider);
@@ -866,7 +866,7 @@
     if (deleteBtn) deleteBtn.style.display = isNew ? 'none' : '';
 
     const saveBtn = document.querySelector('[data-action="save-mcp-group"]');
-    if (saveBtn) saveBtn.textContent = isNew ? 'Create Group' : 'Done';
+    if (saveBtn) saveBtn.textContent = isNew ? 'Create Group' : 'Save';
 
     openDrawer('mcp-group');
   }
@@ -1307,6 +1307,13 @@
   }
 
   // ─── Delete functions ──────────────────────────────────────────
+  function confirmDelete(itemName, callback) {
+    if (!confirm(`Delete "${itemName}"? This cannot be undone.`)) {
+      return;
+    }
+    callback();
+  }
+
   function deletePreset() {
     if (!editing.presetId || editing.presetId === DEFAULT_PRESET_ID) return;
     const store = state.store;
@@ -1617,9 +1624,11 @@
       case 'save-preset':
         savePresetFromDrawer();
         break;
-      case 'delete-preset':
-        deletePreset();
+      case 'delete-preset': {
+        const preset = state.store.presets.find(p => p.id === editing.presetId);
+        if (preset) confirmDelete(preset.name, deletePreset);
         break;
+      }
       case 'duplicate-preset':
         duplicatePreset();
         break;
@@ -1639,9 +1648,11 @@
       case 'save-provider':
         saveProviderFromDrawer();
         break;
-      case 'delete-provider':
-        deleteProvider();
+      case 'delete-provider': {
+        const provider = state.store.providers.find(p => p.id === editing.providerId);
+        if (provider) confirmDelete(provider.name, deleteProvider);
         break;
+      }
       case 'duplicate-provider':
         duplicateProvider();
         break;
@@ -1655,9 +1666,11 @@
       case 'save-mcp-group':
         saveMcpGroupFromDrawer();
         break;
-      case 'delete-mcp-group':
-        deleteMcpGroup();
+      case 'delete-mcp-group': {
+        const group = state.store.mcpGroups.find(g => g.id === editing.mcpGroupId);
+        if (group) confirmDelete(group.name, deleteMcpGroup);
         break;
+      }
       case 'duplicate-mcp-group':
         duplicateMcpGroup();
         break;
@@ -1698,9 +1711,11 @@
       case 'save-dir-group':
         saveDirGroupFromDrawer();
         break;
-      case 'delete-dir-group':
-        deleteDirGroup();
+      case 'delete-dir-group': {
+        const group = state.store.dirGroups.find(g => g.id === editing.dirGroupId);
+        if (group) confirmDelete(group.name, deleteDirGroup);
         break;
+      }
       case 'duplicate-dir-group':
         duplicateDirGroup();
         break;

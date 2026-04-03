@@ -83,7 +83,7 @@ export function renderPresetDrawer(): string {
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-preset">Done</button>
+    <button class="btn btn-primary" data-action="save-preset">Save</button>
     <button class="btn btn-ghost" data-action="duplicate-preset">Duplicate</button>
     <span class="spacer"></span>
     <button class="btn btn-danger" data-action="delete-preset">Delete</button>`;
@@ -258,10 +258,10 @@ export function renderProviderDrawer(): string {
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-provider">Done</button>
+    <button class="btn btn-primary" data-action="save-provider">Save</button>
     <button class="btn btn-ghost" data-action="duplicate-provider">Duplicate</button>
     <span class="spacer"></span>
-    <button class="btn btn-danger btn-sm" data-action="delete-provider">Delete</button>`;
+    <button class="btn btn-danger" data-action="delete-provider">Delete</button>`;
 
   return drawerShell('provider', header, body, footer);
 }
@@ -291,10 +291,10 @@ export function renderMcpGroupDrawer(): string {
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-mcp-group">Done</button>
+    <button class="btn btn-primary" data-action="save-mcp-group">Save</button>
     <button class="btn btn-ghost" data-action="duplicate-mcp-group">Duplicate</button>
     <span class="spacer"></span>
-    <button class="btn btn-danger btn-sm" data-action="delete-mcp-group">Delete</button>`;
+    <button class="btn btn-danger" data-action="delete-mcp-group">Delete</button>`;
 
   return drawerShell('mcp-group', header, body, footer);
 }
@@ -401,10 +401,10 @@ export function renderDirectoryGroupDrawer(): string {
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-dir-group">Done</button>
+    <button class="btn btn-primary" data-action="save-dir-group">Save</button>
     <button class="btn btn-ghost" data-action="duplicate-dir-group">Duplicate</button>
     <span class="spacer"></span>
-    <button class="btn btn-danger btn-sm" data-action="delete-dir-group">Delete</button>`;
+    <button class="btn btn-danger" data-action="delete-dir-group">Delete</button>`;
 
   return drawerShell('dir-group', header, body, footer);
 }
