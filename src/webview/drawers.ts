@@ -104,12 +104,12 @@ export function renderProviderDrawer(): string {
     <span class="drawer-header-icon" id="provider-drawer-icon">☁️</span>
     <div class="drawer-header-text">
       <div class="drawer-header-title" id="provider-drawer-title">Edit Provider</div>
-      <div class="drawer-header-subtitle">Provider profile</div>
+      <div class="drawer-header-subtitle">Provider</div>
     </div>`;
 
   const body = `
     <div class="form-group">
-      <label class="form-label">Profile name</label>
+      <label class="form-label">Provider name</label>
       <input type="text" id="provider-name" placeholder="e.g. Bedrock US, Company API, Local vLLM" />
     </div>
 
@@ -128,10 +128,16 @@ export function renderProviderDrawer(): string {
         <span class="section-dot section-dot-orange"></span>
         ANTHROPIC API
       </div>
-      <div class="info-box">Uses Anthropic's API directly. Get a key at console.anthropic.com</div>
+      <div class="info-box">Uses Anthropic's API directly. Enter an API key from <strong>console.anthropic.com</strong>, or use a 1Password <code>op://</code> reference. Without a key, you'll need to <code>/login</code> with an Anthropic Max or Pro plan.</div>
       <div class="form-group">
-        <label class="form-label">API Key</label>
-        <input type="password" id="provider-anthropic-key" placeholder="sk-ant-... (optional)" />
+        <label class="form-label">API Key <span style="opacity:0.5">(optional)</span></label>
+        <div class="input-reveal">
+          <input type="password" id="provider-anthropic-key" placeholder="sk-ant-… or op://Vault/Item/field" />
+          <button type="button" class="btn-eye" data-reveal="provider-anthropic-key" title="Show / hide">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
+          </button>
+        </div>
+        <div class="form-hint" id="anthropic-credential-hint" style="margin-top:4px"></div>
       </div>
     </div>
 

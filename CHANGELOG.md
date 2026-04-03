@@ -4,6 +4,20 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.13] — 2026-04-02
+
+### Added
+- **Bedrock model test buttons** — each model slot (Sonnet, Haiku, Opus) shows a **Test** pill for Bedrock providers. Calls `aws bedrock-runtime converse` with the selected profile, region, and model; shows **OK** (green) or **Fail** (red). Test state is persisted per model ID.
+- **Anthropic API key field improvements** — added eye button for reveal/hide, `op://` 1Password reference support (writes `apiKeyHelper` to settings), and clearer info text. Now explicitly states "Without a key, you'll need to `/login` with an Anthropic Max or Pro plan".
+
+### Changed
+- **Provider drawer labels** — "Provider profile" → "Provider", "Profile name" → "Provider name" to reduce terminology confusion (AWS profile is the only "profile" concept that should surface).
+
+### Fixed
+- **AWS Env honored in Bedrock model operations** — when a Bedrock provider has `awsEnv` set, `AWS_CONFIG_FILE` is now correctly passed to both model fetching (`aws bedrock list-*`) and model testing (`aws bedrock-runtime converse`). Previously, model operations used the system `~/.aws/config` symlink instead of the provider's configured env.
+- **Profile selection preserved on env switch** — when opening a provider drawer, if the provider has an `awsEnv` configured, the profile list is refreshed from the correct env config, and the saved `awsProfile` is retained (was being cleared).
+- **Test pill invalidation for Bedrock** — changing AWS profile or region now resets all test pills; manual AWS env switch also resets pills to reflect the new credentials.
+
 ## [0.3.12] — 2026-04-02
 
 ### Added

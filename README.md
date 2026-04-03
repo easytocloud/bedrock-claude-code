@@ -48,6 +48,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 
 - Select provider type **Bedrock**, fill in your AWS profile name and region
 - Pick models from the smart presets or click **Fetch models from AWS** to discover all inference profiles and foundation models in your account
+- **Test models** — each model slot has a **Test** pill that calls `aws bedrock-runtime converse` to verify profile and model access. Results (OK / Fail) are persisted on the provider
 - Optionally set an auth-refresh command (e.g. `aws sso login --profile my-profile`)
 - Claude Code's login/logout commands are automatically disabled when using Bedrock
 - If `$AWS_CONFIG_FILE` is set or `~/.aws/config` is a symlink, the resolved config path is shown as **AWS Config** (read-only). If you use [easytocloud aws-envs](https://github.com/easytocloud/aws-envs), an **AWS Env** dropdown appears instead — each provider stores its own env selection in `coder-profiles.json`, so different providers can point to different AWS environments independently
@@ -72,7 +73,8 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 ### Anthropic Direct
 
 - The built-in **Anthropic** provider is always available
-- Optionally set your API key in the provider editor
+- Optionally set your API key in the provider editor (enter a key from [console.anthropic.com](https://console.anthropic.com), or use an `op://` reference for 1Password)
+- Without an API key, you'll need to run `/login` with an Anthropic Max or Pro plan
 - Model selection is not shown — Claude Code uses its built-in defaults (Sonnet for primary, Haiku for small/fast tasks, Opus for complex tasks)
 
 ## Features

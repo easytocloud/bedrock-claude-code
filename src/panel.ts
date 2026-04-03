@@ -318,12 +318,16 @@ export class ClaudeCodeSettingsPanel {
         await this._testModel(msg.baseUrl as string, msg.apiKey as string, msg.authToken as string, msg.modelId as string, msg.slot as string);
         break;
 
+      case 'testBedrockModel':
+        await this._testBedrockModel(msg.awsProfile as string, msg.awsRegion as string, msg.awsEnv as string | undefined, msg.modelId as string, msg.slot as string);
+        break;
+
       case 'setDismissPref':
         await this._context.globalState.update(msg.key as string, msg.value);
         break;
 
       case 'fetchBedrockModels':
-        await this._fetchBedrockModels(msg.awsProfile as string, msg.awsRegion as string);
+        await this._fetchBedrockModels(msg.awsProfile as string, msg.awsRegion as string, msg.awsEnv as string | undefined);
         break;
 
       case 'switchAwsEnv': {
@@ -350,6 +354,7 @@ export class ClaudeCodeSettingsPanel {
           providerId,
           awsProfiles: profiles,
           awsConfigInfo: configInfo,
+          preserveProfile: msg.preserveProfile as string | undefined,
         });
         break;
       }
@@ -501,6 +506,34 @@ export class ClaudeCodeSettingsPanel {
     }
   }
 
+  private async _testBedrockModel(awsProfile: string, awsRegion: string, awsEnv: string | undefined, modelId: string, slot: string): Promise<void> {
+    try {
+      if (!modelId) { throw new Error('No model selected'); }
+      if (!awsProfile) { throw new Error('No AWS profile configured'); }
+
+      const { execSync } = require('child_process') as typeof import('child_process');
+      const env: Record<string, string> = { ...process.env as Record<string, string> };
+      if (awsProfile) { env['AWS_PROFILE'] = awsProfile; }
+      if (awsRegion) { env['AWS_REGION'] = awsRegion; }
+      if (awsEnv) {
+        env['AWS_CONFIG_FILE'] = path.join(os.homedir(), '.aws', 'aws-envs', awsEnv, 'config');
+      }
+
+      const messages = JSON.stringify([{ role: 'user', content: [{ text: 'hi' }] }]);
+      const inferenceConfig = JSON.stringify({ maxTokens: 1 });
+
+      execSync(
+        `aws bedrock-runtime converse --model-id '${modelId}' --messages '${messages}' --inference-config '${inferenceConfig}' --output json`,
+        { encoding: 'utf8', env, timeout: 30000 }
+      );
+
+      this._panel.webview.postMessage({ type: 'testModelResult', slot, ok: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message.split('\n')[0] : String(err);
+      this._panel.webview.postMessage({ type: 'testModelResult', slot, ok: false, message });
+    }
+  }
+
   // ── Bedrock model cache (1-hour TTL per profile+region) ─────────────
 
   private static _modelCachePath(awsProfile: string, awsRegion: string): string {
@@ -523,7 +556,7 @@ export class ClaudeCodeSettingsPanel {
     } catch { /* best effort */ }
   }
 
-  private async _fetchBedrockModels(awsProfile: string, awsRegion: string): Promise<void> {
+  private async _fetchBedrockModels(awsProfile: string, awsRegion: string, awsEnv?: string): Promise<void> {
     const cachePath = ClaudeCodeSettingsPanel._modelCachePath(awsProfile, awsRegion);
     const cached = ClaudeCodeSettingsPanel._readModelCache(cachePath);
     if (cached) {
@@ -536,6 +569,9 @@ export class ClaudeCodeSettingsPanel {
       const env: Record<string, string> = { ...process.env as Record<string, string> };
       if (awsProfile) { env['AWS_PROFILE'] = awsProfile; }
       if (awsRegion) { env['AWS_REGION'] = awsRegion; }
+      if (awsEnv) {
+        env['AWS_CONFIG_FILE'] = path.join(os.homedir(), '.aws', 'aws-envs', awsEnv, 'config');
+      }
       const opts = { encoding: 'utf8' as const, env, timeout: 30000 };
 
       // Fetch inference profiles (cross-region) and foundation models

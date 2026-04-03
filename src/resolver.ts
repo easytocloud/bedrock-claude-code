@@ -77,7 +77,11 @@ export function resolvePreset(
         break;
       }
       case 'anthropic':
-        if (provider.anthropicApiKey) { env['ANTHROPIC_API_KEY'] = provider.anthropicApiKey; }
+        if (provider.anthropicApiKey?.startsWith('op://')) {
+          apiKeyHelper = `op read '${provider.anthropicApiKey}'`;
+        } else if (provider.anthropicApiKey) {
+          env['ANTHROPIC_API_KEY'] = provider.anthropicApiKey;
+        }
         break;
       case 'proxy': {
         let baseUrl = provider.proxyBaseUrl || '';

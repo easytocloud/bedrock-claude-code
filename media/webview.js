@@ -433,13 +433,19 @@
       btn.classList.toggle('sel', btn.dataset.val === authMode);
     });
 
-    // Refresh op:// hint after value is populated
+    // Refresh op:// hints after values are populated
     updateCredentialHint();
+    updateAnthropicCredentialHint();
 
     // AWS config / env info row — pass per-provider awsEnv so each provider shows its own selection
     renderAwsConfigRow(state.awsConfigInfo || null, provider ? provider.awsEnv : undefined);
 
     // AWS profiles — filterable combobox
+    // When the provider has a specific awsEnv, request the correct profile list from the backend;
+    // pass preserveProfile so the existing awsProfile selection is kept after refresh
+    if (provider && provider.awsEnv) {
+      vscode.postMessage({ type: 'switchAwsEnv', envName: provider.awsEnv, providerId: provider.id, preserveProfile: provider.awsProfile || '' });
+    }
     var awsTarget = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
     if (awsTarget) {
       var awsItems = (state.awsProfiles || ['default']).map(function(p) { return { value: p, label: p }; });
@@ -507,7 +513,7 @@
     }
 
     // Restore persisted test state for model pills
-    if (provider && provider.modelTestState && typeVal === 'proxy') {
+    if (provider && provider.modelTestState && (typeVal === 'proxy' || typeVal === 'bedrock')) {
       var testSlots = { sonnet: 'provider-model-sonnet', haiku: 'provider-model-haiku', opus: 'provider-model-opus' };
       Object.keys(testSlots).forEach(function(slot) {
         var modelId = getModelValue(testSlots[slot]);
@@ -533,9 +539,10 @@
     if (bedrockFetch) bedrockFetch.style.display = type === 'bedrock' ? '' : 'none';
     var proxyFetch = document.getElementById('proxy-fetch-row');
     if (proxyFetch) proxyFetch.style.display = type === 'proxy' ? '' : 'none';
-    // Test pills only shown for proxy (bedrock has its own flow; anthropic is native)
+    // Test pills shown for proxy and bedrock
+    var showTest = type === 'proxy' || type === 'bedrock';
     document.querySelectorAll('.btn-test').forEach(function(b) {
-      b.style.display = type === 'proxy' ? '' : 'none';
+      b.style.display = showTest ? '' : 'none';
       b.className = 'btn-test'; b.textContent = 'Test'; b.title = '';
     });
     // Standalone mode toggle only shown for proxy — bedrock is always-on (handled in resolver),
@@ -628,7 +635,13 @@
     var region = document.getElementById('provider-aws-region').value;
     var statusEl = document.getElementById('bedrock-fetch-status');
     if (statusEl) statusEl.textContent = 'Fetching from AWS…';
-    vscode.postMessage({ type: 'fetchBedrockModels', awsProfile: profile, awsRegion: region });
+    // Include awsEnv so the backend uses the correct AWS_CONFIG_FILE
+    var awsEnv = undefined;
+    if (editing.providerId) {
+      var provider = state.store.providers.find(function(p) { return p.id === editing.providerId; });
+      if (provider && provider.awsEnv) { awsEnv = provider.awsEnv; }
+    }
+    vscode.postMessage({ type: 'fetchBedrockModels', awsProfile: profile, awsRegion: region, awsEnv: awsEnv });
   }
 
   function applyFetchedBedrockModels(models) {
@@ -1057,8 +1070,8 @@
       disableLoginPrompt: document.querySelector('[data-toggle="provider-disable-nonessential"]')?.classList.contains('on') || false,
     };
 
-    // Check for untested models on proxy providers — show reminder unless dismissed
-    if (type === 'proxy' && !state.dismissTestReminder) {
+    // Check for untested models on proxy/bedrock providers — show reminder unless dismissed
+    if ((type === 'proxy' || type === 'bedrock') && !state.dismissTestReminder) {
       var untestedSlots = [];
       ['sonnet', 'haiku', 'opus'].forEach(function(slot) {
         var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
@@ -1821,6 +1834,28 @@
     resetAllTestPills();
   });
 
+  // Reset test pills when AWS region changes (bedrock provider)
+  document.getElementById('provider-aws-region')?.addEventListener('change', function() {
+    resetAllTestPills();
+  });
+
+  // Update op:// hint for the Anthropic API key field
+  function updateAnthropicCredentialHint() {
+    var inputEl = document.getElementById('provider-anthropic-key');
+    var hint = document.getElementById('anthropic-credential-hint');
+    if (!inputEl || !hint) { return; }
+    if (inputEl.value.startsWith('op://')) {
+      hint.innerHTML = '<strong>1Password:</strong> <code>apiKeyHelper: "op read \'' + inputEl.value + '\'"</code>';
+      setReveal(inputEl, true);
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  document.getElementById('provider-anthropic-key')?.addEventListener('input', function() {
+    updateAnthropicCredentialHint();
+  });
+
   // Model test pill clicks
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.btn-test');
@@ -1829,15 +1864,35 @@
     var slot = btn.dataset.slot;
     var modelId = getModelValue(selectId);
     if (!modelId) { showToast('Select a model first', true); return; }
-    var baseUrl = document.getElementById('provider-proxy-url').value.trim();
-    if (!baseUrl) { showToast('Enter a Base URL first', true); return; }
-    var credMode = (document.querySelector('[data-pill="proxy-auth"].sel') || {}).dataset?.val || 'apikey';
-    var cred = document.getElementById('provider-proxy-credential').value.trim();
-    var apiKey = credMode === 'apikey' ? cred : '';
-    var authToken = credMode === 'authtoken' ? cred : '';
-    btn.className = 'btn-test testing';
-    btn.textContent = 'Testing';
-    vscode.postMessage({ type: 'testModel', baseUrl: baseUrl, apiKey: apiKey, authToken: authToken, modelId: modelId, slot: slot });
+
+    // Determine active provider type
+    var typeBtn = document.querySelector('[data-seg="provider-type"].sel');
+    var providerType = typeBtn ? typeBtn.dataset.val : '';
+
+    if (providerType === 'bedrock') {
+      var awsProfile = getModelValue('provider-aws-profile');
+      var awsRegion = document.getElementById('provider-aws-region').value;
+      if (!awsProfile) { showToast('Select an AWS profile first', true); return; }
+      if (!awsRegion) { showToast('Select an AWS region first', true); return; }
+      var awsEnv = undefined;
+      if (editing.providerId) {
+        var provider = state.store.providers.find(function(p) { return p.id === editing.providerId; });
+        if (provider && provider.awsEnv) { awsEnv = provider.awsEnv; }
+      }
+      btn.className = 'btn-test testing';
+      btn.textContent = 'Testing';
+      vscode.postMessage({ type: 'testBedrockModel', awsProfile: awsProfile, awsRegion: awsRegion, awsEnv: awsEnv, modelId: modelId, slot: slot });
+    } else {
+      var baseUrl = document.getElementById('provider-proxy-url').value.trim();
+      if (!baseUrl) { showToast('Enter a Base URL first', true); return; }
+      var credMode = (document.querySelector('[data-pill="proxy-auth"].sel') || {}).dataset?.val || 'apikey';
+      var cred = document.getElementById('provider-proxy-credential').value.trim();
+      var apiKey = credMode === 'apikey' ? cred : '';
+      var authToken = credMode === 'authtoken' ? cred : '';
+      btn.className = 'btn-test testing';
+      btn.textContent = 'Testing';
+      vscode.postMessage({ type: 'testModel', baseUrl: baseUrl, apiKey: apiKey, authToken: authToken, modelId: modelId, slot: slot });
+    }
   });
 
   // Reset ALL test pills (when URL, credential, or auth type changes)
@@ -1858,7 +1913,10 @@
     var opt = e.target.closest('.combobox-option');
     if (!opt) { return; }
     var inputEl = opt.closest('.combobox') && opt.closest('.combobox').querySelector('input');
-    if (inputEl) { resetTestPillForInput(inputEl); }
+    if (!inputEl) { return; }
+    // AWS profile change affects all test results
+    if (inputEl.id === 'provider-aws-profile') { resetAllTestPills(); }
+    else { resetTestPillForInput(inputEl); }
   });
   document.addEventListener('input', function(e) {
     var inputEl = e.target;
@@ -1982,10 +2040,14 @@
           if (switchedProvider) { switchedProvider.awsEnv = msg.envName; }
         }
         renderAwsConfigRow(state.awsConfigInfo, msg.envName);
+        // preserveProfile: keep existing selection when reopening a drawer (vs. clearing on user switch)
+        var profileToSelect = msg.preserveProfile || '';
+        // User-initiated env switch: reset test pills (credentials changed)
+        if (!msg.preserveProfile) { resetAllTestPills(); }
         var awsTarget2 = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
         if (awsTarget2) {
           var awsItems2 = state.awsProfiles.map(function(p) { return { value: p, label: p }; });
-          var awsCombo2 = createCombobox('provider-aws-profile', awsItems2, '', false);
+          var awsCombo2 = createCombobox('provider-aws-profile', awsItems2, profileToSelect, false);
           awsTarget2.replaceWith(awsCombo2);
         }
         break;
