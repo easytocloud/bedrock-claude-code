@@ -2160,18 +2160,18 @@
 
     var overlay = document.createElement('div');
     overlay.id = 'test-reminder';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.15);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:10000;';
     var box = document.createElement('div');
-    box.style.cssText = 'background:var(--bg-card);border:1px solid var(--input-border);border-radius:var(--radius);padding:20px 24px;max-width:360px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.25);';
+    box.style.cssText = 'background:var(--bg-raised);border:1px solid var(--input-border);border-radius:var(--radius);padding:20px 24px;max-width:360px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,0.4);';
     box.innerHTML =
-      '<div style="font-size:13px;color:var(--fg);margin-bottom:16px;line-height:1.5">' +
-      'Some models have not been tested for Anthropic API compatibility.<br>Use the <strong>Test</strong> buttons to verify.' +
+      '<div style="font-size:14px;color:var(--fg);margin-bottom:20px;line-height:1.6">' +
+      '<strong>Some models untested</strong><br>Use the <strong>Test</strong> buttons to verify Anthropic API compatibility.' +
       '</div>' +
-      '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">' +
-      '<button class="btn btn-secondary" id="test-reminder-back">Go back</button>' +
-      '<button class="btn btn-primary" id="test-reminder-save">Save anyway</button>' +
+      '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">' +
+      '<button class="btn btn-primary" id="test-reminder-save" style="width:100%;display:flex;justify-content:center">Save anyway</button>' +
+      '<button class="btn btn-secondary" id="test-reminder-back" style="width:100%;display:flex;justify-content:center">Go back</button>' +
       '</div>' +
-      '<label style="font-size:11px;color:var(--fg-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">' +
+      '<label style="font-size:12px;color:var(--fg-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">' +
       '<input type="checkbox" id="test-reminder-dismiss" style="width:auto;accent-color:var(--blue)"> Don\'t show again</label>';
     overlay.appendChild(box);
     document.body.appendChild(overlay);

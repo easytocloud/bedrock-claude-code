@@ -74,7 +74,7 @@ export function buildStyles(): string {
     }
 
     /* ─── Layout ────────────────────────────────────────────────────── */
-    .app { max-width: 860px; margin: 0 auto; padding: 16px 20px 60px; }
+    .app { max-width: 860px; margin: 0 auto; padding: 16px 16px 60px; }
 
     .header {
       display: flex;
@@ -85,7 +85,7 @@ export function buildStyles(): string {
     .header-logo {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex: 1;
     }
     .header-logo h1 {
@@ -98,7 +98,7 @@ export function buildStyles(): string {
     .btn {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       padding: 6px 12px;
       border-radius: var(--radius-sm);
       border: 1px solid transparent;
@@ -179,8 +179,8 @@ export function buildStyles(): string {
     .scope-header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 14px 18px;
+      gap: 8px;
+      padding: 16px 20px;
       cursor: pointer;
       user-select: none;
       transition: background var(--transition);
@@ -205,7 +205,7 @@ export function buildStyles(): string {
       align-items: center;
       gap: 8px;
     }
-    .scope-subtitle { font-size: 11px; color: var(--fg-dim); margin-top: 2px; }
+    .scope-subtitle { font-size: 11px; color: var(--fg-dim); margin-top: 4px; }
 
     .scope-badge {
       font-size: 10px;
@@ -226,14 +226,14 @@ export function buildStyles(): string {
     .scope-card.collapsed .scope-body { display: none; }
 
     .scope-body {
-      padding: 12px 18px 18px;
+      padding: 12px 16px 16px;
     }
 
     .scope-preset-row {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 14px;
+      gap: 8px;
+      margin-bottom: 16px;
     }
     .scope-preset-row label {
       font-size: 12px;
@@ -252,8 +252,8 @@ export function buildStyles(): string {
     .panel-header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 14px 18px;
+      gap: 8px;
+      padding: 16px 20px;
       cursor: pointer;
       user-select: none;
       transition: background var(--transition);
@@ -278,7 +278,7 @@ export function buildStyles(): string {
       align-items: center;
       gap: 8px;
     }
-    .panel-subtitle { font-size: 11px; color: var(--fg-dim); margin-top: 2px; }
+    .panel-subtitle { font-size: 11px; color: var(--fg-dim); margin-top: 4px; }
     .panel-badge {
       font-size: 10px;
       padding: 2px 8px;
@@ -297,7 +297,7 @@ export function buildStyles(): string {
     .panel-section.collapsed .panel-chevron { transform: rotate(-90deg); }
     .panel-section.collapsed .panel-body { display: none; }
     .panel-body {
-      padding: 0 18px 18px;
+      padding: 0 16px 16px;
     }
 
     /* ─── Canvas Section Heading ─────────────────────────────────── */
@@ -306,7 +306,7 @@ export function buildStyles(): string {
       font-weight: 600;
       color: var(--fg);
       margin-top: 20px;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
     .canvas-hint {
       font-size: 12px;
@@ -339,7 +339,7 @@ export function buildStyles(): string {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
     .preset-card-name {
       font-weight: 600;
@@ -350,7 +350,7 @@ export function buildStyles(): string {
     .preset-card-default {
       font-size: 10px;
       font-weight: 500;
-      padding: 1px 6px;
+      padding: 2px 8px;
       border-radius: var(--radius-pill);
       background: var(--fg-muted);
       color: var(--bg);
@@ -359,7 +359,7 @@ export function buildStyles(): string {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
     .preset-card-section:last-child { margin-bottom: 0; }
     .preset-tag {
@@ -439,7 +439,7 @@ export function buildStyles(): string {
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .bb-chip-spacer { margin-top: 6px; }
+    .bb-chip-spacer { margin-top: 8px; }
     .bb-chip-new {
       border-style: dashed;
       color: var(--fg-dim);
@@ -461,19 +461,19 @@ export function buildStyles(): string {
       font-size: 12px;
       font-weight: 500;
       color: var(--fg);
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
     .form-hint {
       font-size: 11px;
       color: var(--fg-dim);
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
 
     input[type="text"],
     input[type="password"],
     textarea {
       width: 100%;
-      padding: 7px 10px;
+      padding: 8px 12px;
       background: var(--input-bg);
       border: 1px solid var(--input-border);
       border-radius: var(--radius-sm);
@@ -490,7 +490,7 @@ export function buildStyles(): string {
 
     select {
       width: 100%;
-      padding: 7px 10px;
+      padding: 8px 12px;
       background: var(--input-bg);
       border: 1px solid var(--input-border);
       border-radius: var(--radius-sm);
@@ -517,8 +517,8 @@ export function buildStyles(): string {
     .label-row {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-bottom: 5px;
+      gap: 8px;
+      margin-bottom: 4px;
     }
     .label-row .form-label { margin: 0; flex: 1; }
 
@@ -576,7 +576,7 @@ export function buildStyles(): string {
       flex-shrink: 0;
     }
     .pill-btn {
-      padding: 4px 10px;
+      padding: 4px 12px;
       font-size: 11px;
       font-family: inherit;
       cursor: pointer;
@@ -642,7 +642,7 @@ export function buildStyles(): string {
     .toggle-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       padding: 8px 0;
     }
     .toggle-label {
@@ -678,10 +678,10 @@ export function buildStyles(): string {
       background: var(--blue-dim);
       border: 1px solid var(--blue-mid);
       border-radius: var(--radius-sm);
-      padding: 10px 12px;
+      padding: 8px 12px;
       font-size: 12px;
       color: var(--fg-dim);
-      margin-bottom: 14px;
+      margin-bottom: 16px;
       line-height: 1.5;
     }
 
@@ -715,7 +715,7 @@ export function buildStyles(): string {
     .section-dot-purple { background: var(--purple-accent); }
     .section-dot-green  { background: var(--green-accent); }
     .section-subtitle   { color: var(--fg-dim); font-weight: 400; text-transform: none; }
-    .form-hint-mt   { margin-top: 6px; }
+    .form-hint-mt   { margin-top: 8px; }
     .form-hint-sm   { margin-top: 4px; }
     .form-hint-flex { flex: 1; margin: 0 12px; }
     .env-key-input  { width: 40%; display: inline-block; margin-right: 4px; }
@@ -727,11 +727,11 @@ export function buildStyles(): string {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 10px;
+      padding: 8px 12px;
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       font-size: 12px;
     }
     .item-row-info { flex: 1; min-width: 0; }
@@ -765,12 +765,12 @@ export function buildStyles(): string {
     }
 
     /* ─── Checkbox List (MCP groups, dir groups in preset) ──────────── */
-    .check-list { margin-bottom: 10px; }
+    .check-list { margin-bottom: 12px; }
     .check-item {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 10px;
+      padding: 8px 12px;
       border-radius: var(--radius-sm);
       cursor: pointer;
       transition: background var(--transition);
@@ -821,8 +821,8 @@ export function buildStyles(): string {
     .drawer-header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 16px 20px;
+      gap: 8px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
@@ -852,14 +852,14 @@ export function buildStyles(): string {
     .drawer-body {
       flex: 1;
       overflow-y: auto;
-      padding: 20px;
+      padding: 16px;
     }
 
     .drawer-footer {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 14px 20px;
+      padding: 12px 16px;
       border-top: 1px solid var(--border);
       flex-shrink: 0;
     }
@@ -870,7 +870,7 @@ export function buildStyles(): string {
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 10px 12px;
+      padding: 8px 12px;
       font-size: 11px;
       color: var(--fg-dim);
       margin-top: 8px;
@@ -891,7 +891,7 @@ export function buildStyles(): string {
       font-weight: 700;
       background: var(--green-accent);
       color: #000;
-      padding: 1px 5px;
+      padding: 2px 8px;
       border-radius: var(--radius-pill);
       letter-spacing: 0.5px;
     }
@@ -928,7 +928,7 @@ export function buildStyles(): string {
     }
     .combobox-input {
       width: 100%;
-      padding: 6px 10px;
+      padding: 6px 12px;
       background: var(--input-bg);
       border: 1px solid var(--input-border);
       border-radius: var(--radius-sm);
@@ -954,7 +954,7 @@ export function buildStyles(): string {
     }
     .combobox.open .combobox-list { display: block; }
     .combobox-option {
-      padding: 5px 10px;
+      padding: 4px 12px;
       font-size: 13px;
       cursor: pointer;
       color: var(--fg);
