@@ -6,7 +6,7 @@
  */
 
 import { esc } from './components';
-import { AWS_REGIONS } from '../models';
+import { AWS_REGIONS } from '@easytocloud/claude-personae-core';
 
 // ---------------------------------------------------------------------------
 // Drawer shell

@@ -6,8 +6,8 @@
  * that sets window.__DATA__ before the main script runs.
  */
 
-import { HAIKU_MODELS, SONNET_MODELS, OPUS_MODELS, ANTHROPIC_DEFAULTS } from '../models';
-import { DEFAULT_PROVIDER_ID, DEFAULT_PRESET_ID } from '../profiles';
+import { HAIKU_MODELS, SONNET_MODELS, OPUS_MODELS, ANTHROPIC_DEFAULTS } from '@easytocloud/claude-personae-core';
+import { DEFAULT_PROVIDER_ID, DEFAULT_PRESET_ID } from '@easytocloud/claude-personae-core';
 
 export { esc } from './components';
 

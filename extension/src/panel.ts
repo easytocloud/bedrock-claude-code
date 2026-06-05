@@ -3,12 +3,12 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getClaudeSettingsPath } from './claudeSettings';
-import { readAwsProfiles, readAwsProfilesFrom, getAwsConfigInfo } from './awsConfig';
-import { readProfileStore, writeProfileStore, createEmptyStore, generateId } from './profiles';
-import { applyAllScopes } from './resolver';
-import { PanelState, ProfileStore, McpServerEntry } from './types';
-import { ANTHROPIC_DEFAULTS } from './models';
+import { getClaudeSettingsPath } from '@easytocloud/claude-personae-core';
+import { readAwsProfiles, readAwsProfilesFrom, getAwsConfigInfo } from '@easytocloud/claude-personae-core';
+import { readProfileStore, writeProfileStore, createEmptyStore, generateId } from '@easytocloud/claude-personae-core';
+import { applyAllScopes } from '@easytocloud/claude-personae-core';
+import { PanelState, ProfileStore, McpServerEntry } from '@easytocloud/claude-personae-core';
+import { ANTHROPIC_DEFAULTS } from '@easytocloud/claude-personae-core';
 import { buildHtml } from './webview/index';
 import { refreshStatusBar, setRefreshHook } from './statusBar';
 
@@ -16,10 +16,10 @@ import { refreshStatusBar, setRefreshHook } from './statusBar';
 // Migration: import existing settings into a ProfileStore
 // ---------------------------------------------------------------------------
 
-import { readClaudeSettings } from './claudeSettings';
-import { readUserMcpServers, ensureOnboardingComplete } from './claudeJson';
-import { readProjectMcpServers } from './mcpJson';
-import { MANAGED_ENV_KEYS } from './models';
+import { readClaudeSettings } from '@easytocloud/claude-personae-core';
+import { readUserMcpServers, ensureOnboardingComplete } from '@easytocloud/claude-personae-core';
+import { readProjectMcpServers } from '@easytocloud/claude-personae-core';
+import { MANAGED_ENV_KEYS } from '@easytocloud/claude-personae-core';
 
 function migrateExistingSettings(workspaceRoot: string | undefined): ProfileStore {
   const store = createEmptyStore();

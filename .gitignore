@@ -1,4 +1,8 @@
 out/
+dist/
+*.tsbuildinfo
 node_modules/
 .vscode-test/
 *.vsix
+.mcp.json
+.claude/settings.json

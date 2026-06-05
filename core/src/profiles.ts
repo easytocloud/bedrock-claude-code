@@ -119,6 +119,14 @@ export function readProfileStore(): ProfileStore {
   }
 }
 
+/** Find a preset by exact ID first, then by case-insensitive name. */
+export function findPresetByNameOrId(store: ProfileStore, query: string): Preset | undefined {
+  return (
+    store.presets.find(p => p.id === query) ??
+    store.presets.find(p => p.name.toLowerCase() === query.toLowerCase())
+  );
+}
+
 /** Writes the profile store to ~/.claude/coder-profiles.json, creating the directory if needed. */
 export function writeProfileStore(store: ProfileStore): void {
   const filePath = getProfileStorePath();

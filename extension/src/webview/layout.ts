@@ -2,8 +2,8 @@
  * Main view layout: scope cards and preset grid.
  * Renders the primary visible content of the settings panel.
  */
-import { PanelState, Preset, ProviderProfile, McpServerGroup, DirectoryGroup } from '../types';
-import { DEFAULT_PRESET_ID } from '../profiles';
+import { PanelState, Preset, ProviderProfile, McpServerGroup, DirectoryGroup } from '@easytocloud/claude-personae-core';
+import { DEFAULT_PRESET_ID } from '@easytocloud/claude-personae-core';
 import { esc } from './components';
 
 // ---------------------------------------------------------------------------

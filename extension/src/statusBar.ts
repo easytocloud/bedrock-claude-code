@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { readProfileStore, writeProfileStore } from './profiles';
-import { applyAllScopes } from './resolver';
-import { ensureOnboardingComplete } from './claudeJson';
-import { ScopeAssignment } from './types';
+import { readProfileStore, writeProfileStore } from '@easytocloud/claude-personae-core';
+import { applyAllScopes } from '@easytocloud/claude-personae-core';
+import { ensureOnboardingComplete } from '@easytocloud/claude-personae-core';
+import { ScopeAssignment } from '@easytocloud/claude-personae-core';
 
 // ---------------------------------------------------------------------------
 // Status bar item — shows active preset and scope, click to quick-switch

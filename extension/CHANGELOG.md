@@ -4,6 +4,14 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.17] — 2026-06-05
+
+### Added
+- **Companion CLI** — `@easytocloud/claude-personae` (`ccp`) on npm lets you switch and apply presets from the shell (headless / SSH / CI), operating on the same `~/.claude` profile store as this extension. The repository is now an npm-workspaces monorepo (`core` engine shared by the extension and CLI).
+
+### Fixed
+- **Export now scrubs proxy credentials** — the single-field `proxyCredential` value (used by "Local / Other" providers) is now replaced with `<REPLACE_ME>` on export, alongside the legacy `proxyApiKey`/`proxyAuthToken` fields. `op://` 1Password references are preserved (they are pointers, not secrets).
+
 ## [0.3.16] — 2026-04-03
 
 ### Added

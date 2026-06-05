@@ -1,0 +1,47 @@
+{
+  "name": "@easytocloud/claude-personae",
+  "version": "0.1.0",
+  "description": "CLI to switch Claude Code provider presets (AWS Bedrock / Anthropic / proxy) — companion to the Claude Code Personae VS Code extension. Operates on the same ~/.claude profile store.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/easytocloud/bedrock-claude-code",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/easytocloud/bedrock-claude-code#readme",
+  "bugs": {
+    "url": "https://github.com/easytocloud/bedrock-claude-code/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "aws",
+    "bedrock",
+    "anthropic",
+    "cli",
+    "presets",
+    "proxy"
+  ],
+  "bin": {
+    "claude-personae": "dist/cli.js",
+    "ccp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "prepublishOnly": "node esbuild.js"
+  },
+  "devDependencies": {
+    "@easytocloud/claude-personae-core": "*",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0"
+  }
+}
