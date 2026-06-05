@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ClaudeCodeSettingsPanel } from './panel';
-import { getClaudeSettingsPath } from './claudeSettings';
+import { getClaudeSettingsPath } from '@easytocloud/claude-personae-core';
 import { createStatusBar } from './statusBar';
 import { exportPresets, importPresets } from './importExport';
 

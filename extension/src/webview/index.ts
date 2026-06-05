@@ -3,7 +3,7 @@
  * Composes styles, layout, drawers, and script into a single HTML document.
  */
 
-import { PanelState } from '../types';
+import { PanelState } from '@easytocloud/claude-personae-core';
 import { buildStyles } from './styles';
 import { renderScopeCards, renderPresetGrid, renderBuildingBlocks } from './layout';
 import { renderAllDrawers } from './drawers';

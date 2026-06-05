@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "composite": true,
     "module": "Node16",
     "target": "ES2022",
     "outDir": "out",
@@ -8,12 +9,13 @@
     "rootDir": "src",
     "strict": true,
     "moduleResolution": "Node16",
-    "declaration": false,
+    "declaration": true,
     "skipLibCheck": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true
   },
+  "references": [{ "path": "../core" }],
   "include": ["src"],
   "exclude": ["node_modules", ".vscode-test", "out"]
 }

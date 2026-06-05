@@ -9,6 +9,7 @@ examples/
 .mcp.json
 eslint.config.js
 tsconfig.json
+*.tsbuildinfo
 **/*.ts
 *.vsix
 esbuild.js

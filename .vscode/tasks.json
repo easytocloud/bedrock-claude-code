@@ -2,8 +2,12 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "watch:tsc",
+      "label": "watch-extension",
+      "type": "shell",
+      "command": "npm run watch:tsc",
+      "options": {
+        "cwd": "${workspaceFolder}/extension"
+      },
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
       "presentation": {

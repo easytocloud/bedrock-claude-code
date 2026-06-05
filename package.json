@@ -1,110 +1,27 @@
 {
-  "name": "bedrock-claude-code",
-  "displayName": "Claude Code Personae",
-  "description": "Composable preset-based settings for Claude Code — switch between Anthropic, AWS Bedrock, and proxy providers with reusable MCP server and directory groups",
-  "version": "0.3.16",
-  "publisher": "easytocloud",
+  "name": "claude-personae-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo for Claude Code Personae — VS Code extension + CLI, sharing one preset-resolution engine",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/easytocloud/bedrock-claude-code"
   },
-  "homepage": "https://github.com/easytocloud/bedrock-claude-code#readme",
-  "bugs": {
-    "url": "https://github.com/easytocloud/bedrock-claude-code/issues"
-  },
-  "icon": "images/icon.png",
-  "galleryBanner": {
-    "color": "#1a1a2e",
-    "theme": "dark"
-  },
-  "engines": {
-    "vscode": "^1.98.0"
-  },
-  "categories": [
-    "Machine Learning",
-    "Other"
+  "workspaces": [
+    "core",
+    "extension",
+    "cli"
   ],
-  "keywords": [
-    "claude",
-    "claude-code",
-    "aws",
-    "bedrock",
-    "anthropic",
-    "ai",
-    "mcp",
-    "presets",
-    "proxy",
-    "ollama"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "bedrock-claude-code.openSettings",
-        "title": "Open Claude Code Personae",
-        "category": "Claude Code",
-        "icon": "$(settings-gear)"
-      },
-      {
-        "command": "bedrock-claude-code.openSettingsFile",
-        "title": "Open ~/.claude/settings.json",
-        "category": "Claude Code",
-        "icon": "$(file-code)"
-      },
-      {
-        "command": "bedrock-claude-code.quickSwitch",
-        "title": "Quick Switch Preset",
-        "category": "Claude Code",
-        "icon": "$(sparkle)"
-      },
-      {
-        "command": "bedrock-claude-code.exportPresets",
-        "title": "Export Presets",
-        "category": "Claude Code",
-        "icon": "$(export)"
-      },
-      {
-        "command": "bedrock-claude-code.importPresets",
-        "title": "Import Presets",
-        "category": "Claude Code",
-        "icon": "$(import)"
-      }
-    ],
-    "menus": {
-      "commandPalette": [
-        {
-          "command": "bedrock-claude-code.openSettings"
-        },
-        {
-          "command": "bedrock-claude-code.openSettingsFile"
-        }
-      ]
-    }
-  },
   "scripts": {
-    "vscode:prepublish": "npm run build",
-    "build": "node esbuild.js",
-    "compile": "tsc -p ./",
-    "watch": "node esbuild.js --watch",
-    "watch:tsc": "tsc -watch -p ./",
-    "lint": "eslint src media/webview.js --cache",
-    "package": "vsce package"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/vscode": "^1.98.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
-    "@vscode/vsce": "^3.0.0",
-    "esbuild": "^0.25.0",
-    "eslint": "^9.0.0",
-    "typescript": "^5.6.0"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "build": "npm run build --workspaces --if-present",
+    "build:core": "npm run build -w @easytocloud/claude-personae-core",
+    "build:extension": "npm run build -w bedrock-claude-code",
+    "build:cli": "npm run build -w @easytocloud/claude-personae",
+    "compile": "npm run compile --workspaces --if-present",
+    "lint": "npm run lint -w bedrock-claude-code --if-present",
+    "package:extension": "npm run package -w bedrock-claude-code",
+    "publish:extension": "npm run publish -w bedrock-claude-code",
+    "publish:cli": "npm publish -w @easytocloud/claude-personae --access public"
   }
 }

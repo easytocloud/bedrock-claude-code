@@ -6,12 +6,13 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}"
+        "--extensionDevelopmentPath=${workspaceFolder}/extension"
       ],
       "outFiles": [
-        "${workspaceFolder}/out/**/*.js"
+        "${workspaceFolder}/extension/out/**/*.js",
+        "${workspaceFolder}/core/dist/**/*.js"
       ],
-      "preLaunchTask": "npm: watch:tsc"
+      "preLaunchTask": "watch-extension"
     }
   ]
 }

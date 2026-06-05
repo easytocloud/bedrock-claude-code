@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "Node16",
+    "target": "ES2022",
+    "outDir": "dist",
+    "rootDir": "src",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "moduleResolution": "Node16",
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
