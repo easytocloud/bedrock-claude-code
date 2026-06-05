@@ -4,6 +4,20 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.18] — 2026-06-05
+
+### Added
+- **Sticky toolbar** — header and intro banner are now `position: sticky`, staying visible while the page scrolls. The toolbar gains a shadow when the page is scrolled.
+- **Collapsible intro banner** — the "How it works" section can be toggled closed; the collapsed state persists across panel reloads via `introCollapsed` in extension globalState.
+- **Color-coded jump links** — each concept in the intro banner (Providers, MCP Server Groups, Directory Groups, Presets, Global, VS Code Workspace) is a clickable link that expands the target section and scrolls to it with a brief highlight animation.
+- **Save All pulse** — the Save All button shows a "●" suffix and a blue pulse animation whenever there are unsaved changes.
+- **Unsaved-changes guard** — closing a drawer via backdrop click or Escape now shows a "Discard unsaved changes?" confirmation dialog when form fields have been modified since the drawer opened.
+
+### Changed
+- **"Save" → "Done"** on all drawer footer buttons (Preset, Provider, MCP Server Group, Directory Group, MCP Server).
+- **"Workspace" → "VS Code Workspace"** throughout the UI — status bar tooltips, quick-pick labels, and scope card title updated for consistency with official VS Code terminology.
+- **Terminology Title-Case** — section headings in the preset drawer now read "MCP SERVER GROUPS" and "DIRECTORY GROUPS"; canvas hint and inline button labels capitalized to match.
+
 ## [0.3.17] — 2026-06-05
 
 ### Added

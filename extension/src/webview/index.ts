@@ -29,27 +29,43 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
 </head>
 <body>
   <div class="app">
-    <!-- Header -->
-    <div class="header">
-      <div class="header-logo">
-        <svg width="28" height="28" viewBox="0 0 256 256">
-          <rect width="256" height="256" rx="40" fill="#1a1a2e"/>
-          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#4ec970" transform="matrix(0.84,0.38,-0.84,0.38,128,144)" opacity="0.78"/>
-          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#b48eda" transform="matrix(0.72,0.32,-0.72,0.32,128,114)" opacity="0.78"/>
-          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#e8973e" transform="matrix(0.60,0.27,-0.60,0.27,128,86)" opacity="0.82"/>
-          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#d97857" transform="matrix(0.40,0.18,-0.40,0.18,128,60)" opacity="0.88"/>
-        </svg>
-        <h1>Claude Code Settings</h1>
+    <!-- Sticky top bar: actions stay reachable while the page scrolls -->
+    <div class="topbar">
+      <div class="header">
+        <div class="header-logo">
+          <svg width="28" height="28" viewBox="0 0 256 256">
+            <rect width="256" height="256" rx="40" fill="#1a1a2e"/>
+            <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#4ec970" transform="matrix(0.84,0.38,-0.84,0.38,128,144)" opacity="0.78"/>
+            <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#b48eda" transform="matrix(0.72,0.32,-0.72,0.32,128,114)" opacity="0.78"/>
+            <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#e8973e" transform="matrix(0.60,0.27,-0.60,0.27,128,86)" opacity="0.82"/>
+            <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#d97857" transform="matrix(0.40,0.18,-0.40,0.18,128,60)" opacity="0.88"/>
+          </svg>
+          <h1>Claude Code Settings</h1>
+        </div>
+        <button class="btn btn-secondary btn-sm" data-action="reload">Reload</button>
+        <button class="btn btn-secondary btn-sm" data-action="open-file">Open File</button>
+        <button class="btn btn-primary btn-sm" data-action="save-all">Save All</button>
       </div>
-      <button class="btn btn-secondary btn-sm" data-action="reload">Reload</button>
-      <button class="btn btn-secondary btn-sm" data-action="open-file">Open File</button>
-      <button class="btn btn-primary btn-sm" data-action="save-all">Save All</button>
-    </div>
 
-    <!-- Intro -->
-    <div class="intro-banner">
-      <strong>How it works:</strong> Create <strong>providers</strong>, <strong>MCP server groups</strong>, and <strong>directory groups</strong> as building blocks.
-      Combine them into <strong>presets</strong>, then assign a preset to the <strong>global</strong> or <strong>workspace</strong> scope.
+      <!-- Collapsible "How it works" — pinned with the toolbar -->
+      <div class="intro-banner" id="intro-banner">
+        <button class="intro-toggle" data-action="toggle-intro" aria-expanded="true" aria-controls="intro-body">
+          <span class="intro-info" aria-hidden="true">ⓘ</span>
+          <span class="intro-title">How it works</span>
+          <span class="intro-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div class="intro-body" id="intro-body">
+          Create
+          <a class="intro-link orange" data-jump="panel:providers" role="link" tabindex="0">Providers</a>,
+          <a class="intro-link purple" data-jump="panel:mcp-groups" role="link" tabindex="0">MCP Server Groups</a>, and
+          <a class="intro-link green" data-jump="panel:dir-groups" role="link" tabindex="0">Directory Groups</a>
+          as Building Blocks. Combine them into
+          <a class="intro-link red" data-jump="panel:presets" role="link" tabindex="0">Presets</a>,
+          then assign a Preset to the
+          <a class="intro-link blue" data-jump="scope:global" role="link" tabindex="0">Global</a> or
+          <a class="intro-link teal" data-jump="scope:workspace" role="link" tabindex="0">VS Code Workspace</a> Scope.
+        </div>
+      </div>
     </div>
 
     <!-- Scope Cards -->

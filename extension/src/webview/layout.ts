@@ -35,7 +35,7 @@ function renderScopeCard(attrs: {
 
   return `
     <div class="scope-card collapsed" data-scope="${scope}">
-      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle ${scope} scope">
+      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle ${esc(title)}">
         <div class="scope-indicator ${scope}"></div>
         <div class="scope-title-area">
           <div class="scope-title">
@@ -91,7 +91,7 @@ export function renderScopeCards(state: PanelState): string {
     const wsPresetId = wsScope.presetId;
     html += renderScopeCard({
       scope: 'workspace',
-      title: 'Workspace Scope',
+      title: 'VS Code Workspace Scope',
       subtitle: `${state.workspaceName ?? state.workspacePath ?? ''} · .claude/settings.json`,
       badgeText: wsScope.mode === 'preset'
         ? (store.presets.find(p => p.id === wsPresetId)?.name ?? 'None')
@@ -164,7 +164,7 @@ export function renderPresetGrid(state: PanelState): string {
 
   let html = `
     <div class="canvas-heading">Presets</div>
-    <div class="canvas-hint">A preset combines one provider with optional MCP server groups and directory groups into a reusable configuration. Assign presets to scopes above.</div>
+    <div class="canvas-hint">A Preset combines one Provider with optional MCP Server Groups and Directory Groups into a reusable configuration. Assign Presets to Scopes above.</div>
 
     <div class="panel-section collapsed" data-panel="presets">
       <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="false">
@@ -174,7 +174,7 @@ export function renderPresetGrid(state: PanelState): string {
             Presets
             <span class="panel-badge red">${count}</span>
           </div>
-          <div class="panel-subtitle">Reusable configurations to assign to scopes.</div>
+          <div class="panel-subtitle">Reusable configurations to assign to Scopes.</div>
         </div>
         <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
@@ -252,7 +252,7 @@ export function renderBuildingBlocks(state: PanelState): string {
 
   return `
     <div class="canvas-heading">Building Blocks</div>
-    <div class="canvas-hint">Create and manage the building blocks that make up presets: providers, MCP server groups, and directory groups.</div>
+    <div class="canvas-hint">Create and manage the Building Blocks that make up Presets: Providers, MCP Server Groups, and Directory Groups.</div>
 
     <!-- Providers panel -->
     <div class="panel-section collapsed" data-panel="providers">
@@ -284,14 +284,14 @@ export function renderBuildingBlocks(state: PanelState): string {
             MCP Server Groups
             <span class="panel-badge purple">${mcpCount}</span>
           </div>
-          <div class="panel-subtitle">Named collections of MCP servers to include in presets.</div>
+          <div class="panel-subtitle">Named collections of MCP servers to include in Presets.</div>
         </div>
         <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="panel-body">
         <div class="bb-chips" data-chips="mcp-groups">
           ${store.mcpGroups.map(g => renderMcpGroupChip(g)).join('')}
-          <div class="bb-chip card card-new card-purple" data-action="new-mcp-group-standalone">+ New Group</div>
+          <div class="bb-chip card card-new card-purple" data-action="new-mcp-group-standalone">+ New MCP Server Group</div>
         </div>
       </div>
     </div>
@@ -312,7 +312,7 @@ export function renderBuildingBlocks(state: PanelState): string {
       <div class="panel-body">
         <div class="bb-chips" data-chips="dir-groups">
           ${store.directoryGroups.map(g => renderDirGroupChip(g)).join('')}
-          <div class="bb-chip card card-new card-green" data-action="new-dir-group-standalone">+ New Group</div>
+          <div class="bb-chip card card-new card-green" data-action="new-dir-group-standalone">+ New Directory Group</div>
         </div>
       </div>
     </div>`;

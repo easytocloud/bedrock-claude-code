@@ -50,21 +50,21 @@ export function refreshStatusBar(): void {
     // Workspace has its own preset
     const name = presetLabel(wsScope, store.presets);
     statusBarItem.text = `$(sparkle) ${name}`;
-    statusBarItem.tooltip = `Global: ${globalPresetName}\nWorkspace: ${name}\n\nClick to switch presets`;
+    statusBarItem.tooltip = `Global: ${globalPresetName}\nVS Code Workspace: ${name}\n\nClick to switch presets`;
   } else if (wsScope && wsScope.mode === 'manual') {
     statusBarItem.text = `$(sparkle) Manual`;
-    statusBarItem.tooltip = `Global: ${globalPresetName}\nWorkspace: Manual\n\nClick to switch presets`;
+    statusBarItem.tooltip = `Global: ${globalPresetName}\nVS Code Workspace: Manual\n\nClick to switch presets`;
   } else if (wsScope && wsScope.mode === 'inherit') {
     // Workspace explicitly inherits — show link icon to indicate delegation
     statusBarItem.text = `$(link) ${globalPresetName}`;
-    statusBarItem.tooltip = `Global: ${globalPresetName}\nWorkspace: Inherited from global\n\nClick to override for this workspace`;
+    statusBarItem.tooltip = `Global: ${globalPresetName}\nVS Code Workspace: Inherited from Global\n\nClick to override for this VS Code Workspace`;
   } else {
     // No workspace scope configured — show global with hollow indicator
     statusBarItem.text = workspaceRoot
       ? `$(sparkle) ${globalPresetName}`
       : `$(sparkle) ${globalPresetName}`;
     statusBarItem.tooltip = workspaceRoot
-      ? `Global: ${globalPresetName}\nWorkspace: Not configured — click to set`
+      ? `Global: ${globalPresetName}\nVS Code Workspace: Not configured — click to set`
       : `Global: ${globalPresetName}\n\nClick to switch presets`;
   }
 
@@ -111,8 +111,8 @@ async function quickSwitch(): Promise<void> {
 
   // ── Workspace section (only if a workspace is open) ──
   if (workspaceRoot) {
-    const wsName = vscode.workspace.workspaceFolders?.[0]?.name ?? 'Workspace';
-    items.push({ label: `Workspace: ${wsName}`, kind: vscode.QuickPickItemKind.Separator });
+    const wsName = vscode.workspace.workspaceFolders?.[0]?.name ?? 'VS Code Workspace';
+    items.push({ label: `VS Code Workspace: ${wsName}`, kind: vscode.QuickPickItemKind.Separator });
 
     items.push({
       label: `${wsScope?.mode === 'inherit' ? '$(check) ' : '     '}Inherit from Global`,
@@ -134,7 +134,7 @@ async function quickSwitch(): Promise<void> {
     }
     items.push({
       label: `${wsScope?.mode === 'manual' ? '$(check) ' : '     '}Manual`,
-      description: 'Manage workspace config files yourself',
+      description: 'Manage VS Code Workspace config files yourself',
       scope: 'workspace',
       mode: 'manual',
     });
@@ -143,7 +143,7 @@ async function quickSwitch(): Promise<void> {
   const wsName = vscode.workspace.workspaceFolders?.[0]?.name;
   const pick = await vscode.window.showQuickPick(items, {
     placeHolder: wsName
-      ? `Switch preset — Global and Workspace (${wsName})`
+      ? `Switch preset — Global and VS Code Workspace (${wsName})`
       : 'Switch preset — Global scope',
     matchOnDescription: true,
   });
@@ -172,7 +172,7 @@ async function quickSwitch(): Promise<void> {
     ClaudeCodeSettingsPanel_refresh();
   }
 
-  const scopeName = pick.scope === 'global' ? 'Global' : 'Workspace';
+  const scopeName = pick.scope === 'global' ? 'Global' : 'VS Code Workspace';
   const presetName = pick.mode === 'preset'
     ? store.presets.find(p => p.id === pick.presetId)?.name ?? 'Unknown'
     : pick.mode === 'inherit' ? 'Inherit' : 'Manual';

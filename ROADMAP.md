@@ -49,7 +49,7 @@ CLI command re-resolves all presets in `workspaceScopes` and rewrites their `.cl
 - `ccp sync` — re-apply all workspace assignments
 - `ccp sync --dry-run` — show what would change without writing
 - Simple, predictable, no background processes. Manual step — easy to forget.
-- **Selected for initial CLI release.**
+- **Shipped.** `cmdSync` re-applies the global scope plus every entry in `workspaceScopes`, skips `manual` scopes, clears `inherit` scopes, and reports workspaces whose directory no longer exists. (`ccp apply` remains the global + current-workspace-only variant.)
 
 **Option 2 — Extension save triggers re-apply (natural fit)**
 Extend the existing save handler: when a preset is saved in the extension UI, iterate all `workspaceScopes` entries and re-apply to every known workspace path (not just the current one).

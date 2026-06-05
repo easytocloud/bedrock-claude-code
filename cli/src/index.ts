@@ -6,6 +6,10 @@ import {
   writeProfileStore,
   ensureDefaults,
   applyAllScopes,
+  resolvePreset,
+  applyGlobalConfig,
+  applyProjectConfig,
+  cleanProjectConfig,
   ensureOnboardingComplete,
   findPresetByNameOrId,
   scrubStore,
@@ -34,7 +38,8 @@ COMMANDS
   list [presets|providers|scopes]   List configured items (default: all)
   current                           Show the active global + workspace preset
   switch <preset> [scope]           Set the active preset and apply it
-  apply                             Re-apply the stored scopes to disk
+  apply                             Re-apply the global + current-workspace scopes
+  sync                              Re-apply EVERY known workspace assignment
   export                            Print the store as JSON (credentials scrubbed)
   import <file|->                   Import a store from a file or stdin
 
@@ -50,6 +55,7 @@ OPTIONS
   --out, -o <file>        Write export to a file instead of stdout
   --no-scrub              Export without scrubbing credentials (dangerous)
   --mode <merge|replace>  Import mode (default: merge)
+  --dry-run               Preview only — show what \`sync\` would change, write nothing
   --help, -h              Show this help
   --version, -v           Show version
 
@@ -58,7 +64,9 @@ EXAMPLES
   ccp switch bedrock-prod            # set global preset
   ccp switch dev --workspace         # set preset for the current project
   ccp switch --workspace --inherit   # project inherits global again
-  ccp apply                          # reprovision config files from the store
+  ccp apply                          # reprovision the current project's config
+  ccp sync                           # re-apply every workspace after editing a preset
+  ccp sync --dry-run                 # preview what sync would rewrite
   ccp export -o presets.json
   cat presets.json | ccp import - --mode replace
 `;
@@ -106,6 +114,7 @@ function parse(argv: string[]) {
       inherit: { type: 'boolean', default: false },
       manual: { type: 'boolean', default: false },
       mode: { type: 'string' },
+      'dry-run': { type: 'boolean', default: false },
       out: { type: 'string', short: 'o' },
       'no-scrub': { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
@@ -216,6 +225,72 @@ function cmdApply(store: ProfileStore, values: Values): void {
   process.stdout.write(`          workspace (${ws}): ${describeScope(store, store.workspaceScopes[ws])}\n`);
 }
 
+function cmdSync(store: ProfileStore, values: Values): void {
+  const dryRun = Boolean(values['dry-run']);
+
+  // Global scope
+  if (store.globalScope.mode === 'preset' && store.globalScope.presetId) {
+    const resolved = resolvePreset(store, store.globalScope.presetId);
+    if (!resolved) {
+      process.stderr.write(`global: preset missing — skipped\n`);
+    } else {
+      if (!dryRun) { ensureOnboardingComplete(); applyGlobalConfig(resolved); }
+      process.stdout.write(`${dryRun ? 'would apply' : 'applied'}  global: ${describeScope(store, store.globalScope)}\n`);
+    }
+  } else {
+    process.stdout.write(`(skip)      global: ${describeScope(store, store.globalScope)}\n`);
+  }
+
+  const entries = Object.entries(store.workspaceScopes);
+  if (entries.length === 0) {
+    process.stdout.write('no workspace assignments to sync.\n');
+    return;
+  }
+
+  let applied = 0;
+  let skipped = 0;
+  let missing = 0;
+
+  for (const [ws, scope] of entries) {
+    const desc = describeScope(store, scope);
+
+    if (!fs.existsSync(ws)) {
+      process.stderr.write(`(missing)   ${ws}: ${desc}\n`);
+      missing++;
+      continue;
+    }
+    if (scope.mode === 'manual') {
+      process.stdout.write(`(manual)    ${ws}: left untouched\n`);
+      skipped++;
+      continue;
+    }
+    if (scope.mode === 'inherit') {
+      if (!dryRun) { cleanProjectConfig(ws); }
+      process.stdout.write(`${dryRun ? 'would clear' : 'cleared  '}  ${ws}: inherit from global\n`);
+      applied++;
+      continue;
+    }
+    // preset
+    const resolved = scope.presetId ? resolvePreset(store, scope.presetId) : null;
+    if (!resolved) {
+      process.stderr.write(`(skip)      ${ws}: preset missing\n`);
+      skipped++;
+      continue;
+    }
+    if (!dryRun) { applyProjectConfig(resolved, ws); }
+    process.stdout.write(`${dryRun ? 'would apply' : 'applied  '}  ${ws}: ${desc}\n`);
+    applied++;
+  }
+
+  const verb = dryRun ? 'would sync' : 'synced';
+  process.stdout.write(
+    `\n${verb} ${applied} workspace(s)` +
+    (skipped ? `, ${skipped} skipped` : '') +
+    (missing ? `, ${missing} with missing directory` : '') +
+    '.\n'
+  );
+}
+
 function cmdExport(store: ProfileStore, values: Values): void {
   const out = values['no-scrub'] ? store : scrubStore(store);
   const content = JSON.stringify(out, null, 2) + '\n';
@@ -291,6 +366,7 @@ function main(): void {
     case 'current':  cmdCurrent(store, values); break;
     case 'switch':   cmdSwitch(store, positionals[1], values); break;
     case 'apply':    cmdApply(store, values); break;
+    case 'sync':     cmdSync(store, values); break;
     case 'export':   cmdExport(store, values); break;
     case 'import':   cmdImport(positionals[1], values); break;
     case 'help':     process.stdout.write(HELP); break;

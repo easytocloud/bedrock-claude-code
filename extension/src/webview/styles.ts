@@ -76,12 +76,26 @@ export function buildStyles(): string {
     /* ─── Layout ────────────────────────────────────────────────────── */
     .app { max-width: 860px; margin: 0 auto; padding: 16px 16px 60px; }
 
+    /* Pinned toolbar — keeps the actions (incl. Save All) and the
+       "How it works" banner in view while the page scrolls. */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      background: var(--bg);
+      margin: -16px -16px 16px;       /* bleed over .app padding so it spans full width */
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar.scrolled { box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+
     .header {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 20px;
     }
+    .topbar .intro-banner { margin-bottom: 0; }
+    .header + .intro-banner { margin-top: 12px; }
     .header-logo {
       display: flex;
       align-items: center;
@@ -114,6 +128,16 @@ export function buildStyles(): string {
       border-color: var(--blue);
     }
     .btn-primary:hover { filter: brightness(1.1); }
+    /* Save All when there are unsaved changes — pulse to draw attention */
+    .btn.has-unsaved {
+      box-shadow: 0 0 0 0 rgba(59,158,255,0.55);
+      animation: unsaved-pulse 1.8s ease-out infinite;
+    }
+    @keyframes unsaved-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(59,158,255,0.55); }
+      70%  { box-shadow: 0 0 0 6px rgba(59,158,255,0); }
+      100% { box-shadow: 0 0 0 0 rgba(59,158,255,0); }
+    }
     .btn-secondary {
       background: transparent;
       color: var(--fg-dim);
@@ -370,18 +394,63 @@ export function buildStyles(): string {
       margin-bottom: 4px;
     }
 
-    /* ─── Intro Banner ──────────────────────────────────────────────── */
+    /* ─── Intro Banner (collapsible) ────────────────────────────────── */
     .intro-banner {
       background: var(--bg-raised);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 14px 20px;
       margin-bottom: 16px;
       font-size: 12px;
       line-height: 1.6;
       color: var(--fg-dim);
+      overflow: hidden;
     }
+    .intro-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--fg);
+      cursor: pointer;
+      padding: 10px 16px;
+      font: inherit;
+      text-align: left;
+    }
+    .intro-toggle:hover { background: var(--bg-hover); }
+    .intro-info { color: var(--blue); font-size: 13px; }
+    .intro-title { font-weight: 600; flex: 1; color: var(--fg); }
+    .intro-chevron { color: var(--fg-dim); transition: transform 0.2s ease; }
+    .intro-banner.collapsed .intro-chevron { transform: rotate(-90deg); }
+    .intro-body {
+      padding: 0 16px 12px 38px;
+    }
+    .intro-banner.collapsed .intro-body { display: none; }
     .intro-banner strong { color: var(--fg); font-weight: 600; }
+    /* Colored, clickable concept links inside the help banner —
+       hues match the section indicators/badges further down the page. */
+    .intro-link {
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border-bottom: 1px dotted currentColor;
+    }
+    .intro-link:hover { border-bottom-style: solid; }
+    .intro-link:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; border-radius: 2px; }
+    .intro-link.orange { color: var(--orange-accent); }
+    .intro-link.purple { color: var(--purple-accent); }
+    .intro-link.green  { color: var(--green-accent); }
+    .intro-link.red    { color: var(--red); }
+    .intro-link.blue   { color: var(--blue); }
+    .intro-link.teal   { color: var(--teal-accent); }
+
+    /* Brief highlight when a section is jumped to from a help link */
+    @keyframes jump-flash {
+      0%   { box-shadow: 0 0 0 2px var(--blue), 0 0 0 6px var(--blue-mid); }
+      100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+    }
+    .jump-flash { animation: jump-flash 1.2s ease-out; border-radius: var(--radius-lg); }
 
     /* ─── Preset Grid ───────────────────────────────────────────────── */
 

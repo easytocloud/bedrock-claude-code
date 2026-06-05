@@ -23,6 +23,7 @@ console.log('[WEBVIEW] Script loaded');
   let dirty = false;
   let drawerStack = [];
   const drawerScrollPositions = {};  // Track scroll position per drawer
+  const drawerSnapshots = {};        // Serialized form state per drawer, captured on open — used to detect unsaved edits
 
   // Editing context — which item is currently open in a drawer
   const editing = {
@@ -56,9 +57,38 @@ console.log('[WEBVIEW] Script loaded');
       dirty = true;
       vscode.postMessage({ type: 'dirty' });
     }
+    updateSaveIndicator();
     // Auto-save draft so unsaved changes survive panel close
     if (state && state.store) {
       vscode.postMessage({ type: 'saveDraft', store: state.store });
+    }
+  }
+
+  // Collapse / expand the pinned "How it works" banner. When persist is true,
+  // remember the choice so it survives reloads (stored in extension globalState).
+  function setIntroCollapsed(collapsed, persist) {
+    const banner = document.getElementById('intro-banner');
+    if (!banner) return;
+    banner.classList.toggle('collapsed', collapsed);
+    const toggle = banner.querySelector('.intro-toggle');
+    if (toggle) toggle.setAttribute('aria-expanded', String(!collapsed));
+    if (persist) {
+      vscode.postMessage({ type: 'setDismissPref', key: 'introCollapsed', value: collapsed });
+      if (state) state.introCollapsed = collapsed;
+    }
+  }
+
+  // Reflect the unsaved (dirty) state on the Save All button so it's obvious
+  // that changes are pending and haven't been applied yet.
+  function updateSaveIndicator() {
+    const saveBtn = document.querySelector('[data-action="save-all"]');
+    if (!saveBtn) return;
+    if (dirty) {
+      saveBtn.classList.add('has-unsaved');
+      saveBtn.textContent = 'Save All ●';
+    } else {
+      saveBtn.classList.remove('has-unsaved');
+      saveBtn.textContent = 'Save All';
     }
   }
 
@@ -135,6 +165,10 @@ console.log('[WEBVIEW] Script loaded');
     drawer.classList.add('open');
     backdrop.classList.add('open');
 
+    // Snapshot the populated form so we can detect unsaved edits on close.
+    // Must run after the openXDrawer() caller has filled the fields (it has — openDrawer is its last step).
+    drawerSnapshots[id] = serializeDrawer(drawer);
+
     // Auto-focus first autofocus input and restore scroll position
     setTimeout(() => {
       const body = drawer.querySelector('.drawer-body');
@@ -163,12 +197,63 @@ console.log('[WEBVIEW] Script loaded');
       const backdrop = document.getElementById('drawer-backdrop');
       if (backdrop) backdrop.classList.remove('open');
     }
+    if (id) delete drawerSnapshots[id];
   }
 
   function closeAllDrawers() {
     while (drawerStack.length > 0) {
       closeTopDrawer();
     }
+  }
+
+  // Serialize the editable state of a drawer so two snapshots can be compared
+  // to tell whether the user changed anything since it opened.
+  function serializeDrawer(drawer) {
+    if (!drawer) return '';
+    const parts = [];
+    drawer.querySelectorAll('input, select, textarea').forEach(function(el) {
+      const key = el.id || el.name || el.dataset.mcpGroup || el.dataset.dirGroup || '';
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        parts.push(key + '=' + el.checked);
+      } else {
+        parts.push(key + '=' + el.value);
+      }
+    });
+    // Active segmented buttons / pills / toggles (selection lives in CSS classes, not form values)
+    drawer.querySelectorAll('[data-seg].sel, [data-pill].sel, [data-toggle].on').forEach(function(el) {
+      parts.push('@' + (el.dataset.seg || el.dataset.pill || el.dataset.toggle) + '=' + (el.dataset.val || 'on'));
+    });
+    // Pending lists for not-yet-saved MCP / directory groups are kept in `editing`, not in inputs
+    if (drawer.id === 'drawer-mcp-group') parts.push('#servers=' + JSON.stringify(editing.pendingServers));
+    if (drawer.id === 'drawer-dir-group') parts.push('#dirs=' + JSON.stringify(editing.pendingDirs));
+    return parts.join('|');
+  }
+
+  function isTopDrawerDirty() {
+    if (drawerStack.length === 0) return false;
+    const id = drawerStack[drawerStack.length - 1];
+    if (!(id in drawerSnapshots)) return false;
+    const drawer = document.getElementById('drawer-' + id);
+    if (!drawer) return false;
+    return serializeDrawer(drawer) !== drawerSnapshots[id];
+  }
+
+  // Close the top drawer, but warn first if it has unsaved field edits.
+  // Used for "navigate away" gestures (backdrop click, Escape). Explicit Save
+  // buttons call closeTopDrawer() directly — they've already committed the form.
+  function closeTopDrawerGuarded() {
+    if (drawerStack.length === 0) return;
+    if (isTopDrawerDirty()) {
+      showConfirm({
+        title: 'Discard unsaved changes?',
+        message: "This form has changes you haven't saved. Closing it will lose them.",
+        confirmLabel: 'Discard changes',
+        cancelLabel: 'Keep editing',
+        danger: true,
+      }, function() { closeTopDrawer(); });
+      return;
+    }
+    closeTopDrawer();
   }
 
   // ─── Scope card toggle ─────────────────────────────────────────
@@ -179,6 +264,49 @@ console.log('[WEBVIEW] Script loaded');
       const isExpanded = !card.classList.contains('collapsed');
       header.setAttribute('aria-expanded', isExpanded);
     }
+  }
+
+  // Jump from a help-banner link to its section: expand it, scroll it into
+  // view (accounting for the sticky toolbar), and flash it briefly.
+  // spec is "panel:<data-panel>" or "scope:<data-scope>".
+  function jumpToSection(spec) {
+    const sep = spec.indexOf(':');
+    const kind = spec.slice(0, sep);
+    const key = spec.slice(sep + 1);
+    let target = null;
+
+    if (kind === 'panel') {
+      target = document.querySelector('.panel-section[data-panel="' + key + '"]');
+      if (target) {
+        // Accordion-expand, mirroring the toggle-panel behaviour
+        document.querySelectorAll('.panel-section').forEach(function(p) {
+          p.classList.add('collapsed');
+          const hdr = p.querySelector('.panel-header');
+          if (hdr) hdr.setAttribute('aria-expanded', 'false');
+        });
+        target.classList.remove('collapsed');
+        const hdr = target.querySelector('.panel-header');
+        if (hdr) hdr.setAttribute('aria-expanded', 'true');
+      }
+    } else if (kind === 'scope') {
+      target = document.querySelector('.scope-card[data-scope="' + key + '"]');
+      if (target) {
+        target.classList.remove('collapsed');
+        const hdr = target.querySelector('.scope-header');
+        if (hdr) hdr.setAttribute('aria-expanded', 'true');
+      }
+    }
+    if (!target) return;
+
+    const topbar = document.querySelector('.topbar');
+    const offset = (topbar ? topbar.offsetHeight : 0) + 8;
+    const top = target.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+
+    target.classList.remove('jump-flash');
+    void target.offsetWidth; // restart the animation
+    target.classList.add('jump-flash');
+    setTimeout(function() { target.classList.remove('jump-flash'); }, 1300);
   }
 
   // ─── Shared chip renderers (used by scope blocks AND building block panels) ──
@@ -383,7 +511,7 @@ console.log('[WEBVIEW] Script loaded');
     if (dupBtn) dupBtn.style.display = isDefault ? 'none' : '';
 
     const saveBtn = document.querySelector('[data-action="save-preset"]');
-    if (saveBtn) saveBtn.textContent = isNew ? 'Create Preset' : 'Save';
+    if (saveBtn) saveBtn.textContent = isNew ? 'Create Preset' : 'Done';
 
     openDrawer('preset');
   }
@@ -417,8 +545,8 @@ console.log('[WEBVIEW] Script loaded');
    */
   // selectedEnvName: the awsEnv stored on the current provider (may differ from the live symlink)
   function renderAwsConfigRow(awsConfigInfo, selectedEnvName) {
-    var configRow = document.getElementById('provider-aws-config-row');
-    var envRow = document.getElementById('provider-aws-env-row');
+    let configRow = document.getElementById('provider-aws-config-row');
+    let envRow = document.getElementById('provider-aws-env-row');
     if (!configRow || !envRow) return;
 
     if (!awsConfigInfo) {
@@ -431,14 +559,14 @@ console.log('[WEBVIEW] Script loaded');
       // Hide plain config row, show env selector
       configRow.style.display = 'none';
       envRow.style.display = '';
-      var sel = document.getElementById('provider-aws-env');
+      let sel = document.getElementById('provider-aws-env');
       if (sel) {
         sel.innerHTML = '';
-        var envNames = awsConfigInfo.envNames || [];
+        let envNames = awsConfigInfo.envNames || [];
         // Use the per-provider stored selection; fall back to the live symlink target
-        var activeEnv = selectedEnvName || awsConfigInfo.envName;
+        let activeEnv = selectedEnvName || awsConfigInfo.envName;
         envNames.forEach(function(name) {
-          var opt = document.createElement('option');
+          let opt = document.createElement('option');
           opt.value = name;
           opt.textContent = name;
           if (name === activeEnv) opt.selected = true;
@@ -449,8 +577,8 @@ console.log('[WEBVIEW] Script loaded');
       // Hide env row, show read-only config path
       envRow.style.display = 'none';
       configRow.style.display = '';
-      var label = document.getElementById('provider-aws-config-label');
-      var val = document.getElementById('provider-aws-config-value');
+      let label = document.getElementById('provider-aws-config-label');
+      let val = document.getElementById('provider-aws-config-value');
       if (label) label.textContent = 'AWS Config';
       if (val) val.textContent = awsConfigInfo.configPath || '';
     }
@@ -465,9 +593,9 @@ console.log('[WEBVIEW] Script loaded');
     editing.providerId = isNew ? null : providerId;
     fetched.proxyModels = [];
     fetched.bedrockModels = [];
-    var fetchStatus = document.getElementById('proxy-fetch-status');
+    let fetchStatus = document.getElementById('proxy-fetch-status');
     if (fetchStatus) fetchStatus.textContent = '';
-    var brFetchStatus = document.getElementById('bedrock-fetch-status');
+    let brFetchStatus = document.getElementById('bedrock-fetch-status');
     if (brFetchStatus) brFetchStatus.textContent = '';
 
     document.getElementById('provider-drawer-title').textContent = isNew ? 'New Provider' : escHtml(provider.name);
@@ -493,7 +621,7 @@ console.log('[WEBVIEW] Script loaded');
     }
 
     // Proxy auth mode pill — migrate old separate fields to new combined model
-    var authMode = (provider && provider.proxyAuthMode)
+    let authMode = (provider && provider.proxyAuthMode)
       || (provider && provider.proxyAuthToken ? 'authtoken' : 'apikey');
     document.querySelectorAll('[data-pill="proxy-auth"]').forEach(function(btn) {
       btn.classList.toggle('sel', btn.dataset.val === authMode);
@@ -512,10 +640,10 @@ console.log('[WEBVIEW] Script loaded');
     if (provider && provider.awsEnv) {
       vscode.postMessage({ type: 'switchAwsEnv', envName: provider.awsEnv, providerId: provider.id, preserveProfile: provider.awsProfile || '' });
     }
-    var awsTarget = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
+    let awsTarget = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
     if (awsTarget) {
-      var awsItems = (state.awsProfiles || ['default']).map(function(p) { return { value: p, label: p }; });
-      var awsCombo = createCombobox('provider-aws-profile', awsItems, provider ? provider.awsProfile : '', false);
+      let awsItems = (state.awsProfiles || ['default']).map(function(p) { return { value: p, label: p }; });
+      let awsCombo = createCombobox('provider-aws-profile', awsItems, provider ? provider.awsProfile : '', false);
       awsTarget.replaceWith(awsCombo);
     }
 
@@ -561,7 +689,7 @@ console.log('[WEBVIEW] Script loaded');
     if (dupProvBtn) dupProvBtn.style.display = isDefaultProv ? 'none' : '';
 
     const saveBtn = document.querySelector('[data-action="save-provider"]');
-    if (saveBtn) saveBtn.textContent = isNew ? 'Create Provider' : 'Save';
+    if (saveBtn) saveBtn.textContent = isNew ? 'Create Provider' : 'Done';
 
     showProviderSections(typeVal);
     if (typeVal) rebuildModelSelects(typeVal, provider);
@@ -580,11 +708,11 @@ console.log('[WEBVIEW] Script loaded');
 
     // Restore persisted test state for model pills
     if (provider && provider.modelTestState && (typeVal === 'proxy' || typeVal === 'bedrock')) {
-      var testSlots = { sonnet: 'provider-model-sonnet', haiku: 'provider-model-haiku', opus: 'provider-model-opus' };
+      let testSlots = { sonnet: 'provider-model-sonnet', haiku: 'provider-model-haiku', opus: 'provider-model-opus' };
       Object.keys(testSlots).forEach(function(slot) {
-        var modelId = getModelValue(testSlots[slot]);
-        var savedState = provider.modelTestState[modelId];
-        var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
+        let modelId = getModelValue(testSlots[slot]);
+        let savedState = provider.modelTestState[modelId];
+        let btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
         if (btn && savedState) {
           btn.className = 'btn-test ' + savedState;
           btn.textContent = savedState === 'ok' ? 'OK' : 'Fail';
@@ -601,19 +729,19 @@ console.log('[WEBVIEW] Script loaded');
     document.getElementById('provider-section-proxy').style.display = type === 'proxy' ? '' : 'none';
     document.getElementById('provider-models-section').style.display = (type && type !== 'anthropic') ? '' : 'none';
     document.getElementById('provider-models-info').style.display = type === 'bedrock' ? '' : 'none';
-    var bedrockFetch = document.getElementById('bedrock-fetch-row');
+    let bedrockFetch = document.getElementById('bedrock-fetch-row');
     if (bedrockFetch) bedrockFetch.style.display = type === 'bedrock' ? '' : 'none';
-    var proxyFetch = document.getElementById('proxy-fetch-row');
+    let proxyFetch = document.getElementById('proxy-fetch-row');
     if (proxyFetch) proxyFetch.style.display = type === 'proxy' ? '' : 'none';
     // Test pills shown for proxy and bedrock
-    var showTest = type === 'proxy' || type === 'bedrock';
+    let showTest = type === 'proxy' || type === 'bedrock';
     document.querySelectorAll('.btn-test').forEach(function(b) {
       b.style.display = showTest ? '' : 'none';
       b.className = 'btn-test'; b.textContent = 'Test'; b.title = '';
     });
     // Standalone mode toggle only shown for proxy — bedrock is always-on (handled in resolver),
     // anthropic never applies.
-    var standaloneRow = document.getElementById('provider-standalone-row');
+    let standaloneRow = document.getElementById('provider-standalone-row');
     if (standaloneRow) standaloneRow.style.display = type === 'proxy' ? '' : 'none';
   }
 
@@ -624,19 +752,19 @@ console.log('[WEBVIEW] Script loaded');
 
     if (type === 'bedrock') {
       // Smart presets (curated list filtered by region) + any fetched account models
-      var sonnetPresets = filterModels(SONNET_MODELS, region);
-      var haikuPresets = filterModels(HAIKU_MODELS, region);
-      var opusPresets = filterModels(OPUS_MODELS, region);
+      let sonnetPresets = filterModels(SONNET_MODELS, region);
+      let haikuPresets = filterModels(HAIKU_MODELS, region);
+      let opusPresets = filterModels(OPUS_MODELS, region);
       if (fetched.bedrockModels.length > 0) {
         // Merge: smart presets first, then fetched models not already in presets
-        var presetIds = new Set(sonnetPresets.concat(haikuPresets, opusPresets).map(function(m) { return m.id; }));
-        var extra = fetched.bedrockModels.filter(function(m) { return !presetIds.has(m.id); });
+        let presetIds = new Set(sonnetPresets.concat(haikuPresets, opusPresets).map(function(m) { return m.id; }));
+        let extra = fetched.bedrockModels.filter(function(m) { return !presetIds.has(m.id); });
         // All three selects get the full merged list so any model can go in any slot
-        var allModels = sonnetPresets.concat(haikuPresets, opusPresets, extra);
+        let allModels = sonnetPresets.concat(haikuPresets, opusPresets, extra);
         // Deduplicate by id
-        var seen = new Set();
-        var merged = [];
-        for (var i = 0; i < allModels.length; i++) {
+        let seen = new Set();
+        let merged = [];
+        for (let i = 0; i < allModels.length; i++) {
           if (!seen.has(allModels[i].id)) { seen.add(allModels[i].id); merged.push(allModels[i]); }
         }
         populateModelSelect('provider-model-sonnet', merged, provider?.primaryModel, true);
@@ -698,16 +826,16 @@ console.log('[WEBVIEW] Script loaded');
   }
 
   function fetchBedrockModels() {
-    var profile = getModelValue('provider-aws-profile');
-    var region = document.getElementById('provider-aws-region').value;
-    var statusEl = document.getElementById('bedrock-fetch-status');
+    let profile = getModelValue('provider-aws-profile');
+    let region = document.getElementById('provider-aws-region').value;
+    let statusEl = document.getElementById('bedrock-fetch-status');
     if (statusEl) statusEl.textContent = 'Fetching from AWS…';
-    var btn = document.querySelector('[data-action="fetch-bedrock-models"]');
+    let btn = document.querySelector('[data-action="fetch-bedrock-models"]');
     if (btn) btn.classList.add('btn-loading');
     // Include awsEnv so the backend uses the correct AWS_CONFIG_FILE
-    var awsEnv = undefined;
+    let awsEnv = undefined;
     if (editing.providerId) {
-      var provider = state.store.providers.find(function(p) { return p.id === editing.providerId; });
+      let provider = state.store.providers.find(function(p) { return p.id === editing.providerId; });
       if (provider && provider.awsEnv) { awsEnv = provider.awsEnv; }
     }
     vscode.postMessage({ type: 'fetchBedrockModels', awsProfile: profile, awsRegion: region, awsEnv: awsEnv });
@@ -716,9 +844,9 @@ console.log('[WEBVIEW] Script loaded');
   function applyFetchedBedrockModels(models) {
     // models: [{id, label}]
     fetched.bedrockModels = models;
-    var statusEl = document.getElementById('bedrock-fetch-status');
+    let statusEl = document.getElementById('bedrock-fetch-status');
     if (statusEl) statusEl.textContent = 'Found ' + models.length + ' models — smart presets + account models merged below';
-    var currentProvider = editing.providerId
+    let currentProvider = editing.providerId
       ? state.store.providers.find(function(p) { return p.id === editing.providerId; })
       : null;
     rebuildModelSelects('bedrock', currentProvider);
@@ -747,12 +875,12 @@ console.log('[WEBVIEW] Script loaded');
 
     function renderOptions(filter) {
       list.innerHTML = '';
-      var lc = (filter || '').toLowerCase();
+      let lc = (filter || '').toLowerCase();
 
       // Filter
-      var filtered = [];
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i];
+      let filtered = [];
+      for (let i = 0; i < items.length; i++) {
+        let item = items[i];
         if (lc && item.label.toLowerCase().indexOf(lc) < 0 && item.value.toLowerCase().indexOf(lc) < 0) continue;
         filtered.push(item);
       }
@@ -761,10 +889,10 @@ console.log('[WEBVIEW] Script loaded');
       filtered.sort(function(a, b) { return a.label.localeCompare(b.label); });
 
       // Split into matching-slot group and rest when a slotHint is provided and no filter active
-      var top = [], rest = [];
+      let top = [], rest = [];
       if (slotHint && !lc) {
-        var hintLc = slotHint.toLowerCase();
-        for (var j = 0; j < filtered.length; j++) {
+        let hintLc = slotHint.toLowerCase();
+        for (let j = 0; j < filtered.length; j++) {
           if (filtered[j].label.toLowerCase().indexOf(hintLc) >= 0 || filtered[j].value.toLowerCase().indexOf(hintLc) >= 0) {
             top.push(filtered[j]);
           } else {
@@ -775,14 +903,14 @@ console.log('[WEBVIEW] Script loaded');
         rest = filtered;
       }
 
-      var count = 0;
+      let count = 0;
       function appendOption(item) {
         if (count >= 50) { return false; }
-        var div = document.createElement('div');
+        let div = document.createElement('div');
         div.className = 'combobox-option';
         div.dataset.value = item.value;
         if (lc) {
-          var idx = item.label.toLowerCase().indexOf(lc);
+          let idx = item.label.toLowerCase().indexOf(lc);
           if (idx >= 0) {
             div.innerHTML = escHtml(item.label.slice(0, idx)) +
               '<mark>' + escHtml(item.label.slice(idx, idx + lc.length)) + '</mark>' +
@@ -799,23 +927,23 @@ console.log('[WEBVIEW] Script loaded');
         return true;
       }
 
-      for (var t = 0; t < top.length; t++) { if (!appendOption(top[t])) break; }
+      for (let t = 0; t < top.length; t++) { if (!appendOption(top[t])) break; }
       if (top.length > 0 && rest.length > 0) {
-        var sep = document.createElement('hr');
+        let sep = document.createElement('hr');
         sep.className = 'combobox-separator';
         list.appendChild(sep);
       }
-      for (var r = 0; r < rest.length; r++) { if (!appendOption(rest[r])) break; }
+      for (let r = 0; r < rest.length; r++) { if (!appendOption(rest[r])) break; }
 
       if (count >= 50) {
-        var more = document.createElement('div');
+        let more = document.createElement('div');
         more.className = 'combobox-option';
         more.style.color = 'var(--fg-dim)';
         more.textContent = '… Showing 50 of ' + filtered.length + '. Type to filter.';
         list.appendChild(more);
       }
       if (allowCustom && filter) {
-        var custom = document.createElement('div');
+        let custom = document.createElement('div');
         custom.className = 'combobox-option';
         custom.dataset.value = filter;
         custom.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5L14.5 4.5M1 15H4L13 6L10 3L1 12V15Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Use "' + escHtml(filter) + '"';
@@ -832,10 +960,10 @@ console.log('[WEBVIEW] Script loaded');
       wrapper.classList.add('open');
     });
     list.addEventListener('click', function(e) {
-      var opt = e.target.closest('.combobox-option');
+      let opt = e.target.closest('.combobox-option');
       if (!opt || !opt.dataset.value) return;
       input.dataset.selectedValue = opt.dataset.value;
-      var match = items.find(function(i) { return i.value === opt.dataset.value; });
+      let match = items.find(function(i) { return i.value === opt.dataset.value; });
       input.value = match ? match.label : opt.dataset.value;
       wrapper.classList.remove('open');
     });
@@ -846,26 +974,26 @@ console.log('[WEBVIEW] Script loaded');
           input.dataset.selectedValue = input.value;
         } else if (!allowCustom) {
           // Snap back to the selected item's label — don't allow free-form text
-          var sel = items.find(function(i) { return i.value === input.dataset.selectedValue; });
+          let sel = items.find(function(i) { return i.value === input.dataset.selectedValue; });
           input.value = sel ? sel.label : (input.dataset.selectedValue || '');
         }
       }
     });
     input.addEventListener('keydown', function(e) {
-      var visible = list.querySelectorAll('.combobox-option[data-value]');
-      var active = list.querySelector('.combobox-option.active');
+      let visible = list.querySelectorAll('.combobox-option[data-value]');
+      let active = list.querySelector('.combobox-option.active');
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        var arr = Array.from(visible);
-        var cur = active ? arr.indexOf(active) : -1;
-        var next = e.key === 'ArrowDown' ? Math.min(cur + 1, arr.length - 1) : Math.max(cur - 1, 0);
+        let arr = Array.from(visible);
+        let cur = active ? arr.indexOf(active) : -1;
+        let next = e.key === 'ArrowDown' ? Math.min(cur + 1, arr.length - 1) : Math.max(cur - 1, 0);
         if (active) active.classList.remove('active');
         if (arr[next]) { arr[next].classList.add('active'); arr[next].scrollIntoView({ block: 'nearest' }); }
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (active && active.dataset.value) {
           input.dataset.selectedValue = active.dataset.value;
-          var match = items.find(function(i) { return i.value === active.dataset.value; });
+          let match = items.find(function(i) { return i.value === active.dataset.value; });
           input.value = match ? match.label : active.dataset.value;
           wrapper.classList.remove('open');
         }
@@ -877,7 +1005,7 @@ console.log('[WEBVIEW] Script loaded');
         if (wrapper.classList.contains('open')) {
           if (active && active.dataset.value) {
             input.dataset.selectedValue = active.dataset.value;
-            var tabMatch = items.find(function(i) { return i.value === active.dataset.value; });
+            let tabMatch = items.find(function(i) { return i.value === active.dataset.value; });
             input.value = tabMatch ? tabMatch.label : active.dataset.value;
           }
           wrapper.classList.remove('open');
@@ -890,24 +1018,24 @@ console.log('[WEBVIEW] Script loaded');
     return wrapper;
   }
 
-  var SLOT_HINTS = {
+  let SLOT_HINTS = {
     'provider-model-sonnet': 'sonnet',
     'provider-model-haiku': 'haiku',
     'provider-model-opus': 'opus'
   };
 
   function populateModelSelect(selectId, models, currentValue, showDropdown) {
-    var existing = document.getElementById(selectId);
-    var comboWrapper = document.getElementById(selectId + '-combobox');
-    var target = comboWrapper || existing;
+    let existing = document.getElementById(selectId);
+    let comboWrapper = document.getElementById(selectId + '-combobox');
+    let target = comboWrapper || existing;
     if (!target) return;
 
     if (showDropdown && models.length > 0) {
-      var items = models.map(function(m) { return { value: m.id, label: m.label }; });
-      var combo = createCombobox(selectId, items, currentValue, false, SLOT_HINTS[selectId]);
+      let items = models.map(function(m) { return { value: m.id, label: m.label }; });
+      let combo = createCombobox(selectId, items, currentValue, false, SLOT_HINTS[selectId]);
       target.replaceWith(combo);
     } else {
-      var input = document.createElement('input');
+      let input = document.createElement('input');
       input.type = 'text';
       input.id = selectId;
       input.value = currentValue || '';
@@ -934,7 +1062,7 @@ console.log('[WEBVIEW] Script loaded');
     if (deleteBtn) deleteBtn.style.display = isNew ? 'none' : '';
 
     const saveBtn = document.querySelector('[data-action="save-mcp-group"]');
-    if (saveBtn) saveBtn.textContent = isNew ? 'Create Group' : 'Save';
+    if (saveBtn) saveBtn.textContent = isNew ? 'Create MCP Server Group' : 'Done';
 
     openDrawer('mcp-group');
   }
@@ -967,6 +1095,8 @@ console.log('[WEBVIEW] Script loaded');
     const isNew = index < 0;
 
     document.getElementById('mcp-server-drawer-title').textContent = isNew ? 'Add MCP Server' : 'Edit MCP Server';
+    const mcpServerSaveBtn = document.querySelector('[data-action="save-mcp-server"]');
+    if (mcpServerSaveBtn) mcpServerSaveBtn.textContent = isNew ? 'Add Server' : 'Done';
     document.getElementById('mcp-server-name').value = server ? server.name : '';
     document.getElementById('mcp-server-url').value = server ? (server.url || '') : '';
     document.getElementById('mcp-server-command').value = server ? (server.command || '') : '';
@@ -982,8 +1112,8 @@ console.log('[WEBVIEW] Script loaded');
     renderMcpEnvVars(server ? (server.env || {}) : {});
 
     // Reset test button and output
-    var btn = document.getElementById('btn-test-mcp');
-    var out = document.getElementById('mcp-test-output');
+    let btn = document.getElementById('btn-test-mcp');
+    let out = document.getElementById('mcp-test-output');
     if (btn) { btn.textContent = 'Test'; btn.disabled = false; }
     if (out) { out.textContent = ''; }
 
@@ -994,8 +1124,8 @@ console.log('[WEBVIEW] Script loaded');
     document.getElementById('mcp-transport-url').style.display = (transport === 'http' || transport === 'sse') ? '' : 'none';
     document.getElementById('mcp-transport-stdio').style.display = transport === 'stdio' ? '' : 'none';
     // Reset test button when transport changes
-    var btn = document.getElementById('btn-test-mcp');
-    var out = document.getElementById('mcp-test-output');
+    let btn = document.getElementById('btn-test-mcp');
+    let out = document.getElementById('mcp-test-output');
     if (btn) { btn.textContent = 'Test'; btn.disabled = false; }
     if (out) { out.textContent = ''; }
   }
@@ -1038,7 +1168,7 @@ console.log('[WEBVIEW] Script loaded');
     if (deleteBtn) deleteBtn.style.display = isNew ? 'none' : '';
 
     const saveBtn = document.querySelector('[data-action="save-dir-group"]');
-    if (saveBtn) saveBtn.textContent = isNew ? 'Create Group' : 'Done';
+    if (saveBtn) saveBtn.textContent = isNew ? 'Create Directory Group' : 'Done';
 
     openDrawer('dir-group');
   }
@@ -1144,11 +1274,11 @@ console.log('[WEBVIEW] Script loaded');
     }
 
     // Collect model test states from pills (keyed by model ID)
-    var modelTestState = {};
+    let modelTestState = {};
     ['sonnet', 'haiku', 'opus'].forEach(function(slot) {
-      var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
-      var selectId = 'provider-model-' + slot;
-      var modelId = getModelValue(selectId);
+      let btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
+      let selectId = 'provider-model-' + slot;
+      let modelId = getModelValue(selectId);
       if (btn && modelId) {
         if (btn.classList.contains('ok')) { modelTestState[modelId] = 'ok'; }
         else if (btn.classList.contains('fail')) { modelTestState[modelId] = 'fail'; }
@@ -1163,7 +1293,7 @@ console.log('[WEBVIEW] Script loaded');
       awsRegion: document.getElementById('provider-aws-region').value || undefined,
       awsAuthRefresh: document.getElementById('provider-aws-refresh').value || undefined,
       awsEnv: (function() {
-        var sel = document.getElementById('provider-aws-env');
+        let sel = document.getElementById('provider-aws-env');
         return (sel && sel.offsetParent !== null) ? (sel.value || undefined) : undefined;
       })(),
       proxyBaseUrl: document.getElementById('provider-proxy-url').value || undefined,
@@ -1179,10 +1309,10 @@ console.log('[WEBVIEW] Script loaded');
 
     // Check for untested models on proxy/bedrock providers — show reminder unless dismissed
     if ((type === 'proxy' || type === 'bedrock') && !state.dismissTestReminder) {
-      var untestedSlots = [];
+      let untestedSlots = [];
       ['sonnet', 'haiku', 'opus'].forEach(function(slot) {
-        var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
-        var modelId = getModelValue('provider-model-' + slot);
+        let btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
+        let modelId = getModelValue('provider-model-' + slot);
         if (modelId && btn && !btn.classList.contains('ok') && !btn.classList.contains('fail')) {
           untestedSlots.push(slot);
         }
@@ -1343,18 +1473,18 @@ console.log('[WEBVIEW] Script loaded');
   }
 
   function testMcpServer() {
-    var btn = document.getElementById('btn-test-mcp');
-    var output = document.getElementById('mcp-test-output');
-    var transportBtn = document.querySelector('[data-seg="mcp-transport"].sel');
-    var type = transportBtn ? transportBtn.dataset.val : 'http';
-    var url = document.getElementById('mcp-server-url').value.trim();
-    var rawCmd = document.getElementById('mcp-server-command').value.trim();
-    var parts = rawCmd.split(/\s+/);
-    var command = parts[0] || rawCmd;
-    var extraArgs = parts.slice(1);
-    var textareaArgs = document.getElementById('mcp-server-args').value.split('\n').map(s => s.trim()).filter(Boolean);
-    var args = extraArgs.concat(textareaArgs);
-    var env = collectMcpEnvFromDOM();
+    let btn = document.getElementById('btn-test-mcp');
+    let output = document.getElementById('mcp-test-output');
+    let transportBtn = document.querySelector('[data-seg="mcp-transport"].sel');
+    let type = transportBtn ? transportBtn.dataset.val : 'http';
+    let url = document.getElementById('mcp-server-url').value.trim();
+    let rawCmd = document.getElementById('mcp-server-command').value.trim();
+    let parts = rawCmd.split(/\s+/);
+    let command = parts[0] || rawCmd;
+    let extraArgs = parts.slice(1);
+    let textareaArgs = document.getElementById('mcp-server-args').value.split('\n').map(s => s.trim()).filter(Boolean);
+    let args = extraArgs.concat(textareaArgs);
+    let env = collectMcpEnvFromDOM();
 
     if (btn) { btn.textContent = 'Testing…'; btn.disabled = true; }
     if (output) { output.textContent = ''; }
@@ -1722,7 +1852,7 @@ console.log('[WEBVIEW] Script loaded');
           // Accordion: collapse all other panel-sections first
           document.querySelectorAll('.panel-section').forEach(function(p) {
             p.classList.add('collapsed');
-            var hdr = p.querySelector('.panel-header');
+            let hdr = p.querySelector('.panel-header');
             if (hdr) hdr.setAttribute('aria-expanded', 'false');
           });
           // Toggle the clicked panel
@@ -1926,6 +2056,7 @@ console.log('[WEBVIEW] Script loaded');
         break;
       }
       case 'save-all':
+        // Dirty state is cleared when the extension confirms via the 'saved' message
         vscode.postMessage({ type: 'saveStore', store: state.store });
         break;
       case 'reload':
@@ -1933,6 +2064,9 @@ console.log('[WEBVIEW] Script loaded');
         break;
       case 'open-file':
         vscode.postMessage({ type: 'openFile' });
+        break;
+      case 'toggle-intro':
+        setIntroCollapsed(!document.getElementById('intro-banner')?.classList.contains('collapsed'), true);
         break;
     }
   });
@@ -2008,10 +2142,10 @@ console.log('[WEBVIEW] Script loaded');
 
   // Pill toggle clicks (compact key/token switcher)
   document.addEventListener('click', function(e) {
-    var pillBtn = e.target.closest('.pill-btn');
+    let pillBtn = e.target.closest('.pill-btn');
     if (!pillBtn) { return; }
-    var pillName = pillBtn.dataset.pill;
-    var pillVal = pillBtn.dataset.val;
+    let pillName = pillBtn.dataset.pill;
+    let pillVal = pillBtn.dataset.val;
     pillBtn.closest('.pill-toggle').querySelectorAll('.pill-btn').forEach(function(b) { b.classList.remove('sel'); });
     pillBtn.classList.add('sel');
     if (pillName === 'proxy-auth') {
@@ -2023,10 +2157,10 @@ console.log('[WEBVIEW] Script loaded');
   // Auto-detect OpenRouter URL and switch to Auth Token mode; invalidate tests on URL change
   document.getElementById('provider-proxy-url')?.addEventListener('input', function() {
     resetAllTestPills();
-    var url = this.value;
+    let url = this.value;
     if (/openrouter\.ai/i.test(url)) {
-      var pills = document.querySelectorAll('[data-pill="proxy-auth"]');
-      var alreadyToken = false;
+      let pills = document.querySelectorAll('[data-pill="proxy-auth"]');
+      let alreadyToken = false;
       pills.forEach(function(b) { if (b.dataset.val === 'authtoken' && b.classList.contains('sel')) { alreadyToken = true; } });
       if (!alreadyToken) {
         pills.forEach(function(b) { b.classList.toggle('sel', b.dataset.val === 'authtoken'); });
@@ -2037,8 +2171,8 @@ console.log('[WEBVIEW] Script loaded');
 
   // Update op:// hint for the credential field
   function updateCredentialHint() {
-    var inputEl = document.getElementById('provider-proxy-credential');
-    var hint = document.getElementById('proxy-credential-hint');
+    let inputEl = document.getElementById('provider-proxy-credential');
+    let hint = document.getElementById('proxy-credential-hint');
     if (!inputEl || !hint) { return; }
     if (inputEl.value.startsWith('op://')) {
       hint.innerHTML = '<strong>1Password:</strong> <code>apiKeyHelper: "op read \'' + inputEl.value + '\'"</code>';
@@ -2051,7 +2185,7 @@ console.log('[WEBVIEW] Script loaded');
   // Set or clear reveal state on a password input
   function setReveal(inputEl, on) {
     inputEl.type = on ? 'text' : 'password';
-    var btn = inputEl.closest('.input-reveal') && inputEl.closest('.input-reveal').querySelector('.btn-eye');
+    let btn = inputEl.closest('.input-reveal') && inputEl.closest('.input-reveal').querySelector('.btn-eye');
     if (btn) btn.classList.toggle('revealed', on);
   }
 
@@ -2067,8 +2201,8 @@ console.log('[WEBVIEW] Script loaded');
 
   // Update op:// hint for the Anthropic API key field
   function updateAnthropicCredentialHint() {
-    var inputEl = document.getElementById('provider-anthropic-key');
-    var hint = document.getElementById('anthropic-credential-hint');
+    let inputEl = document.getElementById('provider-anthropic-key');
+    let hint = document.getElementById('anthropic-credential-hint');
     if (!inputEl || !hint) { return; }
     if (inputEl.value.startsWith('op://')) {
       hint.innerHTML = '<strong>1Password:</strong> <code>apiKeyHelper: "op read \'' + inputEl.value + '\'"</code>';
@@ -2084,8 +2218,8 @@ console.log('[WEBVIEW] Script loaded');
 
   // Reset MCP test output when URL or command fields change
   function resetMcpTest() {
-    var btn = document.getElementById('btn-test-mcp');
-    var out = document.getElementById('mcp-test-output');
+    let btn = document.getElementById('btn-test-mcp');
+    let out = document.getElementById('mcp-test-output');
     if (btn) { btn.textContent = 'Test'; btn.disabled = false; }
     if (out) { out.textContent = ''; }
   }
@@ -2095,39 +2229,39 @@ console.log('[WEBVIEW] Script loaded');
 
   // Model test pill clicks
   document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.btn-test');
+    let btn = e.target.closest('.btn-test');
     if (!btn || btn.classList.contains('testing') || btn.classList.contains('ok')) { return; }
     // Skip if this is the MCP server test button (no data-test-model)
     if (!btn.dataset.testModel) { return; }
-    var selectId = btn.dataset.testModel;
-    var slot = btn.dataset.slot;
-    var modelId = getModelValue(selectId);
+    let selectId = btn.dataset.testModel;
+    let slot = btn.dataset.slot;
+    let modelId = getModelValue(selectId);
     if (!modelId) { showToast('Select a model first', true); return; }
 
     // Determine active provider type
-    var typeBtn = document.querySelector('[data-seg="provider-type"].sel');
-    var providerType = typeBtn ? typeBtn.dataset.val : '';
+    let typeBtn = document.querySelector('[data-seg="provider-type"].sel');
+    let providerType = typeBtn ? typeBtn.dataset.val : '';
 
     if (providerType === 'bedrock') {
-      var awsProfile = getModelValue('provider-aws-profile');
-      var awsRegion = document.getElementById('provider-aws-region').value;
+      let awsProfile = getModelValue('provider-aws-profile');
+      let awsRegion = document.getElementById('provider-aws-region').value;
       if (!awsProfile) { showToast('Select an AWS profile first', true); return; }
       if (!awsRegion) { showToast('Select an AWS region first', true); return; }
-      var awsEnv = undefined;
+      let awsEnv = undefined;
       if (editing.providerId) {
-        var provider = state.store.providers.find(function(p) { return p.id === editing.providerId; });
+        let provider = state.store.providers.find(function(p) { return p.id === editing.providerId; });
         if (provider && provider.awsEnv) { awsEnv = provider.awsEnv; }
       }
       btn.className = 'btn-test testing';
       btn.textContent = 'Testing';
       vscode.postMessage({ type: 'testBedrockModel', awsProfile: awsProfile, awsRegion: awsRegion, awsEnv: awsEnv, modelId: modelId, slot: slot });
     } else {
-      var baseUrl = document.getElementById('provider-proxy-url').value.trim();
+      let baseUrl = document.getElementById('provider-proxy-url').value.trim();
       if (!baseUrl) { showToast('Enter a Base URL first', true); return; }
-      var credMode = (document.querySelector('[data-pill="proxy-auth"].sel') || {}).dataset?.val || 'apikey';
-      var cred = document.getElementById('provider-proxy-credential').value.trim();
-      var apiKey = credMode === 'apikey' ? cred : '';
-      var authToken = credMode === 'authtoken' ? cred : '';
+      let credMode = (document.querySelector('[data-pill="proxy-auth"].sel') || {}).dataset?.val || 'apikey';
+      let cred = document.getElementById('provider-proxy-credential').value.trim();
+      let apiKey = credMode === 'apikey' ? cred : '';
+      let authToken = credMode === 'authtoken' ? cred : '';
       btn.className = 'btn-test testing';
       btn.textContent = 'Testing';
       vscode.postMessage({ type: 'testModel', baseUrl: baseUrl, apiKey: apiKey, authToken: authToken, modelId: modelId, slot: slot });
@@ -2143,31 +2277,31 @@ console.log('[WEBVIEW] Script loaded');
 
   // Reset test pill when the model selection changes (combobox option click, typing, or plain input edit)
   function resetTestPillForInput(inputEl) {
-    var slot = SLOT_HINTS[inputEl.id];
+    let slot = SLOT_HINTS[inputEl.id];
     if (!slot) { return; }
-    var btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
+    let btn = document.querySelector('.btn-test[data-slot="' + slot + '"]');
     if (btn) { btn.className = 'btn-test'; btn.textContent = 'Test'; btn.title = ''; }
   }
   document.addEventListener('click', function(e) {
-    var opt = e.target.closest('.combobox-option');
+    let opt = e.target.closest('.combobox-option');
     if (!opt) { return; }
-    var inputEl = opt.closest('.combobox') && opt.closest('.combobox').querySelector('input');
+    let inputEl = opt.closest('.combobox') && opt.closest('.combobox').querySelector('input');
     if (!inputEl) { return; }
     // AWS profile change affects all test results
     if (inputEl.id === 'provider-aws-profile') { resetAllTestPills(); }
     else { resetTestPillForInput(inputEl); }
   });
   document.addEventListener('input', function(e) {
-    var inputEl = e.target;
+    let inputEl = e.target;
     if (inputEl && inputEl.id && SLOT_HINTS[inputEl.id]) { resetTestPillForInput(inputEl); }
   });
 
   // Eye-button: toggle password visibility
   document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.btn-eye');
+    let btn = e.target.closest('.btn-eye');
     if (!btn) { return; }
-    var inputId = btn.dataset.reveal;
-    var inputEl = inputId && document.getElementById(inputId);
+    let inputId = btn.dataset.reveal;
+    let inputEl = inputId && document.getElementById(inputId);
     if (!inputEl) { return; }
     // Don't hide when value is op:// — keep visible so user can read the reference
     if (inputEl.value.startsWith('op://') && inputEl.type === 'text') { return; }
@@ -2176,20 +2310,38 @@ console.log('[WEBVIEW] Script loaded');
 
   // Toggle clicks
   document.addEventListener('click', function(e) {
-    var toggle = e.target.closest('.toggle-track');
+    let toggle = e.target.closest('.toggle-track');
     if (!toggle) { return; }
     toggle.classList.toggle('on');
   });
 
-  // Backdrop click closes drawer
+  // Help-banner concept links — jump to the matching section
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('[data-jump]');
+    if (!link) return;
+    e.preventDefault();
+    jumpToSection(link.dataset.jump);
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const link = e.target.closest && e.target.closest('[data-jump]');
+    if (link) { e.preventDefault(); jumpToSection(link.dataset.jump); }
+  });
+
+  // Backdrop click closes drawer (warns if there are unsaved edits)
   document.getElementById('drawer-backdrop')?.addEventListener('click', function() {
-    closeTopDrawer();
+    closeTopDrawerGuarded();
   });
 
   // Escape key closes drawer
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && drawerStack.length > 0) {
-      closeTopDrawer();
+    if (e.key === 'Escape') {
+      // If a confirm dialog is open, Escape cancels it rather than the drawer behind it
+      const conf = document.getElementById('confirm-overlay');
+      if (conf) { conf.remove(); e.stopPropagation(); return; }
+      if (drawerStack.length > 0) {
+        closeTopDrawerGuarded();
+      }
     }
     // Enter/Space on collapsible headers
     if ((e.key === 'Enter' || e.key === ' ') && (e.target.getAttribute('role') === 'button' && e.target.dataset.action === 'toggle-scope' || e.target.dataset.action === 'toggle-panel')) {
@@ -2207,10 +2359,13 @@ console.log('[WEBVIEW] Script loaded');
         state = msg.data;
         dirty = false;
         refreshUI();
+        updateSaveIndicator();
+        setIntroCollapsed(!!state.introCollapsed, false);
         break;
 
       case 'saved':
         dirty = false;
+        updateSaveIndicator();
         showToast('Settings saved');
         break;
 
@@ -2273,7 +2428,7 @@ console.log('[WEBVIEW] Script loaded');
       }
 
       case 'testModelResult': {
-        var testBtn = document.querySelector('.btn-test[data-slot="' + msg.slot + '"]');
+        let testBtn = document.querySelector('.btn-test[data-slot="' + msg.slot + '"]');
         if (testBtn) {
           testBtn.className = 'btn-test ' + (msg.ok ? 'ok' : 'fail');
           testBtn.textContent = msg.ok ? 'OK' : 'Fail';
@@ -2288,18 +2443,18 @@ console.log('[WEBVIEW] Script loaded');
         state.awsConfigInfo = msg.awsConfigInfo || null;
         // Persist awsEnv on the provider in the local store so the drawer reflects it
         if (msg.providerId && msg.envName) {
-          var switchedProvider = state.store.providers.find(function(p) { return p.id === msg.providerId; });
+          let switchedProvider = state.store.providers.find(function(p) { return p.id === msg.providerId; });
           if (switchedProvider) { switchedProvider.awsEnv = msg.envName; }
         }
         renderAwsConfigRow(state.awsConfigInfo, msg.envName);
         // preserveProfile: keep existing selection when reopening a drawer (vs. clearing on user switch)
-        var profileToSelect = msg.preserveProfile || '';
+        let profileToSelect = msg.preserveProfile || '';
         // User-initiated env switch: reset test pills (credentials changed)
         if (!msg.preserveProfile) { resetAllTestPills(); }
-        var awsTarget2 = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
+        let awsTarget2 = document.getElementById('provider-aws-profile-combobox') || document.getElementById('provider-aws-profile');
         if (awsTarget2) {
-          var awsItems2 = state.awsProfiles.map(function(p) { return { value: p, label: p }; });
-          var awsCombo2 = createCombobox('provider-aws-profile', awsItems2, profileToSelect, false);
+          let awsItems2 = state.awsProfiles.map(function(p) { return { value: p, label: p }; });
+          let awsCombo2 = createCombobox('provider-aws-profile', awsItems2, profileToSelect, false);
           awsTarget2.replaceWith(awsCombo2);
         }
         break;
@@ -2314,8 +2469,8 @@ console.log('[WEBVIEW] Script loaded');
       }
 
       case 'testMcpResult': {
-        var btn2 = document.getElementById('btn-test-mcp');
-        var out2 = document.getElementById('mcp-test-output');
+        let btn2 = document.getElementById('btn-test-mcp');
+        let out2 = document.getElementById('mcp-test-output');
         if (btn2) { btn2.textContent = 'Test'; btn2.disabled = false; }
         if (msg.ok) {
           if (out2) out2.textContent = 'Connected ✓\n\nTools (' + msg.tools.length + '):\n' + msg.tools.map(t => '  • ' + t).join('\n');
@@ -2337,16 +2492,43 @@ console.log('[WEBVIEW] Script loaded');
     }
   }
 
+  // Generic confirm dialog. opts: { title, message?, confirmLabel?, cancelLabel?, danger? }
+  function showConfirm(opts, onConfirm) {
+    const existing = document.getElementById('confirm-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'confirm-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:10001;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg-raised);border:1px solid var(--input-border);border-radius:var(--radius);padding:20px 24px;max-width:360px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,0.4);';
+    box.innerHTML =
+      '<div style="font-size:14px;color:var(--fg);margin-bottom:20px;line-height:1.6">' +
+      '<strong>' + escHtml(opts.title) + '</strong>' + (opts.message ? '<br>' + escHtml(opts.message) : '') +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<button class="btn ' + (opts.danger ? 'btn-danger' : 'btn-primary') + '" id="confirm-ok" style="width:100%;display:flex;justify-content:center">' + escHtml(opts.confirmLabel || 'Confirm') + '</button>' +
+      '<button class="btn btn-secondary" id="confirm-cancel" style="width:100%;display:flex;justify-content:center">' + escHtml(opts.cancelLabel || 'Cancel') + '</button>' +
+      '</div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    document.getElementById('confirm-cancel').addEventListener('click', close);
+    document.getElementById('confirm-ok').addEventListener('click', function() { close(); if (onConfirm) onConfirm(); });
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
+  }
+
   // Reminder popup for untested proxy models
   function showTestReminder(callback) {
     // Remove any existing reminder
-    var existing = document.getElementById('test-reminder');
+    let existing = document.getElementById('test-reminder');
     if (existing) existing.remove();
 
-    var overlay = document.createElement('div');
+    let overlay = document.createElement('div');
     overlay.id = 'test-reminder';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:10000;';
-    var box = document.createElement('div');
+    let box = document.createElement('div');
     box.style.cssText = 'background:var(--bg-raised);border:1px solid var(--input-border);border-radius:var(--radius);padding:20px 24px;max-width:360px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,0.4);';
     box.innerHTML =
       '<div style="font-size:14px;color:var(--fg);margin-bottom:20px;line-height:1.6">' +
@@ -2363,12 +2545,18 @@ console.log('[WEBVIEW] Script loaded');
 
     document.getElementById('test-reminder-back').addEventListener('click', function() { overlay.remove(); });
     document.getElementById('test-reminder-save').addEventListener('click', function() {
-      var dismiss = document.getElementById('test-reminder-dismiss').checked;
+      let dismiss = document.getElementById('test-reminder-dismiss').checked;
       overlay.remove();
       callback(dismiss);
     });
     overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
   }
+
+  // Drop a shadow under the pinned toolbar once the page is scrolled
+  window.addEventListener('scroll', function() {
+    const topbar = document.querySelector('.topbar');
+    if (topbar) topbar.classList.toggle('scrolled', window.scrollY > 4);
+  }, { passive: true });
 
   // ─── Init ─────────────────────────────────────────────────────
   vscode.postMessage({ type: 'ready' });

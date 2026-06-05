@@ -114,6 +114,7 @@ export interface PanelState {
   workspacePath?: string;
   workspaceName?: string;
   dismissTestReminder?: boolean;
+  introCollapsed?: boolean;
 }
 
 // ─── Claude Code's own file format (kept for I/O) ───────────────────

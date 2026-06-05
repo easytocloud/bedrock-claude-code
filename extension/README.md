@@ -19,7 +19,7 @@ Presets are then assigned to **scopes**:
 | Scope | Config files written | Dropdown options |
 |---|---|---|
 | **Global** | `~/.claude/settings.json`, `~/.claude.json` | Any preset, or Manual |
-| **Workspace** | `{workspace}/.claude/settings.json`, `.mcp.json` | Any preset, Inherit from Global, or Manual |
+| **VS Code Workspace** | `{workspace}/.claude/settings.json`, `.mcp.json` | Any preset, Inherit from Global, or Manual |
 
 Switching a scope's preset instantly reconfigures Claude Code — no manual file editing required.
 
@@ -41,7 +41,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 2. Create a **Provider** (e.g. AWS Bedrock with your profile and region)
 3. Optionally create **MCP Server Groups** and **Directory Groups**
 4. Create a **Preset** that combines your provider with any groups
-5. Assign the preset to the **Global** or **Workspace** scope
+5. Assign the preset to the **Global** or **VS Code Workspace** scope
 6. Click **Save All**
 
 ### AWS Bedrock
@@ -90,12 +90,13 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 | Model compatibility testing | Per-slot **Test** pill verifies the model speaks Anthropic's `/v1/messages` API; results persisted per provider |
 | 1Password support | Enter `op://Vault/Item/field` as the credential — the extension writes `apiKeyHelper` for Claude Code to resolve at startup |
 | Filterable dropdowns | Type-to-filter combobox for AWS profiles (100+) and model lists (500+ OpenRouter) — slot-matching models grouped first, alphabetical sort, keyboard nav, match highlighting |
-| Quick-switch status bar | Click the status bar item to switch presets for global or workspace scope without opening the panel |
+| Quick-switch status bar | Click the status bar item to switch presets for global or VS Code Workspace scope without opening the panel |
 | Import / Export | Share presets between machines or team members — credentials are scrubbed on export, recipients fill in their own |
 | Draft auto-save | Unsaved changes persist across panel close and are restored on re-open |
-| Dirty indicator | Title bar shows `●` when unsaved changes exist |
-| Drawer-based editing | Slide-out panels for editing all building blocks |
-| Inherit mode | Workspace scope can inherit from global — cleans up workspace files |
+| Dirty indicator | Save All button pulses with a `●` indicator when unsaved changes exist |
+| Drawer-based editing | Slide-out panels for editing all building blocks; closing with unsaved edits prompts a confirmation |
+| Sticky toolbar | Header and intro banner stay visible while scrolling; intro banner can be collapsed |
+| Inherit mode | VS Code Workspace scope can inherit from global — cleans up workspace files |
 | Login prompt suppression | Automatic for Bedrock (always on) and Proxy (on by default, overridable). Sets both env vars in `~/.claude/settings.json` and the `claudeCode.disableLoginPrompt` VS Code setting at the right scope (global or workspace). |
 
 ## Requirements

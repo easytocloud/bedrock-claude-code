@@ -12,7 +12,7 @@ devcontainer, or from a script.
 
 > **Authoring stays in the GUI.** Create and edit providers, presets, MCP groups and
 > directory groups in the VS Code extension. This CLI is for the *operate* verbs:
-> switch, apply, list, current, export, import.
+> switch, apply, sync, list, current, export, import.
 
 ## Install
 
@@ -33,7 +33,8 @@ ccp <command> [options]
 | `ccp list [presets\|providers\|scopes]` | List configured items (default: all). `--json` for machine output. |
 | `ccp current` | Show the active global + workspace preset. |
 | `ccp switch <preset> [scope]` | Set the active preset and write the config files. |
-| `ccp apply` | Re-apply the stored scopes to disk (reprovision a machine / fresh checkout). |
+| `ccp apply` | Re-apply the global + current-workspace scopes (reprovision a machine / fresh checkout). |
+| `ccp sync` | Re-apply **every** known workspace assignment — propagate a changed preset everywhere. `--dry-run` previews without writing. |
 | `ccp export` | Print the store as JSON with **credentials scrubbed** (`-o <file>` to write). |
 | `ccp import <file\|->` | Import a store (`--mode merge` \| `replace`). `-` reads stdin. |
 
@@ -56,7 +57,9 @@ ccp list presets
 ccp switch bedrock-prod               # set the global preset
 ccp switch dev --workspace            # set a preset for the current project
 ccp switch --workspace --inherit      # project goes back to inheriting global
-ccp apply                             # rewrite config files from the stored scopes
+ccp apply                             # rewrite config files for this project
+ccp sync                              # re-apply every workspace after editing a preset
+ccp sync --dry-run                    # preview what sync would rewrite
 ccp export -o presets.json            # share presets (keys replaced with <REPLACE_ME>)
 cat presets.json | ccp import - --mode replace
 ```

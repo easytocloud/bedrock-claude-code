@@ -54,35 +54,35 @@ export function renderPresetDrawer(): string {
     </div>
     <div class="form-group">
       <select id="preset-provider">
-        <option value="">— Select a provider —</option>
+        <option value="">— Select a Provider —</option>
       </select>
-      <button type="button" class="add-inline add-inline-mt" data-action="new-provider-from-preset">+ New provider</button>
+      <button type="button" class="add-inline add-inline-mt" data-action="new-provider-from-preset">+ New Provider</button>
     </div>
     <div id="preset-provider-preview" class="provider-preview" style="display:none"></div>
 
     <div class="divider"></div>
 
-    <!-- MCP groups slot -->
+    <!-- MCP Server Groups slot -->
     <div class="section-heading">
       <span class="section-dot section-dot-purple"></span>
-      MCP SERVERS <span class="section-subtitle">— pick one or more</span>
+      MCP SERVER GROUPS <span class="section-subtitle">— pick one or more</span>
     </div>
     <div id="preset-mcp-groups" class="check-list"></div>
-    <button type="button" class="add-inline" data-action="new-mcp-group-from-preset">+ New MCP server group</button>
+    <button type="button" class="add-inline" data-action="new-mcp-group-from-preset">+ New MCP Server Group</button>
 
     <div class="divider"></div>
 
-    <!-- Directory groups slot -->
+    <!-- Directory Groups slot -->
     <div class="section-heading">
       <span class="section-dot section-dot-green"></span>
-      ADDITIONAL DIRECTORIES <span class="section-subtitle">— pick one or more</span>
+      DIRECTORY GROUPS <span class="section-subtitle">— pick one or more</span>
     </div>
     <div id="preset-dir-groups" class="check-list"></div>
-    <button type="button" class="add-inline" data-action="new-dir-group-from-preset">+ New directory group</button>
+    <button type="button" class="add-inline" data-action="new-dir-group-from-preset">+ New Directory Group</button>
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-preset">Save</button>
+    <button class="btn btn-primary" data-action="save-preset">Done</button>
     <button class="btn btn-ghost" data-action="duplicate-preset">Duplicate</button>
     <span class="spacer"></span>
     <button class="btn btn-danger" data-action="delete-preset">Delete</button>`;
@@ -256,7 +256,7 @@ export function renderProviderDrawer(): string {
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-provider">Save</button>
+    <button class="btn btn-primary" data-action="save-provider">Done</button>
     <button class="btn btn-ghost" data-action="duplicate-provider">Duplicate</button>
     <span class="spacer"></span>
     <button class="btn btn-danger" data-action="delete-provider">Delete</button>`;
@@ -272,7 +272,7 @@ export function renderMcpGroupDrawer(): string {
   const header = `
     <div class="drawer-header-text">
       <div class="drawer-header-title" id="mcp-group-drawer-title">Edit MCP Server Group</div>
-      <div class="drawer-header-subtitle">MCP server group</div>
+      <div class="drawer-header-subtitle">MCP Server Group</div>
     </div>`;
 
   const body = `
@@ -288,7 +288,7 @@ export function renderMcpGroupDrawer(): string {
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-mcp-group">Save</button>
+    <button class="btn btn-primary" data-action="save-mcp-group">Done</button>
     <button class="btn btn-ghost" data-action="duplicate-mcp-group">Duplicate</button>
     <span class="spacer"></span>
     <button class="btn btn-danger" data-action="delete-mcp-group">Delete</button>`;
@@ -356,7 +356,7 @@ export function renderMcpServerDrawer(): string {
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-mcp-server">Save</button>
+    <button class="btn btn-primary" data-action="save-mcp-server">Done</button>
     <span class="spacer"></span>
     <button class="btn btn-ghost" data-action="close-drawer">Cancel</button>`;
 
@@ -371,7 +371,7 @@ export function renderDirectoryGroupDrawer(): string {
   const header = `
     <div class="drawer-header-text">
       <div class="drawer-header-title" id="dir-group-drawer-title">Edit Directory Group</div>
-      <div class="drawer-header-subtitle">Additional directory group</div>
+      <div class="drawer-header-subtitle">Directory Group</div>
     </div>`;
 
   const body = `
@@ -387,7 +387,7 @@ export function renderDirectoryGroupDrawer(): string {
   `;
 
   const footer = `
-    <button class="btn btn-primary" data-action="save-dir-group">Save</button>
+    <button class="btn btn-primary" data-action="save-dir-group">Done</button>
     <button class="btn btn-ghost" data-action="duplicate-dir-group">Duplicate</button>
     <span class="spacer"></span>
     <button class="btn btn-danger" data-action="delete-dir-group">Delete</button>`;

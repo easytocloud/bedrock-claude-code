@@ -261,6 +261,7 @@ export class ClaudeCodeSettingsPanel {
       workspacePath: this._workspaceRoot,
       workspaceName,
       dismissTestReminder: this._context.globalState.get<boolean>('dismissTestReminder') || false,
+      introCollapsed: this._context.globalState.get<boolean>('introCollapsed') || false,
     };
   }
 
