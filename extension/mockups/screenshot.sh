@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Regenerate images/screenshot.png from the HTML mockup using Chrome headless.
-# Run from the repository root:  bash mockups/screenshot.sh
+# Run from anywhere:  bash extension/mockups/screenshot.sh
+# Resolves paths relative to this script's parent (the extension package),
+# so it works in the monorepo regardless of CWD.
 
 set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless=new \
