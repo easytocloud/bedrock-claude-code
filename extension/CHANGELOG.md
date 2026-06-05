@@ -4,6 +4,15 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.19] — 2026-06-05
+
+### Fixed
+- **Toggle not responding** — "Disable prompt caching" and "Standalone mode" toggles in the provider drawer were unclickable after opening the built-in Anthropic provider (which disables them). The `pointer-events: none` lock was never cleared when subsequently opening other providers; now it resets correctly every time a provider drawer opens.
+- **Resolver writes valid env values** — `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` and `DISABLE_AUTOUPDATER` now write `"0"` instead of `""` when standalone mode is off, matching the schema-defined valid values (`"0"` / `"1"`). The `"0"` value is also treated as a no-op at global scope (like `""` was) so it is only written to project settings when needed to override a global `"1"`.
+
+### Changed
+- **Toggle off-state visibility** — toggle track background in off state changed from the panel background color to `var(--vscode-input-border)`, making the on/off states clearly distinguishable across VS Code themes.
+
 ## [0.3.18] — 2026-06-05
 
 ### Added

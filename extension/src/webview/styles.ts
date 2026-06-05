@@ -815,7 +815,7 @@ export function buildStyles(): string {
       position: relative;
       width: 36px;
       height: 20px;
-      background: var(--bg-active);
+      background: var(--vscode-input-border, #666);
       border-radius: 10px;
       cursor: pointer;
       transition: background var(--transition);

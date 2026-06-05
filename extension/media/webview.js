@@ -695,16 +695,14 @@ console.log('[WEBVIEW] Script loaded');
     if (typeVal) rebuildModelSelects(typeVal, provider);
 
     // Disable model selects for default provider (they're fixed to Anthropic defaults)
-    if (isDefaultProv) {
-      ['provider-model-sonnet', 'provider-model-haiku', 'provider-model-opus'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.disabled = true;
-      });
-      const cachingToggleEl = document.querySelector('[data-toggle="provider-disable-caching"]');
-      if (cachingToggleEl) cachingToggleEl.style.pointerEvents = 'none';
-      const nonessentialToggleEl = document.querySelector('[data-toggle="provider-disable-nonessential"]');
-      if (nonessentialToggleEl) nonessentialToggleEl.style.pointerEvents = 'none';
-    }
+    ['provider-model-sonnet', 'provider-model-haiku', 'provider-model-opus'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = isDefaultProv;
+    });
+    const cachingToggleEl = document.querySelector('[data-toggle="provider-disable-caching"]');
+    if (cachingToggleEl) cachingToggleEl.style.pointerEvents = isDefaultProv ? 'none' : '';
+    const nonessentialToggleEl = document.querySelector('[data-toggle="provider-disable-nonessential"]');
+    if (nonessentialToggleEl) nonessentialToggleEl.style.pointerEvents = isDefaultProv ? 'none' : '';
 
     // Restore persisted test state for model pills
     if (provider && provider.modelTestState && (typeVal === 'proxy' || typeVal === 'bedrock')) {

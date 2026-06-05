@@ -134,8 +134,8 @@ export function resolvePreset(
     const shouldDisableLoginPrompt =
       provider.type === 'bedrock' ||
       (provider.type === 'proxy' && provider.disableLoginPrompt !== false);
-    env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = shouldDisableLoginPrompt ? '1' : '';
-    env['DISABLE_AUTOUPDATER'] = shouldDisableLoginPrompt ? '1' : '';
+    env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = shouldDisableLoginPrompt ? '1' : '0';
+    env['DISABLE_AUTOUPDATER'] = shouldDisableLoginPrompt ? '1' : '0';
 
   }
 
@@ -183,6 +183,7 @@ export function resolvePreset(
 function isNoOp(key: string, value: string): boolean {
   if (value === '') { return true; }
   if (key === 'CLAUDE_CODE_USE_BEDROCK' && value === '0') { return true; }
+  if ((key === 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC' || key === 'DISABLE_AUTOUPDATER') && value === '0') { return true; }
   return false;
 }
 
