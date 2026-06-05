@@ -24,7 +24,7 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; style-src ${cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}' ${cspSource};" />
-  <title>Claude Code Settings</title>
+  <title>Claude Code Personae</title>
   <style nonce="${nonce}">${styles}</style>
 </head>
 <body>
@@ -40,7 +40,7 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
             <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#e8973e" transform="matrix(0.60,0.27,-0.60,0.27,128,86)" opacity="0.82"/>
             <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#d97857" transform="matrix(0.40,0.18,-0.40,0.18,128,60)" opacity="0.88"/>
           </svg>
-          <h1>Claude Code Settings</h1>
+          <h1>Claude Code Personae</h1>
         </div>
         <button class="btn btn-secondary btn-sm" data-action="reload">Reload</button>
         <button class="btn btn-secondary btn-sm" data-action="open-file">Open File</button>
@@ -79,7 +79,7 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
   </div>
 
   <!-- Save Toast -->
-  <div class="save-toast" id="save-toast">Settings saved</div>
+  <div class="save-toast" id="save-toast">Saved</div>
 
   <!-- Drawers -->
   ${drawers}

@@ -4,6 +4,15 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.20] — 2026-06-05
+
+### Fixed
+- **Mutually exclusive credentials** — `.claude/settings.json` no longer writes both `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` at the same time. Previously the resolver wrote `ANTHROPIC_AUTH_TOKEN='local'` alongside `ANTHROPIC_API_KEY` in "Local / Other" provider apikey mode (and `'local'` alone in keyless mode) as a login-prompt suppression hack. Now exactly one of the two is written (or neither when keyless), and login suppression is handled solely by `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`. Switching auth modes automatically removes the previously-written variable.
+
+### Changed
+- **Renamed main screen** — the webview heading, tab title, and document title changed from "Claude Code Settings" to "Claude Code Personae" to match the product name. Save confirmation toast shortened to "Saved".
+- **`DISABLE_AUTOUPDATER` no longer managed** — auto-updating the Claude Code CLI is a per-machine lifecycle decision, not a per-preset one. The resolver no longer writes this variable, so switching presets across workspaces never flips your auto-update behavior. Any previously written value is cleaned out on the next save (clean-slate migration). Users who want auto-updates disabled can set this themselves in `~/.claude/settings.json` outside the extension (note: still managed for now, so a future version is planned to leave hand-set values alone).
+
 ## [0.3.19] — 2026-06-05
 
 ### Fixed

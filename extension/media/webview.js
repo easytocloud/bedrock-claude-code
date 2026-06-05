@@ -2364,7 +2364,7 @@ console.log('[WEBVIEW] Script loaded');
       case 'saved':
         dirty = false;
         updateSaveIndicator();
-        showToast('Settings saved');
+        showToast('Saved');
         break;
 
       case 'error':

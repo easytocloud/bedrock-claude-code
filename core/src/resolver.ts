@@ -101,17 +101,19 @@ export function resolvePreset(
         const mode = provider.proxyAuthMode
           ?? (provider.proxyAuthToken ? 'authtoken' : 'apikey'); // eslint-disable-line deprecation/deprecation
 
-        // 1Password: op:// ref → apiKeyHelper (conflicts with AUTH_TOKEN, so skip that)
+        // Mutual exclusivity rule: ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN must never
+        // coexist in settings.json. Exactly one is written based on the user-selected mode,
+        // or neither when keyless. Login-prompt suppression is handled by
+        // CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC (set below), not by a synthetic token.
         if (cred?.startsWith('op://')) {
+          // 1Password ref → apiKeyHelper (no API_KEY/AUTH_TOKEN written)
           apiKeyHelper = `op read '${cred}'`;
         } else if (cred && mode === 'authtoken') {
           env['ANTHROPIC_AUTH_TOKEN'] = cred;
         } else if (cred && mode === 'apikey') {
           env['ANTHROPIC_API_KEY'] = cred;
-          env['ANTHROPIC_AUTH_TOKEN'] = 'local';  // suppresses login prompt
-        } else {
-          env['ANTHROPIC_AUTH_TOKEN'] = 'local';  // keyless — suppress login prompt only
         }
+        // keyless: write neither — disableLoginPrompt toggle controls prompt suppression
         break;
       }
     }
@@ -128,14 +130,16 @@ export function resolvePreset(
       env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel || '';
     }
     env['DISABLE_PROMPT_CACHING'] = provider.disablePromptCaching ? '1' : '';
-    // Bedrock always disables login/nonessential traffic (AWS auth, never needs Anthropic login).
+    // Bedrock always disables nonessential traffic (AWS auth, never needs Anthropic login).
     // Proxy defaults to disabled (most are local/non-Anthropic); explicit false overrides for
     // proxies that forward to Anthropic and need the login flow.
+    // DISABLE_AUTOUPDATER is intentionally NOT written here: auto-update is a CLI-lifecycle
+    // decision that belongs to the user/machine, not a preset. Toggling presets across
+    // workspaces shouldn't flip whether the CLI updates itself.
     const shouldDisableLoginPrompt =
       provider.type === 'bedrock' ||
       (provider.type === 'proxy' && provider.disableLoginPrompt !== false);
     env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = shouldDisableLoginPrompt ? '1' : '0';
-    env['DISABLE_AUTOUPDATER'] = shouldDisableLoginPrompt ? '1' : '0';
 
   }
 
@@ -183,7 +187,7 @@ export function resolvePreset(
 function isNoOp(key: string, value: string): boolean {
   if (value === '') { return true; }
   if (key === 'CLAUDE_CODE_USE_BEDROCK' && value === '0') { return true; }
-  if ((key === 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC' || key === 'DISABLE_AUTOUPDATER') && value === '0') { return true; }
+  if (key === 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC' && value === '0') { return true; }
   return false;
 }
 

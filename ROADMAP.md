@@ -1,38 +1,20 @@
 # Roadmap
 
-This document captures architectural decisions and planned work discussed during development.
+This document captures planned work and open design decisions.
 
 ---
 
-## CLI & Core extraction
+## Configuration as Code
 
-### Context
+### `.ccp` file per project
 
-The extension currently contains all logic for reading/writing `~/.claude/coder-profiles.json` and resolving presets to `settings.json` files. To enable programmatic access — scripting, CI, git hooks — this logic will be extracted into two independent packages:
+A tiny JSON file at the repo root declaring the desired preset:
 
-| Package | npm name | Purpose |
-|---|---|---|
-| `ccp-core` | `@easytocloud/ccp-core` | Shared types, profile store read/write, preset resolver |
-| `ccp-cli` | `@easytocloud/ccp` | Terminal CLI wrapping core |
+```json
+{ "preset": "bedrock-prod" }
+```
 
-The extension will remain unchanged until after the demo, then be refactored to depend on `ccp-core` instead of its own copies of `src/profiles.ts`, `src/resolver.ts`, and `src/types.ts`.
-
-### CLI commands (initial scope)
-
-| Command | Description |
-|---|---|
-| `ccp list` | List all presets |
-| `ccp show <preset>` | Show preset details (provider, MCP groups, directory groups) |
-| `ccp use <preset> [--workspace]` | Assign preset to global or current working directory |
-| `ccp where <preset>` | List all directories where a preset is assigned |
-| `ccp status` | Show all workspace → preset assignments |
-| `ccp sync` | Re-apply all workspace assignments (rewrite `.claude/settings.json` for every known workspace) |
-
-### Source of truth for workspace assignments
-
-`~/.claude/coder-profiles.json` contains a `workspaceScopes` map (`workspacePath → { mode, presetId }`) that already tracks which preset is assigned to which directory. This is the index `ccp where` and `ccp status` query.
-
-**Gap:** `workspaceScopes` only contains workspaces opened in VS Code with a preset assigned via the UI. Repos with manually edited `.claude/settings.json` won't appear. Future `ccp scan` command could crawl configurable root directories to find all deployed settings files and correlate them back to presets.
+No credentials — safe to commit. `ccp apply` reads it before falling back to `workspaceScopes`. Makes preset assignment auditable in git history and enables repos that never open in VS Code (CI, SSH, new teammates) to self-describe their required preset. `ccp scan` can discover repos by looking for this file.
 
 ---
 
@@ -40,16 +22,9 @@ The extension will remain unchanged until after the demo, then be refactored to 
 
 ### Problem
 
-When a preset — or any of its components (provider models, MCP server groups, directory groups) — is updated, all workspaces using that preset have stale `.claude/settings.json` files until they are re-applied.
+When a preset — or any of its components (provider models, MCP server groups, directory groups) — is updated, all workspaces using that preset have stale `.claude/settings.json` files until they are re-applied. `ccp sync` (shipped v0.2.0) covers the manual case.
 
-### Options evaluated
-
-**Option 1 — Pull on demand (`ccp sync`)**
-CLI command re-resolves all presets in `workspaceScopes` and rewrites their `.claude/settings.json` files.
-- `ccp sync` — re-apply all workspace assignments
-- `ccp sync --dry-run` — show what would change without writing
-- Simple, predictable, no background processes. Manual step — easy to forget.
-- **Shipped.** `cmdSync` re-applies the global scope plus every entry in `workspaceScopes`, skips `manual` scopes, clears `inherit` scopes, and reports workspaces whose directory no longer exists. (`ccp apply` remains the global + current-workspace-only variant.)
+### Options remaining
 
 **Option 2 — Extension save triggers re-apply (natural fit)**
 Extend the existing save handler: when a preset is saved in the extension UI, iterate all `workspaceScopes` entries and re-apply to every known workspace path (not just the current one).
@@ -71,15 +46,55 @@ Long-running process watches `~/.claude/coder-profiles.json` for changes and re-
 
 ### Recommended path
 
-1. Ship `ccp sync` in the CLI (Option 1) — covers manual and scripted workflows
-2. Extend extension save to re-apply all workspaces (Option 2) — post-demo refactor
-3. `ccp watch` as a `launchd` agent (Option 3) — separate workstream
-4. `ccp init-hooks` for git hook installation (Option 4) — pairs well with Option 3
+1. Extend extension save to re-apply all workspaces (Option 2) — post-demo refactor
+2. `ccp watch` as a `launchd` agent (Option 3) — separate workstream
+3. `ccp init-hooks` for git hook installation (Option 4) — pairs well with Option 3
+
+---
+
+## CLI completeness
+
+### Headless setup
+
+- **`ccp init`** — interactive wizard: pick provider type, fill in credentials, name the preset, assign to current directory. Covers the "new machine" case without opening VS Code.
+- **`ccp validate`** — verify all presets in the store resolve correctly (provider exists, MCP groups and dir groups exist, no broken references). Exits non-zero — designed for CI.
+- **`ccp diagnose`** — health check: reach each provider's endpoint, verify MCP server commands exist on PATH, check AWS profile is valid.
+
+### Output formats
+
+- **`ccp export --format env`** — emit shell export statements (`export AWS_PROFILE=prod AWS_REGION=eu-west-1 ...`) so a script can `eval $(ccp export --format env --preset bedrock-prod)` without touching any config files. Useful for one-shot commands and CI.
+
+---
+
+## Team / multi-machine sharing
+
+- **`ccp sync --from <git-url|file>`** — pull a shared "team profiles" repo, merge structure into local store, leave credentials untouched. New team members run this once to get the full preset catalogue; they supply their own credentials. Builds on the existing import-merge logic.
+- **Diff on import** — before `--mode replace`, show a structured diff of what would change (presets added/removed/modified), not a raw JSON diff.
+
+---
+
+## Observability
+
+- **`ccp history`** — append-only log of preset applications (`~/.claude/ccp-history.jsonl`) with timestamps and preset versions. Answers: "when did I last apply `bedrock-prod` here, and was it the current version?"
+- **Diff before Save All** — collapsible preview in the extension showing exactly what will be written to `settings.json` and `.mcp.json` before committing. Currently a black box.
+
+---
+
+## Scale (when presets multiply)
+
+- **Preset tags** — free-form `tags: ["bedrock", "prod", "eu"]` on presets; filter/group in the GUI and via `ccp list --tag prod`.
+- **`ccp diff <preset-a> <preset-b>`** — structural diff between two presets: provider, models, MCP groups, directory groups.
+- **Search in the preset grid** — filter input in the VS Code panel, essential past ~15 presets.
+
+---
+
+## MCP depth
+
+- **MCP server health check** — "Test" button per MCP server: spawn the process, send a `tools/list` JSON-RPC call, report discovered tools. Same UX as the existing model test pills.
+- **MCP server discovery** — scan npm global packages for `@modelcontextprotocol/server-*` and `mcp-server-*` naming conventions; offer to add found servers automatically.
 
 ---
 
 ## Future ideas
 
 - `ccp scan [--root ~/Developer]` — crawl directories to find all deployed `.claude/settings.json` files and correlate back to presets; surfaces repos not tracked in `workspaceScopes`
-- `ccp export / import` — same as extension UI export/import, credential-scrubbed
-- Homebrew formula for `ccp` — `brew install easytocloud/tap/ccp`

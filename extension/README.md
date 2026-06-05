@@ -37,7 +37,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 
 ## Getting Started
 
-1. Open the Command Palette → **Open Claude Code Settings**
+1. Open the Command Palette → **Open Claude Code Personae**
 2. Create a **Provider** (e.g. AWS Bedrock with your profile and region)
 3. Optionally create **MCP Server Groups** and **Directory Groups**
 4. Create a **Preset** that combines your provider with any groups

@@ -153,8 +153,8 @@ function migrateExistingSettings(workspaceRoot: string | undefined): ProfileStor
 // Panel class
 // ---------------------------------------------------------------------------
 
-const PANEL_TITLE = 'Claude Code — Settings';
-const PANEL_TITLE_DIRTY = 'Claude Code — Settings ●';
+const PANEL_TITLE = 'Claude Code Personae';
+const PANEL_TITLE_DIRTY = 'Claude Code Personae ●';
 
 export class ClaudeCodeSettingsPanel {
   public static currentPanel: ClaudeCodeSettingsPanel | undefined;
@@ -726,7 +726,7 @@ export class ClaudeCodeSettingsPanel {
             this._syncVsCodeLoginSetting(draft);
             refreshStatusBar();
             ClaudeCodeSettingsPanel._clearDraft();
-            vscode.window.showInformationMessage('Settings saved.');
+            vscode.window.showInformationMessage('Saved.');
           } else if (choice === 'Discard') {
             ClaudeCodeSettingsPanel._clearDraft();
           }
