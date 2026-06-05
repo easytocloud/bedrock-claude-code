@@ -1,6 +1,6 @@
 {
   "name": "@easytocloud/claude-personae",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "CLI to switch Claude Code provider presets (AWS Bedrock / Anthropic / proxy) — companion to the Claude Code Personae VS Code extension. Operates on the same ~/.claude profile store.",
   "license": "MIT",
   "repository": {
