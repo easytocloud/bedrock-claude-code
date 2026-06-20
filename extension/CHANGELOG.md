@@ -4,6 +4,11 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.22] — 2026-06-20
+
+### Changed
+- **README restructured around four use cases** — Marketplace listing now leads with "One Claude Code. Every backend." and a Use-it-when table covering Anthropic Direct, AWS Bedrock, local models (Ollama / LM Studio / oMLX / vLLM), and proxies/gateways (OpenRouter / LiteLLM). The provider-by-provider docs are split into separate **Local models** and **Proxies and gateways** sections so on-device backends aren't lumped together with cloud gateways. No functional changes.
+
 ## [0.3.21] — 2026-06-20
 
 ### Added

@@ -1,14 +1,25 @@
 # Claude Code Personae
 
-A VS Code extension for managing [Claude Code](https://docs.anthropic.com/en/docs/claude-code) configurations through composable, reusable presets.
+**One Claude Code. Every backend.** Point [Claude Code](https://docs.anthropic.com/en/docs/claude-code) at Anthropic, AWS Bedrock, a local model running on your own machine, or a proxy like OpenRouter — and switch in a single click.
 
 ![Claude Code Personae screenshot](images/screenshot.png)
 
+## Four ways to run Claude Code
+
+| Backend | Use it when |
+|---|---|
+| **Anthropic Direct** | You want the latest Claude models from the official API — Max/Pro login, or an `sk-ant-…` key from console.anthropic.com. |
+| **AWS Bedrock** | You're billed through AWS, need a specific region, or your workplace requires it. Full support for named profiles, regions, auth-refresh, and [aws-envs](https://github.com/easytocloud/aws-envs). |
+| **Local models** | You want everything on-device — no API key, no telemetry, no data leaving the laptop. **Ollama**, **LM Studio**, **oMLX**, and **vLLM** all work out of the box. |
+| **Proxies / Gateways** | You want to mix Anthropic models with OpenAI, Llama, or anything else through a single API. **OpenRouter** and **LiteLLM** are first-class; any custom Anthropic-compatible endpoint also works. |
+
+Each combination of backend + MCP servers + allowed directories is a **Preset** you build once and apply globally or per workspace. Mix and match freely — "Bedrock for client work, Ollama offline, OpenRouter for niche models" — and switch from the VS Code status bar.
+
 ## Concept
 
-Instead of editing JSON files by hand, this extension lets you build **presets** from three types of building blocks:
+Build **presets** from three types of building blocks:
 
-- **Providers** — API backends: Anthropic Direct, or a 3rd-party endpoint (Amazon Bedrock, OpenRouter, Ollama, LM Studio, oMLX, vLLM, LiteLLM, or a custom Anthropic-compatible proxy)
+- **Providers** — the backend (Anthropic, Bedrock, a local server, or a proxy). The provider drawer offers two top-level choices — **Anthropic** or **3rd party** — with a curated dropdown for the rest.
 - **MCP Server Groups** — named collections of MCP servers
 - **Directory Groups** — additional directories Claude Code may access
 
@@ -63,13 +74,24 @@ The provider drawer has two top-level types — **Anthropic** and **3rd party**.
 - Claude Code's login/logout commands are automatically disabled when using Bedrock
 - If `$AWS_CONFIG_FILE` is set or `~/.aws/config` is a symlink, the resolved config path is shown as **AWS Config** (read-only). If you use [easytocloud aws-envs](https://github.com/easytocloud/aws-envs), an **AWS Env** dropdown appears instead — each provider stores its own env selection in `coder-profiles.json`, so different providers can point to different AWS environments independently
 
-### OpenRouter, Ollama, LM Studio, oMLX, vLLM, LiteLLM
+### Local models — Ollama, LM Studio, oMLX, vLLM
 
-- Pick **3rd party**, then choose the matching entry from the Provider dropdown
-- The Base URL is pre-filled with the catalog default; host and port stay editable (Ollama on another machine, LM Studio on a non-default port, etc.). Scheme and path are locked — they're the bits users most often get wrong
-- Where the provider expects a key, the credential field is labelled with the provider's own terminology (e.g. **OpenRouter API key**, **oMLX API key**). Local-only servers (Ollama, LM Studio) hide the credential field entirely
+For when you want everything on-device. Pick **3rd party**, then choose the matching entry from the Provider dropdown.
+
+- The Base URL is pre-filled with the catalog default (`http://localhost:11434` for Ollama, `http://localhost:1234/v1` for LM Studio, `http://localhost:8000` for oMLX/vLLM)
+- **Host and port stay editable** — point Ollama at another machine on your LAN, or move LM Studio to a non-default port. Scheme and path are locked
+- Local-only servers (Ollama, LM Studio) have no credential field at all. oMLX and vLLM accept an optional API key
 - Click **Fetch available models** to discover models from `/v1/models`. **Test models** verifies the slot speaks Anthropic's `/v1/messages` API
-- Standalone mode is forced on for these presets — they never need an Anthropic login
+- Standalone mode is forced on — local models never need an Anthropic login
+
+### Proxies and gateways — OpenRouter, LiteLLM
+
+For accessing many model families through a single API.
+
+- Pick **3rd party → OpenRouter** for the public OpenRouter gateway, or **LiteLLM** for a self-hosted gateway
+- The credential field reads **OpenRouter API key** (or **API key** for LiteLLM) — paste the value from the provider's own UI. The extension handles the rest internally
+- The URL is locked to the correct scheme + path so common mistakes (missing `/api`, stray `/v1`) can't break the setup
+- Standalone mode is forced on — these gateways never need an Anthropic login
 
 ### Other / Custom
 

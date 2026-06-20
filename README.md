@@ -1,9 +1,15 @@
 # Claude Code Personae
 
-Composable, preset-based configuration for [Claude Code](https://claude.com/claude-code) —
-switch between Anthropic and a curated set of 3rd-party providers (Amazon Bedrock,
-OpenRouter, Ollama, LM Studio, oMLX, vLLM, LiteLLM, or a custom Anthropic-compatible
-proxy) with reusable MCP server and directory groups.
+**One CLI. Every backend.** Run [Claude Code](https://claude.com/claude-code) against whichever model fits the moment — and switch in a single click.
+
+Claude Code Personae lets you point the same Claude Code CLI at four very different kinds of backends:
+
+- **Anthropic Direct** — Claude.ai Max/Pro login or an `sk-ant-…` API key from console.anthropic.com.
+- **AWS Bedrock** — your AWS account, your region, your bill. Profiles, regions, and aws-envs are first-class.
+- **Local models** on your own hardware — **Ollama**, **LM Studio**, **oMLX**, **vLLM**. No data leaves the machine.
+- **Proxies and gateways** — **OpenRouter**, **LiteLLM**, or any custom Anthropic-compatible endpoint.
+
+Each combination of backend, MCP servers, and allowed directories is a **Preset** you can apply globally or per workspace. Spin up "Bedrock for client work, Ollama for offline experiments, OpenRouter for a model the others don't have" — and switch from the status bar without touching `~/.claude/settings.json` by hand.
 
 This repository is an **npm workspaces monorepo** with three packages:
 
