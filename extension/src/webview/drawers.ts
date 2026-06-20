@@ -6,7 +6,7 @@
  */
 
 import { esc } from './components';
-import { AWS_REGIONS } from '@easytocloud/claude-personae-core';
+import { AWS_REGIONS, KNOWN_PROVIDERS } from '@easytocloud/claude-personae-core';
 
 // ---------------------------------------------------------------------------
 // Drawer shell
@@ -113,11 +113,22 @@ export function renderProviderDrawer(): string {
 
     <div class="form-group">
       <label class="form-label" for="provider-type-control">Provider type</label>
-      <div class="seg-control" id="provider-type-control">
+      <div class="seg-control seg-control-2col" id="provider-type-control">
         <button type="button" class="seg-btn" data-seg="provider-type" data-val="anthropic">Anthropic</button>
-        <button type="button" class="seg-btn" data-seg="provider-type" data-val="bedrock">Bedrock</button>
-        <button type="button" class="seg-btn" data-seg="provider-type" data-val="proxy">Local / Other</button>
+        <button type="button" class="seg-btn" data-seg="provider-type" data-val="thirdparty">3rd party</button>
       </div>
+      <div class="info-box info-box-mt" id="provider-type-info">
+        <strong>Anthropic</strong> — direct API or Claude Max/Pro login.<br>
+        <strong>3rd party</strong> — ${KNOWN_PROVIDERS.filter(p => p.id !== 'custom').map(p => esc(p.label)).join(', ')}, or a custom Anthropic-compatible endpoint.
+      </div>
+    </div>
+
+    <!-- 3rd-party provider dropdown — shown only when "3rd party" is selected -->
+    <div class="form-group" id="provider-thirdparty-row" style="display:none">
+      <label class="form-label" for="provider-thirdparty-preset">Provider</label>
+      <select id="provider-thirdparty-preset">
+        ${KNOWN_PROVIDERS.map(p => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('')}
+      </select>
     </div>
 
     <!-- Anthropic section -->
@@ -173,18 +184,17 @@ export function renderProviderDrawer(): string {
 
     <!-- Local / Other section -->
     <div id="provider-section-proxy" style="display:none">
-      <div class="section-heading">
+      <div class="section-heading" id="provider-proxy-heading">
         <span class="section-dot section-dot-orange"></span>
-        LOCAL / OTHER
+        <span id="provider-proxy-heading-text">3RD PARTY</span>
       </div>
-      <div class="info-box">Works with LiteLLM, OpenRouter, Ollama, vLLM, LM Studio, and any proxy that exposes an Anthropic-compatible API (<code>/v1/messages</code>). Enable Standalone mode below for local models.</div>
       <div class="form-group">
         <label class="form-label" for="provider-proxy-url">Base URL</label>
         <input type="text" id="provider-proxy-url" placeholder="http://localhost:11434" />
       </div>
-      <div class="form-group">
+      <div class="form-group" id="provider-proxy-credential-row">
         <div class="label-row">
-          <label class="form-label" for="proxy-auth-pills">Credential</label>
+          <label class="form-label" for="provider-proxy-credential" id="provider-proxy-credential-label">Credential</label>
           <div class="pill-toggle" id="proxy-auth-pills">
             <button type="button" class="pill-btn sel" data-pill="proxy-auth" data-val="apikey">API Key</button>
             <button type="button" class="pill-btn" data-pill="proxy-auth" data-val="authtoken">Token</button>

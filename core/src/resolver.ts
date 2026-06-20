@@ -14,8 +14,9 @@ import {
   writeProjectSettings,
   getProjectSettingsPath,
 } from './claudeSettings';
-import { writeUserMcpServers } from './claudeJson';
+import { writeUserMcpServers, ensureOnboardingComplete } from './claudeJson';
 import { writeProjectMcpServers } from './mcpJson';
+import { knownProvider, normalizeKnownUrl } from './knownProviders';
 
 // ---------------------------------------------------------------------------
 // Resolved configuration — the flat representation written to Claude Code files
@@ -84,12 +85,26 @@ export function resolvePreset(
         }
         break;
       case 'proxy': {
+        // Resolve which known-provider entry (if any) applies. Hand-edited
+        // stores without proxyPreset default to 'custom' — same behaviour as
+        // before the catalogue existed.
+        const known = knownProvider(provider.proxyPreset ?? 'custom');
+        const isKnown = known && known.id !== 'custom';
+
         let baseUrl = provider.proxyBaseUrl || '';
-        // Strip trailing /v1 (users often paste the full endpoint URL)
-        baseUrl = baseUrl.replace(/\/v1\/?$/, '').replace(/\/+$/, '');
-        // OpenRouter requires /api in the URL path
-        if (/openrouter\.ai/i.test(baseUrl) && !/\/api\b/i.test(baseUrl)) {
-          baseUrl = baseUrl + '/api';
+        if (isKnown && known) {
+          // Catalogue is source of truth for known presets: re-impose scheme + path,
+          // accept whatever host:port the user stored. Belt-and-suspenders against
+          // hand-edited profile stores.
+          baseUrl = normalizeKnownUrl(known, baseUrl);
+        } else {
+          // Custom path: strip trailing /v1 (users often paste the full endpoint URL)
+          baseUrl = baseUrl.replace(/\/v1\/?$/, '').replace(/\/+$/, '');
+          // OpenRouter requires /api — defensive fallback for custom entries that
+          // happen to point at openrouter.ai.
+          if (/openrouter\.ai/i.test(baseUrl) && !/\/api\b/i.test(baseUrl)) {
+            baseUrl = baseUrl + '/api';
+          }
         }
         if (baseUrl) { env['ANTHROPIC_BASE_URL'] = baseUrl; }
 
@@ -98,13 +113,19 @@ export function resolvePreset(
         const cred = provider.proxyCredential
           ?? provider.proxyAuthToken   // eslint-disable-line deprecation/deprecation
           ?? provider.proxyApiKey;     // eslint-disable-line deprecation/deprecation
-        const mode = provider.proxyAuthMode
-          ?? (provider.proxyAuthToken ? 'authtoken' : 'apikey'); // eslint-disable-line deprecation/deprecation
+        // Mode source of truth: the catalogue for known presets, the user's
+        // selection for 'custom', or migration fallback for legacy stores.
+        let mode: 'apikey' | 'authtoken' | 'none';
+        if (isKnown && known?.authMode) {
+          mode = known.authMode;
+        } else {
+          mode = provider.proxyAuthMode
+            ?? (provider.proxyAuthToken ? 'authtoken' : 'apikey'); // eslint-disable-line deprecation/deprecation
+        }
 
         // Mutual exclusivity rule: ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN must never
-        // coexist in settings.json. Exactly one is written based on the user-selected mode,
-        // or neither when keyless. Login-prompt suppression is handled by
-        // CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC (set below), not by a synthetic token.
+        // coexist in settings.json. Exactly one is written based on the resolved mode,
+        // or a placeholder AUTH_TOKEN when the user supplied no credential.
         if (cred?.startsWith('op://')) {
           // 1Password ref → apiKeyHelper (no API_KEY/AUTH_TOKEN written)
           apiKeyHelper = `op read '${cred}'`;
@@ -112,8 +133,12 @@ export function resolvePreset(
           env['ANTHROPIC_AUTH_TOKEN'] = cred;
         } else if (cred && mode === 'apikey') {
           env['ANTHROPIC_API_KEY'] = cred;
+        } else {
+          // Placeholder fallback: a non-empty Authorization header keeps
+          // Claude Code from falling back to its OAuth flow against local
+          // servers that ignore the header anyway (Ollama, LM Studio).
+          env['ANTHROPIC_AUTH_TOKEN'] = 'none';
         }
-        // keyless: write neither — disableLoginPrompt toggle controls prompt suppression
         break;
       }
     }
@@ -131,13 +156,19 @@ export function resolvePreset(
     }
     env['DISABLE_PROMPT_CACHING'] = provider.disablePromptCaching ? '1' : '';
     // Bedrock always disables nonessential traffic (AWS auth, never needs Anthropic login).
-    // Proxy defaults to disabled (most are local/non-Anthropic); explicit false overrides for
-    // proxies that forward to Anthropic and need the login flow.
+    // Known 3rd-party presets (OpenRouter, Ollama, LM Studio, oMLX, vLLM, LiteLLM) are
+    // also force-on — none of them route to Anthropic, so telemetry/login traffic is
+    // always wrong. Only the 'custom' proxy honours the user's Standalone-mode toggle,
+    // since a custom proxy might legitimately forward to Anthropic.
     // DISABLE_AUTOUPDATER is intentionally NOT written here: auto-update is a CLI-lifecycle
     // decision that belongs to the user/machine, not a preset. Toggling presets across
     // workspaces shouldn't flip whether the CLI updates itself.
+    const isKnownProxy = provider.type === 'proxy'
+      && provider.proxyPreset !== undefined
+      && provider.proxyPreset !== 'custom';
     const shouldDisableLoginPrompt =
       provider.type === 'bedrock' ||
+      isKnownProxy ||
       (provider.type === 'proxy' && provider.disableLoginPrompt !== false);
     env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = shouldDisableLoginPrompt ? '1' : '0';
 
@@ -363,6 +394,12 @@ export function applyAllScopes(
   store: ProfileStore,
   workspaceRoot: string | undefined
 ): void {
+  // Onboarding flag: Claude Code shows the OAuth /login wizard when
+  // ~/.claude.json is missing hasCompletedOnboarding or has it false.
+  // Guarantee it's true here so every apply path is structurally safe —
+  // not dependent on every caller remembering to invoke it separately.
+  ensureOnboardingComplete();
+
   // Global scope
   if (store.globalScope.mode === 'preset' && store.globalScope.presetId) {
     const resolved = resolvePreset(store, store.globalScope.presetId);

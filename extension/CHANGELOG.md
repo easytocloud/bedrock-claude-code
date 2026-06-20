@@ -4,6 +4,19 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.21] — 2026-06-20
+
+### Added
+- **Curated 3rd-party provider dropdown** — provider type selector reduced to two top-level buttons (**Anthropic** / **3rd party**). The 3rd-party dropdown carries pre-configured presets for Amazon Bedrock, OpenRouter, Ollama, LM Studio, oMLX, vLLM, LiteLLM, plus an **Other / Custom…** escape hatch. Each known preset locks the URL scheme and path (host:port stays editable for "Ollama on another machine" / "LM Studio on a non-default port" cases) and labels the credential field with the provider's own terminology (e.g. "OpenRouter API key"). The catalogue lives in `core/src/knownProviders.ts` and is shared by webview + resolver, so hand-edited profile stores still resolve correctly.
+
+### Fixed
+- **`/login` prompt no longer appears for 3rd-party providers** — root cause: `~/.claude.json` was sometimes missing `hasCompletedOnboarding: true`. `ensureOnboardingComplete()` is now called from inside `applyAllScopes()` so every apply path (panel save, status-bar quick-switch, CLI `ccp apply`/`sync`, AWS-env switch) writes the flag unconditionally — no longer a per-caller convention.
+- **No-credential local servers no longer trigger OAuth fallback** — when no credential is configured for a `proxy` provider (Ollama, LM Studio), the resolver writes a placeholder `ANTHROPIC_AUTH_TOKEN=none`. The placeholder satisfies Claude Code's Bearer-header check and is ignored by local servers, matching the documented Ollama-with-Claude-Code recipe.
+- **Catalog-driven URL/auth coercion** — `ANTHROPIC_BASE_URL` is normalised to the catalog's scheme + path for known presets even when the stored URL is stale, and `ANTHROPIC_AUTH_TOKEN` vs `ANTHROPIC_API_KEY` is decided by the catalog rather than a user-selected pill. `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` is forced on for every known 3rd-party preset.
+
+### Note
+- **If the `/login` prompt still appears after applying a 3rd-party preset**, click **Save All** in the panel header and **fully quit-and-restart VS Code** (Cmd/Ctrl-Q — a window reload is not enough). Claude Code reads `~/.claude.json` and `~/.claude/settings.json` once at startup, so a session that began before the apply may still trigger OAuth until the IDE process restarts.
+
 ## [0.3.20] — 2026-06-05
 
 ### Fixed

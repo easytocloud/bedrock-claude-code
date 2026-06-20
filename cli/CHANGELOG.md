@@ -4,6 +4,16 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-06-20
+
+### Fixed
+- **`/login` prompt no longer appears for 3rd-party providers** — `applyAllScopes()` now writes `hasCompletedOnboarding: true` to `~/.claude.json` on every invocation, so `ccp apply` / `ccp sync` / `ccp use` / `ccp set` all structurally guarantee the flag is set. Previously this depended on every caller remembering to call `ensureOnboardingComplete()` separately.
+- **No-credential local servers no longer trigger OAuth fallback** — when no credential is configured for a `proxy` provider (Ollama, LM Studio), the resolver writes a placeholder `ANTHROPIC_AUTH_TOKEN=none`. The placeholder satisfies Claude Code's Bearer-header check and is ignored by local servers.
+- **Catalog-driven URL/auth coercion** — `ANTHROPIC_BASE_URL` is normalised to the catalogue's scheme + path for known proxy presets (`openrouter`, `ollama`, `lmstudio`, `omlx`, `vllm`, `litellm`) even when the stored `proxyBaseUrl` is stale, and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` is forced on for every known 3rd-party preset.
+
+### Note
+- **If `claude` still prompts for `/login` after `ccp apply`**, quit-and-restart your terminal session. Claude Code reads `~/.claude.json` once at startup, so a long-running shell or IDE session may carry cached state until the process restarts.
+
 ## [0.2.1] — 2026-06-05
 
 ### Fixed

@@ -7,5 +7,6 @@ export * from './awsConfig';
 export * from './claudeSettings';
 export * from './claudeJson';
 export * from './mcpJson';
+export * from './knownProviders';
 export * from './resolver';
 export * from './transfer';

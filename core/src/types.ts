@@ -27,6 +27,11 @@ export interface ProviderProfile {
   proxyBaseUrl?: string;
   proxyCredential?: string;          // The key or token value
   proxyAuthMode?: 'apikey' | 'authtoken'; // How to send it: x-api-key or Bearer
+  /** Which entry from the known-providers catalogue was selected in the UI.
+   *  Drives URL/auth field labelling and resolver-side coercion. Undefined on
+   *  legacy proxy records is treated as 'custom'. Resolver still keys
+   *  behavioural switches off `type`, not this field. */
+  proxyPreset?: 'bedrock' | 'openrouter' | 'ollama' | 'lmstudio' | 'omlx' | 'vllm' | 'litellm' | 'custom';
   /** @deprecated use proxyCredential + proxyAuthMode */
   proxyApiKey?: string;
   /** @deprecated use proxyCredential + proxyAuthMode */

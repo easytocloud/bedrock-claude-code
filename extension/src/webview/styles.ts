@@ -845,6 +845,7 @@ export function buildStyles(): string {
       margin-bottom: 16px;
       line-height: 1.5;
     }
+    .info-box-mt { margin-top: 8px; }
 
     /* ─── Divider ───────────────────────────────────────────────────── */
     .divider {

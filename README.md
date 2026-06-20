@@ -1,8 +1,9 @@
 # Claude Code Personae
 
 Composable, preset-based configuration for [Claude Code](https://claude.com/claude-code) —
-switch between Anthropic, AWS Bedrock, and proxy (local/other) providers with reusable
-MCP server and directory groups.
+switch between Anthropic and a curated set of 3rd-party providers (Amazon Bedrock,
+OpenRouter, Ollama, LM Studio, oMLX, vLLM, LiteLLM, or a custom Anthropic-compatible
+proxy) with reusable MCP server and directory groups.
 
 This repository is an **npm workspaces monorepo** with three packages:
 

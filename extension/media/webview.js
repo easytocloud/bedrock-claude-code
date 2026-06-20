@@ -312,7 +312,13 @@ console.log('[WEBVIEW] Script loaded');
   // ─── Shared chip renderers (used by scope blocks AND building block panels) ──
   function providerTypeLabel(p) {
     if (p.type === 'bedrock' && p.awsProfile) return p.type + ' · ' + p.awsProfile;
-    if (p.type === 'proxy' && p.proxyBaseUrl) return p.proxyBaseUrl;
+    if (p.type === 'proxy') {
+      // Prefer the catalogue label when the provider tracks a known preset.
+      let list = (window.__DATA__ && window.__DATA__.KNOWN_PROVIDERS) || [];
+      let known = p.proxyPreset ? list.find(function(k) { return k.id === p.proxyPreset && k.id !== 'custom'; }) : null;
+      if (known) return known.label + (p.proxyBaseUrl ? ' · ' + p.proxyBaseUrl : '');
+      if (p.proxyBaseUrl) return p.proxyBaseUrl;
+    }
     return p.type;
   }
 
@@ -601,11 +607,26 @@ console.log('[WEBVIEW] Script loaded');
     document.getElementById('provider-drawer-title').textContent = isNew ? 'New Provider' : escHtml(provider.name);
     document.getElementById('provider-name').value = provider ? provider.name : '';
 
-    // Set type selector
+    // Resolve internal type → top-level segmented control value (anthropic | thirdparty)
+    // and the 3rd-party dropdown selection.
     const typeVal = provider ? provider.type : '';
+    const topSegVal = typeVal === 'anthropic' ? 'anthropic'
+      : (typeVal === 'bedrock' || typeVal === 'proxy') ? 'thirdparty'
+      : '';
     document.querySelectorAll('[data-seg="provider-type"]').forEach(btn => {
-      btn.classList.toggle('sel', btn.dataset.val === typeVal);
+      btn.classList.toggle('sel', btn.dataset.val === topSegVal);
     });
+
+    // 3rd-party dropdown: bedrock → 'bedrock', proxy with known preset → that id,
+    // legacy proxy with no preset → 'custom'.
+    let presetId;
+    if (typeVal === 'bedrock') presetId = 'bedrock';
+    else if (typeVal === 'proxy') presetId = provider && provider.proxyPreset ? provider.proxyPreset : 'custom';
+    else presetId = '';
+    const presetSelect = document.getElementById('provider-thirdparty-preset');
+    if (presetSelect && presetId) presetSelect.value = presetId;
+    const thirdpartyRow = document.getElementById('provider-thirdparty-row');
+    if (thirdpartyRow) thirdpartyRow.style.display = topSegVal === 'thirdparty' ? '' : 'none';
 
     // Fill fields
     if (provider) {
@@ -692,6 +713,10 @@ console.log('[WEBVIEW] Script loaded');
     if (saveBtn) saveBtn.textContent = isNew ? 'Create Provider' : 'Done';
 
     showProviderSections(typeVal);
+    // Lock fields per the catalog when this is a known 3rd-party preset.
+    if (typeVal === 'proxy' || typeVal === 'bedrock') {
+      applyKnownProviderToForm(knownProviderById(presetId));
+    }
     if (typeVal) rebuildModelSelects(typeVal, provider);
 
     // Disable model selects for default provider (they're fixed to Anthropic defaults)
@@ -721,6 +746,85 @@ console.log('[WEBVIEW] Script loaded');
     openDrawer('provider');
   }
 
+  // Look up a known-provider entry from the catalog injected by the extension.
+  function knownProviderById(id) {
+    let list = (window.__DATA__ && window.__DATA__.KNOWN_PROVIDERS) || [];
+    return list.find(function(p) { return p.id === id; });
+  }
+
+  // Resolve the effective provider type from the top-level segmented control
+  // plus the 3rd-party dropdown. UI value 'thirdparty' resolves to either
+  // 'bedrock' or 'proxy' based on the dropdown selection.
+  function effectiveProviderType(topSeg, presetId) {
+    if (topSeg === 'anthropic') return 'anthropic';
+    if (topSeg !== 'thirdparty') return topSeg || '';
+    let known = knownProviderById(presetId);
+    return known ? known.type : 'proxy';
+  }
+
+  // Coerce a user-typed URL to the known preset's scheme + path while keeping
+  // host:port. Mirrors core/src/knownProviders.ts#normalizeKnownUrl exactly.
+  function normalizeKnownUrlJs(p, raw) {
+    let trimmed = (raw || '').trim();
+    if (!trimmed) return p.defaultUrl || '';
+    if (p.id === 'custom' || !p.scheme) return trimmed;
+    let withoutScheme = trimmed.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+    let noTrailingSlash = withoutScheme.replace(/\/+$/, '');
+    let slashIdx = noTrailingSlash.indexOf('/');
+    let hostPort = slashIdx === -1 ? noTrailingSlash : noTrailingSlash.slice(0, slashIdx);
+    if (!hostPort) return p.defaultUrl || '';
+    return p.scheme + '://' + hostPort + (p.path || '');
+  }
+
+  // Apply a known-provider entry to the proxy-section form fields. Locks
+  // (or hides) UI elements as required and pre-fills the URL if the field
+  // is empty. Pass null/undefined `known` for the Custom path.
+  function applyKnownProviderToForm(known) {
+    let proxyCredRow = document.getElementById('provider-proxy-credential-row');
+    let proxyCredLabel = document.getElementById('provider-proxy-credential-label');
+    let proxyCredInput = document.getElementById('provider-proxy-credential');
+    let authPills = document.getElementById('proxy-auth-pills');
+    let standaloneRow = document.getElementById('provider-standalone-row');
+    let urlInput = document.getElementById('provider-proxy-url');
+    let headingText = document.getElementById('provider-proxy-heading-text');
+
+    if (!known || known.id === 'custom') {
+      // Custom path: original behaviour. All fields editable, pill-toggle visible.
+      if (proxyCredRow) proxyCredRow.style.display = '';
+      if (proxyCredLabel) proxyCredLabel.textContent = 'Credential';
+      if (authPills) authPills.style.display = '';
+      if (standaloneRow) standaloneRow.style.display = '';
+      if (headingText) headingText.textContent = '3RD PARTY';
+      return;
+    }
+
+    // Known preset: hide pill toggle (catalog decides), hide standalone toggle
+    // (resolver forces on for known presets), label the credential field with
+    // the catalog's friendly term, hide credential entirely when authMode='none'.
+    if (headingText) headingText.textContent = (known.label || '').toUpperCase();
+    if (authPills) authPills.style.display = 'none';
+    if (standaloneRow) standaloneRow.style.display = 'none';
+
+    if (known.authMode === 'none') {
+      if (proxyCredRow) proxyCredRow.style.display = 'none';
+    } else {
+      if (proxyCredRow) proxyCredRow.style.display = '';
+      if (proxyCredLabel) proxyCredLabel.textContent = known.credentialLabel || 'API key';
+    }
+
+    // Pre-fill URL if it's empty; never stomp a saved value (user may have set
+    // a custom host:port on a previous save).
+    if (urlInput && !urlInput.value.trim() && known.defaultUrl) {
+      urlInput.value = known.defaultUrl;
+    }
+
+    // Snap whatever's in the URL to the catalog's scheme+path.
+    if (urlInput && urlInput.value.trim()) {
+      urlInput.value = normalizeKnownUrlJs(known, urlInput.value);
+    }
+    if (proxyCredInput) proxyCredInput.placeholder = 'sk-… or op://Vault/Item/field';
+  }
+
   function showProviderSections(type) {
     document.getElementById('provider-section-anthropic').style.display = type === 'anthropic' ? '' : 'none';
     document.getElementById('provider-section-bedrock').style.display = type === 'bedrock' ? '' : 'none';
@@ -737,10 +841,11 @@ console.log('[WEBVIEW] Script loaded');
       b.style.display = showTest ? '' : 'none';
       b.className = 'btn-test'; b.textContent = 'Test'; b.title = '';
     });
-    // Standalone mode toggle only shown for proxy — bedrock is always-on (handled in resolver),
-    // anthropic never applies.
+    // Standalone mode toggle: only shown for Custom 3rd-party (handled by
+    // applyKnownProviderToForm). Hide here for anthropic; the known-provider
+    // hook controls it for the proxy path.
     let standaloneRow = document.getElementById('provider-standalone-row');
-    if (standaloneRow) standaloneRow.style.display = type === 'proxy' ? '' : 'none';
+    if (standaloneRow && type === 'anthropic') standaloneRow.style.display = 'none';
   }
 
   function showProxyAuthSection() { /* no-op: single credential field, pill only affects semantics */ }
@@ -815,11 +920,15 @@ console.log('[WEBVIEW] Script loaded');
       });
     } else {
       statusEl.textContent = 'Found ' + ids.length + ' models — select below';
-      const typeBtn = document.querySelector('[data-seg="provider-type"].sel');
       const currentProvider = editing.providerId
         ? state.store.providers.find(p => p.id === editing.providerId)
         : null;
-      rebuildModelSelects(typeBtn ? typeBtn.dataset.val : 'proxy', currentProvider);
+      // Resolve through the (top-seg, dropdown) pair — the raw seg value
+      // is now 'anthropic' | 'thirdparty', not the internal type.
+      const topBtn = document.querySelector('[data-seg="provider-type"].sel');
+      const presetSel = document.getElementById('provider-thirdparty-preset');
+      const effType = effectiveProviderType(topBtn ? topBtn.dataset.val : '', presetSel ? presetSel.value : '') || 'proxy';
+      rebuildModelSelects(effType, currentProvider);
     }
   }
 
@@ -1256,11 +1365,16 @@ console.log('[WEBVIEW] Script loaded');
     }
 
     const selBtn = document.querySelector('[data-seg="provider-type"].sel');
-    const type = selBtn ? selBtn.dataset.val : '';
-    if (!type) {
+    const topSeg = selBtn ? selBtn.dataset.val : '';
+    if (!topSeg) {
       showToast('Please select a provider type', true);
       return;
     }
+    const presetSel = document.getElementById('provider-thirdparty-preset');
+    const proxyPresetId = topSeg === 'thirdparty' ? (presetSel ? presetSel.value : '') : '';
+    // Resolve internal type from the (top-seg, dropdown) pair.
+    const type = effectiveProviderType(topSeg, proxyPresetId);
+    const knownForSave = knownProviderById(proxyPresetId);
 
     if (type === 'bedrock' && !getModelValue('provider-aws-profile').trim()) {
       showFieldError('provider-aws-profile', 'AWS profile is required for Bedrock');
@@ -1294,9 +1408,27 @@ console.log('[WEBVIEW] Script loaded');
         let sel = document.getElementById('provider-aws-env');
         return (sel && sel.offsetParent !== null) ? (sel.value || undefined) : undefined;
       })(),
-      proxyBaseUrl: document.getElementById('provider-proxy-url').value || undefined,
+      proxyBaseUrl: (function() {
+        let raw = document.getElementById('provider-proxy-url').value || '';
+        // Defence in depth: re-impose catalog scheme + path on save in case the user
+        // bypassed the blur normalisation by clicking Save directly.
+        if (knownForSave && knownForSave.id !== 'custom') {
+          let norm = normalizeKnownUrlJs(knownForSave, raw);
+          return norm || undefined;
+        }
+        return raw || undefined;
+      })(),
+      proxyPreset: type === 'bedrock' ? 'bedrock'
+        : (type === 'proxy' ? (proxyPresetId || 'custom') : undefined),
       proxyCredential: document.getElementById('provider-proxy-credential').value || undefined,
-      proxyAuthMode: (document.querySelector('[data-pill="proxy-auth"].sel') || {}).dataset?.val || 'apikey',
+      proxyAuthMode: (function() {
+        // For known proxy presets, the catalog dictates the auth mode.
+        if (knownForSave && knownForSave.id !== 'custom' && knownForSave.authMode && knownForSave.authMode !== 'none') {
+          return knownForSave.authMode;
+        }
+        // Custom: read the user's pill selection.
+        return (document.querySelector('[data-pill="proxy-auth"].sel') || {}).dataset?.val || 'apikey';
+      })(),
       primaryModel: getModelValue('provider-model-sonnet'),
       smallFastModel: getModelValue('provider-model-haiku'),
       opusModel: getModelValue('provider-model-opus'),
@@ -2079,8 +2211,10 @@ console.log('[WEBVIEW] Script loaded');
       updateProviderPreview();
     }
     if (target.id === 'provider-aws-region') {
-      const typeBtn = document.querySelector('[data-seg="provider-type"].sel');
-      if (typeBtn && typeBtn.dataset.val === 'bedrock') {
+      const topBtn = document.querySelector('[data-seg="provider-type"].sel');
+      const presetSel = document.getElementById('provider-thirdparty-preset');
+      const effType = effectiveProviderType(topBtn ? topBtn.dataset.val : '', presetSel ? presetSel.value : '');
+      if (effType === 'bedrock') {
         const provider = editing.providerId ? state.store.providers.find(p => p.id === editing.providerId) : null;
         rebuildModelSelects('bedrock', provider);
       }
@@ -2113,24 +2247,37 @@ console.log('[WEBVIEW] Script loaded');
     segBtn.classList.add('sel');
 
     if (segName === 'provider-type') {
-      showProviderSections(segVal);
       const provider = editing.providerId ? state.store.providers.find(p => p.id === editing.providerId) : null;
-      rebuildModelSelects(segVal, provider);
+      const thirdpartyRow = document.getElementById('provider-thirdparty-row');
+      if (thirdpartyRow) thirdpartyRow.style.display = segVal === 'thirdparty' ? '' : 'none';
+
+      // Default the dropdown selection when entering 3rd-party for the first time.
+      const presetSelect = document.getElementById('provider-thirdparty-preset');
+      if (segVal === 'thirdparty' && presetSelect && !presetSelect.value) {
+        // Carry over existing proxyPreset if any, otherwise default to OpenRouter
+        // (the most common cloud 3rd-party setup).
+        presetSelect.value = (provider && provider.proxyPreset) || 'openrouter';
+      }
+
+      const effType = effectiveProviderType(segVal, presetSelect ? presetSelect.value : '');
+      showProviderSections(effType);
+      if (effType === 'proxy' || effType === 'bedrock') {
+        applyKnownProviderToForm(knownProviderById(presetSelect ? presetSelect.value : ''));
+      }
+      rebuildModelSelects(effType, provider);
 
       // Update icon
       const icon = document.getElementById('provider-drawer-icon');
       if (icon) {
-        icon.textContent = segVal === 'anthropic' ? '☁️' : segVal === 'bedrock' ? '🔶' : '🔗';
+        icon.textContent = effType === 'anthropic' ? '☁️' : effType === 'bedrock' ? '🔶' : '🔗';
       }
 
-      // When switching to proxy, default standalone mode on (user can override)
+      // Standalone toggle defaults to on for the Custom path; resolver forces it
+      // on for all known presets regardless of toggle state.
       const nonessentialToggle = document.querySelector('[data-toggle="provider-disable-nonessential"]');
-      if (nonessentialToggle && segVal === 'proxy') {
-        // Keep existing value if the provider was already proxy, otherwise default on
+      if (nonessentialToggle && effType === 'proxy') {
         const alreadyProxy = provider && provider.type === 'proxy';
-        if (!alreadyProxy) {
-          nonessentialToggle.classList.add('on');
-        }
+        if (!alreadyProxy) nonessentialToggle.classList.add('on');
       }
     }
     if (segName === 'mcp-transport') {
@@ -2152,19 +2299,41 @@ console.log('[WEBVIEW] Script loaded');
     }
   });
 
-  // Auto-detect OpenRouter URL and switch to Auth Token mode; invalidate tests on URL change
+  // Invalidate model-test pills whenever the URL is edited.
   document.getElementById('provider-proxy-url')?.addEventListener('input', function() {
     resetAllTestPills();
-    let url = this.value;
-    if (/openrouter\.ai/i.test(url)) {
-      let pills = document.querySelectorAll('[data-pill="proxy-auth"]');
-      let alreadyToken = false;
-      pills.forEach(function(b) { if (b.dataset.val === 'authtoken' && b.classList.contains('sel')) { alreadyToken = true; } });
-      if (!alreadyToken) {
-        pills.forEach(function(b) { b.classList.toggle('sel', b.dataset.val === 'authtoken'); });
-        showProxyAuthSection('authtoken');
-      }
-    }
+  });
+
+  // On blur, snap a known-preset URL back to the catalog's scheme + path,
+  // keeping whatever host:port the user entered.
+  document.getElementById('provider-proxy-url')?.addEventListener('blur', function() {
+    let presetSelect = document.getElementById('provider-thirdparty-preset');
+    let presetId = presetSelect ? presetSelect.value : '';
+    let known = knownProviderById(presetId);
+    if (!known || known.id === 'custom') return;
+    this.value = normalizeKnownUrlJs(known, this.value);
+  });
+
+  // 3rd-party provider dropdown — re-apply catalog locks on change.
+  document.getElementById('provider-thirdparty-preset')?.addEventListener('change', function() {
+    let presetId = this.value;
+    let known = knownProviderById(presetId);
+    if (!known) return;
+    const provider = editing.providerId ? state.store.providers.find(p => p.id === editing.providerId) : null;
+    const effType = known.type;
+
+    // Reset the URL field so the catalog's default is pre-filled cleanly
+    // (avoids carrying a previous preset's URL over to the new one).
+    const urlInput = document.getElementById('provider-proxy-url');
+    if (urlInput && effType === 'proxy') urlInput.value = known.defaultUrl || '';
+
+    showProviderSections(effType);
+    applyKnownProviderToForm(known);
+    rebuildModelSelects(effType, provider);
+    resetAllTestPills();
+
+    const icon = document.getElementById('provider-drawer-icon');
+    if (icon) icon.textContent = effType === 'bedrock' ? '🔶' : '🔗';
   });
 
   // Update op:// hint for the credential field
@@ -2236,9 +2405,11 @@ console.log('[WEBVIEW] Script loaded');
     let modelId = getModelValue(selectId);
     if (!modelId) { showToast('Select a model first', true); return; }
 
-    // Determine active provider type
+    // Determine active provider type via the (top-seg, dropdown) pair —
+    // the raw seg value is 'anthropic' | 'thirdparty', not the internal type.
     let typeBtn = document.querySelector('[data-seg="provider-type"].sel');
-    let providerType = typeBtn ? typeBtn.dataset.val : '';
+    let typePresetSel = document.getElementById('provider-thirdparty-preset');
+    let providerType = effectiveProviderType(typeBtn ? typeBtn.dataset.val : '', typePresetSel ? typePresetSel.value : '');
 
     if (providerType === 'bedrock') {
       let awsProfile = getModelValue('provider-aws-profile');

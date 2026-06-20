@@ -2,7 +2,7 @@
  * Main view layout: scope cards and preset grid.
  * Renders the primary visible content of the settings panel.
  */
-import { PanelState, Preset, ProviderProfile, McpServerGroup, DirectoryGroup } from '@easytocloud/claude-personae-core';
+import { PanelState, Preset, ProviderProfile, McpServerGroup, DirectoryGroup, KNOWN_PROVIDERS } from '@easytocloud/claude-personae-core';
 import { DEFAULT_PRESET_ID } from '@easytocloud/claude-personae-core';
 import { esc } from './components';
 
@@ -203,7 +203,13 @@ export function renderPresetGrid(state: PanelState): string {
 
 function providerTypeLabel(p: ProviderProfile): string {
   if (p.type === 'bedrock' && p.awsProfile) { return `${p.type} · ${p.awsProfile}`; }
-  if (p.type === 'proxy' && p.proxyBaseUrl) { return p.proxyBaseUrl; }
+  if (p.type === 'proxy') {
+    const known = p.proxyPreset
+      ? KNOWN_PROVIDERS.find(k => k.id === p.proxyPreset && k.id !== 'custom')
+      : undefined;
+    if (known) { return `${known.label}${p.proxyBaseUrl ? ' · ' + p.proxyBaseUrl : ''}`; }
+    if (p.proxyBaseUrl) { return p.proxyBaseUrl; }
+  }
   return p.type;
 }
 
