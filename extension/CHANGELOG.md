@@ -4,6 +4,11 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.23] — 2026-06-20
+
+### Changed
+- **Marketplace tagline updated** — extension `description` now reads "One Claude Code, every backend — Anthropic, AWS Bedrock, local models (Ollama, LM Studio, oMLX, vLLM), or proxies like OpenRouter and LiteLLM. Switch from the status bar." Matches the README framing. No functional changes.
+
 ## [0.3.22] — 2026-06-20
 
 ### Changed
