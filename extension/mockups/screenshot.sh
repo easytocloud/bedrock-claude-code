@@ -11,7 +11,7 @@ cd "$(dirname "$0")/.."
   --headless=new \
   --disable-gpu \
   --screenshot=images/screenshot.png \
-  --window-size=900,1850 \
+  --window-size=900,1100 \
   --default-background-color=ff1e1e1e \
   --force-device-scale-factor=2 \
   "file://$(pwd)/mockups/screenshot.html"

@@ -23,20 +23,28 @@
   --blue-mid: rgba(59,158,255,0.20);
 
   --orange: #e8973e;
+  --orange-accent: #e8973e;
   --orange-dim: rgba(232,151,62,0.10);
   --orange-mid: rgba(232,151,62,0.20);
 
   --green: #4ec970;
+  --green-accent: #4ec970;
   --green-dim: rgba(78,201,112,0.10);
   --green-mid: rgba(78,201,112,0.20);
 
   --purple: #b48eda;
+  --purple-accent: #b48eda;
   --purple-dim: rgba(180,142,218,0.10);
   --purple-mid: rgba(180,142,218,0.20);
 
   --red: #e05a5a;
   --red-dim: rgba(224,90,90,0.10);
   --red-mid: rgba(224,90,90,0.20);
+
+  --teal: #2a9d8f;
+  --teal-accent: #40c9b4;
+  --teal-dim: rgba(42,157,143,0.10);
+  --teal-mid: rgba(42,157,143,0.20);
 
   --border: #3e3e3e;
   --input-bg: #333333;
@@ -65,18 +73,25 @@ body {
 }
 
 /* ─── Layout ────────────────────────────────────────────────────── */
-.app { max-width: 860px; margin: 0 auto; padding: 16px 20px 60px; }
+.app { max-width: 860px; margin: 0 auto; padding: 16px 16px 60px; }
+
+/* Sticky toolbar matches the live extension UI */
+.topbar {
+  background: var(--bg);
+  margin: -16px -16px 16px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
 
 .header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
 }
 .header-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
 }
 .header-logo h1 {
@@ -84,6 +99,84 @@ body {
   font-weight: 600;
   color: var(--fg-bright);
 }
+
+/* ─── Intro Banner (collapsible "How it works") ──────────────── */
+.topbar .intro-banner { margin-top: 12px; margin-bottom: 0; }
+.intro-banner {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg-dim);
+  overflow: hidden;
+}
+.intro-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 10px 16px;
+  font: inherit;
+  text-align: left;
+}
+.intro-info { color: var(--blue); font-size: 13px; }
+.intro-title { font-weight: 600; flex: 1; color: var(--fg); }
+.intro-chevron { color: var(--fg-dim); transition: transform 0.2s ease; }
+.intro-body {
+  padding: 0 16px 12px 38px;
+}
+.intro-link {
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+.intro-link.orange { color: var(--orange-accent); }
+.intro-link.purple { color: var(--purple-accent); }
+.intro-link.green  { color: var(--green-accent); }
+.intro-link.red    { color: var(--red); }
+.intro-link.blue   { color: var(--blue); }
+.intro-link.teal   { color: var(--teal-accent); }
+
+/* ─── Hamburger ↔ X toggle (matches live extension) ───────────── */
+.panel-toggle {
+  width: 20px;
+  height: 16px;
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.panel-toggle span {
+  display: block;
+  position: absolute;
+  height: 2px;
+  width: 100%;
+  background: var(--fg-muted);
+  border-radius: 2px;
+  left: 0;
+}
+.panel-toggle span:nth-child(1) { top: 0; }
+.panel-toggle span:nth-child(2) { top: 7px; }
+.panel-toggle span:nth-child(3) { top: 14px; }
+/* Expanded state — X */
+.panel-section:not(.collapsed) .panel-toggle span:nth-child(1),
+.scope-card:not(.collapsed) .panel-toggle span:nth-child(1) {
+  top: 7px; transform: rotate(45deg);
+}
+.panel-section:not(.collapsed) .panel-toggle span:nth-child(2),
+.scope-card:not(.collapsed) .panel-toggle span:nth-child(2) {
+  opacity: 0;
+}
+.panel-section:not(.collapsed) .panel-toggle span:nth-child(3),
+.scope-card:not(.collapsed) .panel-toggle span:nth-child(3) {
+  top: 7px; transform: rotate(-45deg);
+}
+.scope-card .panel-toggle span { background: var(--fg-muted); }
 
 /* ─── Buttons ───────────────────────────────────────────────────── */
 .btn {
@@ -393,19 +486,47 @@ select {
 <body>
 <div class="app">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="header-logo">
-      <h1>Claude Code Personae</h1>
+  <!-- Sticky toolbar: header + collapsible "How it works" -->
+  <div class="topbar">
+    <div class="header">
+      <div class="header-logo">
+        <svg width="28" height="28" viewBox="0 0 256 256">
+          <rect width="256" height="256" rx="40" fill="#1a1a2e"/>
+          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#4ec970" transform="matrix(0.84,0.38,-0.84,0.38,128,144)" opacity="0.78"/>
+          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#b48eda" transform="matrix(0.72,0.32,-0.72,0.32,128,114)" opacity="0.78"/>
+          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#e8973e" transform="matrix(0.60,0.27,-0.60,0.27,128,86)" opacity="0.82"/>
+          <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#d97857" transform="matrix(0.40,0.18,-0.40,0.18,128,60)" opacity="0.88"/>
+        </svg>
+        <h1>Claude Code Personae</h1>
+      </div>
+      <button class="btn btn-secondary">Reload</button>
+      <button class="btn btn-secondary">Open File</button>
+      <button class="btn btn-primary">Save All</button>
     </div>
-    <button class="btn btn-secondary">Save All</button>
+
+    <div class="intro-banner">
+      <div class="intro-toggle">
+        <span class="intro-info">&#9432;</span>
+        <span class="intro-title">How it works</span>
+        <span class="intro-chevron">&#9662;</span>
+      </div>
+      <div class="intro-body">
+        Create <a class="intro-link orange">Providers</a>,
+        <a class="intro-link purple">MCP Server Groups</a>, and
+        <a class="intro-link green">Directory Groups</a>
+        as Building Blocks. Combine them into
+        <a class="intro-link red">Presets</a>, then assign a Preset to the
+        <a class="intro-link blue">Global</a> or
+        <a class="intro-link teal">VS Code Workspace</a> Scope.
+      </div>
+    </div>
   </div>
 
   <!-- ═══ Scope Section ═══ -->
   <div class="scope-section">
 
     <!-- Global Scope -->
-    <div class="scope-card" data-scope="global">
+    <div class="scope-card collapsed" data-scope="global">
       <div class="scope-header">
         <div class="scope-indicator global"></div>
         <div class="scope-title-area">
@@ -415,7 +536,7 @@ select {
           </div>
           <div class="scope-subtitle">~/.claude/settings.json</div>
         </div>
-        <span class="scope-chevron">&#9662;</span>
+        <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="scope-body">
         <div class="scope-preset-row">
@@ -462,34 +583,34 @@ select {
     </div>
 
     <!-- Workspace Scope -->
-    <div class="scope-card" data-scope="project">
+    <div class="scope-card collapsed" data-scope="project">
       <div class="scope-header">
         <div class="scope-indicator workspace"></div>
         <div class="scope-title-area">
           <div class="scope-title">
             Workspace Scope
-            <span class="scope-badge orange">Research</span>
+            <span class="scope-badge orange">Offline (Ollama)</span>
           </div>
           <div class="scope-subtitle">ml-pipeline &middot; .claude/settings.json</div>
         </div>
-        <span class="scope-chevron">&#9662;</span>
+        <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="scope-body">
         <div class="scope-preset-row">
           <label>Preset:</label>
           <select>
-            <option>Research</option>
+            <option>Offline (Ollama)</option>
           </select>
         </div>
         <div class="bb-chips">
           <!-- Provider chip -->
           <div class="bb-chip orange">
             <div class="bb-chip-text">
-              <span class="bb-chip-name">LiteLLM Gateway</span>
-              <span class="bb-chip-detail">https://litellm.internal.example.com</span>
-              <span class="bb-chip-detail bb-chip-spacer">claude-haiku-4-5</span>
-              <span class="bb-chip-detail">claude-sonnet-4-6</span>
-              <span class="bb-chip-detail">claude-opus-4-6</span>
+              <span class="bb-chip-name">Ollama</span>
+              <span class="bb-chip-detail">ollama &middot; http://localhost:11434</span>
+              <span class="bb-chip-detail bb-chip-spacer">qwen2.5-coder:7b</span>
+              <span class="bb-chip-detail">qwen2.5-coder:32b</span>
+              <span class="bb-chip-detail">qwen2.5-coder:32b</span>
             </div>
           </div>
           <!-- MCP chips -->
@@ -500,20 +621,7 @@ select {
               <span class="bb-chip-detail">fetch</span>
             </div>
           </div>
-          <div class="bb-chip purple">
-            <div class="bb-chip-text">
-              <span class="bb-chip-name">Context7</span>
-              <span class="bb-chip-detail">context7</span>
-            </div>
-          </div>
           <!-- Directory chips -->
-          <div class="bb-chip green">
-            <div class="bb-chip-text">
-              <span class="bb-chip-name">Remote Data Lake</span>
-              <span class="bb-chip-detail">/mnt/remote-server/datasets</span>
-              <span class="bb-chip-detail">/mnt/remote-server/models</span>
-            </div>
-          </div>
           <div class="bb-chip green">
             <div class="bb-chip-text">
               <span class="bb-chip-name">Home Projects</span>
@@ -538,7 +646,7 @@ select {
         </div>
         <div class="panel-subtitle">A preset bundles a provider, MCP servers, and directories into a reusable configuration.</div>
       </div>
-      <span class="panel-chevron">&#9662;</span>
+      <div class="panel-toggle"><span></span><span></span><span></span></div>
     </div>
     <div class="panel-body">
       <div class="preset-grid">
@@ -571,43 +679,46 @@ select {
           </div>
         </div>
 
-        <!-- Work (US Bedrock) -->
-        <div class="preset-card">
-          <div class="preset-card-header">
-            <span class="preset-card-name">Work (US Bedrock)</span>
-          </div>
-          <div class="preset-card-section">
-            <span class="preset-tag orange">bedrock &middot; Bedrock US</span>
-          </div>
-          <div class="preset-card-section">
-            <span class="preset-tag purple">Dev Tools</span>
-            <span class="preset-tag purple">Web &amp; Search</span>
-          </div>
-          <div class="preset-card-section">
-            <span class="preset-tag green">Shared Libraries</span>
-          </div>
-        </div>
-
-        <!-- Offline (Ollama) -->
+        <!-- Offline (Ollama) — local model -->
         <div class="preset-card">
           <div class="preset-card-header">
             <span class="preset-card-name">Offline (Ollama)</span>
           </div>
           <div class="preset-card-section">
-            <span class="preset-tag orange">proxy &middot; Ollama Local</span>
+            <span class="preset-tag orange">ollama &middot; Ollama</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag purple">Web &amp; Search</span>
           </div>
           <div class="preset-card-section">
             <span class="preset-tag green">Home Projects</span>
           </div>
         </div>
 
-        <!-- Research -->
+        <!-- OpenRouter — gateway -->
         <div class="preset-card">
           <div class="preset-card-header">
-            <span class="preset-card-name">Research</span>
+            <span class="preset-card-name">OpenRouter (any model)</span>
           </div>
           <div class="preset-card-section">
-            <span class="preset-tag orange">proxy &middot; LiteLLM Gateway</span>
+            <span class="preset-tag orange">openrouter &middot; OpenRouter</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag purple">Context7</span>
+            <span class="preset-tag purple">Web &amp; Search</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag green">Home Projects</span>
+          </div>
+        </div>
+
+        <!-- Research (LiteLLM) — gateway -->
+        <div class="preset-card">
+          <div class="preset-card-header">
+            <span class="preset-card-name">Research (LiteLLM)</span>
+          </div>
+          <div class="preset-card-section">
+            <span class="preset-tag orange">litellm &middot; LiteLLM Gateway</span>
           </div>
           <div class="preset-card-section">
             <span class="preset-tag purple">Web &amp; Search</span>
@@ -615,7 +726,6 @@ select {
           </div>
           <div class="preset-card-section">
             <span class="preset-tag green">Remote Data Lake</span>
-            <span class="preset-tag green">Home Projects</span>
           </div>
         </div>
 
@@ -631,7 +741,7 @@ select {
   <div class="canvas-hint">Create and manage providers, MCP server groups, and directory groups. Use them in presets above.</div>
 
   <!-- Providers -->
-  <div class="panel-section" data-panel="providers">
+  <div class="panel-section collapsed" data-panel="providers">
     <div class="panel-header">
       <div class="panel-indicator orange"></div>
       <div class="panel-title-area">
@@ -639,12 +749,13 @@ select {
           Providers
           <span class="panel-badge orange">5</span>
         </div>
-        <div class="panel-subtitle">API backends — Anthropic, AWS Bedrock, or custom proxy endpoints.</div>
+        <div class="panel-subtitle">Anthropic, AWS Bedrock, local models (Ollama, LM Studio, oMLX, vLLM), or proxies like OpenRouter and LiteLLM.</div>
       </div>
-      <span class="panel-chevron">&#9662;</span>
+      <div class="panel-toggle"><span></span><span></span><span></span></div>
     </div>
     <div class="panel-body">
       <div class="bb-chips">
+        <!-- Anthropic Direct -->
         <div class="bb-chip orange">
           <div class="bb-chip-text">
             <span class="bb-chip-name">Anthropic</span>
@@ -654,6 +765,7 @@ select {
             <span class="bb-chip-detail">claude-opus-4-6-20250514</span>
           </div>
         </div>
+        <!-- AWS Bedrock -->
         <div class="bb-chip orange">
           <div class="bb-chip-text">
             <span class="bb-chip-name">Bedrock EU</span>
@@ -663,28 +775,31 @@ select {
             <span class="bb-chip-detail">eu.anthropic.claude-opus-4-6-v1</span>
           </div>
         </div>
+        <!-- Local model — Ollama -->
         <div class="bb-chip orange">
           <div class="bb-chip-text">
-            <span class="bb-chip-name">Bedrock US</span>
-            <span class="bb-chip-detail">bedrock &middot; my-company-sso</span>
-            <span class="bb-chip-detail bb-chip-spacer">us.anthropic.claude-haiku-4-5-20251001-v1:0</span>
-            <span class="bb-chip-detail">us.anthropic.claude-sonnet-4-6</span>
-            <span class="bb-chip-detail">us.anthropic.claude-opus-4-6-v1</span>
-          </div>
-        </div>
-        <div class="bb-chip orange">
-          <div class="bb-chip-text">
-            <span class="bb-chip-name">Ollama Local</span>
-            <span class="bb-chip-detail">http://localhost:11434</span>
+            <span class="bb-chip-name">Ollama</span>
+            <span class="bb-chip-detail">ollama &middot; http://localhost:11434</span>
             <span class="bb-chip-detail bb-chip-spacer">qwen2.5-coder:7b</span>
             <span class="bb-chip-detail">qwen2.5-coder:32b</span>
             <span class="bb-chip-detail">qwen2.5-coder:32b</span>
           </div>
         </div>
+        <!-- Proxy / Gateway — OpenRouter -->
+        <div class="bb-chip orange">
+          <div class="bb-chip-text">
+            <span class="bb-chip-name">OpenRouter</span>
+            <span class="bb-chip-detail">openrouter &middot; https://openrouter.ai/api</span>
+            <span class="bb-chip-detail bb-chip-spacer">anthropic/claude-haiku-4-5</span>
+            <span class="bb-chip-detail">anthropic/claude-sonnet-4-6</span>
+            <span class="bb-chip-detail">anthropic/claude-opus-4-6</span>
+          </div>
+        </div>
+        <!-- Proxy / Gateway — LiteLLM -->
         <div class="bb-chip orange">
           <div class="bb-chip-text">
             <span class="bb-chip-name">LiteLLM Gateway</span>
-            <span class="bb-chip-detail">https://litellm.internal.example.com</span>
+            <span class="bb-chip-detail">litellm &middot; https://litellm.internal.example.com</span>
             <span class="bb-chip-detail bb-chip-spacer">claude-haiku-4-5</span>
             <span class="bb-chip-detail">claude-sonnet-4-6</span>
             <span class="bb-chip-detail">claude-opus-4-6</span>
@@ -696,7 +811,7 @@ select {
   </div>
 
   <!-- MCP Server Groups -->
-  <div class="panel-section" data-panel="mcp-groups">
+  <div class="panel-section collapsed" data-panel="mcp-groups">
     <div class="panel-header">
       <div class="panel-indicator purple"></div>
       <div class="panel-title-area">
@@ -706,7 +821,7 @@ select {
         </div>
         <div class="panel-subtitle">Named collections of MCP servers to attach to presets.</div>
       </div>
-      <span class="panel-chevron">&#9662;</span>
+      <div class="panel-toggle"><span></span><span></span><span></span></div>
     </div>
     <div class="panel-body">
       <div class="bb-chips">
@@ -736,7 +851,7 @@ select {
   </div>
 
   <!-- Directory Groups -->
-  <div class="panel-section" data-panel="dir-groups">
+  <div class="panel-section collapsed" data-panel="dir-groups">
     <div class="panel-header">
       <div class="panel-indicator green"></div>
       <div class="panel-title-area">
@@ -746,7 +861,7 @@ select {
         </div>
         <div class="panel-subtitle">Additional directories Claude Code is allowed to access.</div>
       </div>
-      <span class="panel-chevron">&#9662;</span>
+      <div class="panel-toggle"><span></span><span></span><span></span></div>
     </div>
     <div class="panel-body">
       <div class="bb-chips">
