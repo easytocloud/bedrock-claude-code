@@ -4,6 +4,11 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.24] — 2026-06-20
+
+### Fixed
+- **README screenshot now visible in the Marketplace** — replaced the relative `images/screenshot.png` link with an absolute `raw.githubusercontent.com` URL. The relative form worked when the README was at the repo root, but after the monorepo restructure the Marketplace couldn't resolve `extension/images/screenshot.png` and the image rendered as a broken icon.
+
 ## [0.3.23] — 2026-06-20
 
 ### Changed

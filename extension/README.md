@@ -2,7 +2,7 @@
 
 **One Claude Code. Every backend.** Point [Claude Code](https://docs.anthropic.com/en/docs/claude-code) at Anthropic, AWS Bedrock, a local model running on your own machine, or a proxy like OpenRouter — and switch in a single click.
 
-![Claude Code Personae screenshot](images/screenshot.png)
+![Claude Code Personae screenshot](https://raw.githubusercontent.com/easytocloud/bedrock-claude-code/main/extension/images/screenshot.png)
 
 ## Four ways to run Claude Code
 
