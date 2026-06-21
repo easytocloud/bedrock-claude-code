@@ -4,6 +4,11 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.25] — 2026-06-21
+
+### Fixed
+- **vLLM and LM Studio base URLs corrected** — both providers had a trailing `/v1` in their default `ANTHROPIC_BASE_URL`. Claude Code appends `/v1/messages` itself, so the trailing `/v1` caused requests to hit `/v1/v1/messages` and fail. Default URLs are now `http://localhost:8000` (vLLM) and `http://localhost:1234` (LM Studio), matching the official Anthropic compatibility docs for both projects.
+
 ## [0.3.24] — 2026-06-20
 
 ### Fixed

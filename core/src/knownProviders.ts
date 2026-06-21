@@ -65,9 +65,9 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     id: 'lmstudio',
     label: 'LM Studio',
     type: 'proxy',
-    defaultUrl: 'http://localhost:1234/v1',
+    defaultUrl: 'http://localhost:1234',
     scheme: 'http',
-    path: '/v1',
+    path: '',
     authMode: 'none',
   },
   {
@@ -85,9 +85,9 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     id: 'vllm',
     label: 'vLLM',
     type: 'proxy',
-    defaultUrl: 'http://localhost:8000/v1',
+    defaultUrl: 'http://localhost:8000',
     scheme: 'http',
-    path: '/v1',
+    path: '',
     authMode: 'authtoken',
     credentialLabel: 'API key (optional)',
     credentialRequired: false,
@@ -123,7 +123,7 @@ export function knownProvider(id: string | undefined): KnownProvider | undefined
  * Examples:
  *   openrouter, "openrouter.ai/v1"     → "https://openrouter.ai/api"
  *   ollama,    "192.168.1.50:11434"    → "http://192.168.1.50:11434"
- *   lmstudio,  "http://mybox:1234"     → "http://mybox:1234/v1"
+ *   lmstudio,  "http://mybox:1234"     → "http://mybox:1234"
  *   custom,    anything                → returned unchanged
  */
 export function normalizeKnownUrl(p: KnownProvider, raw: string): string {

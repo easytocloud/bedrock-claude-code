@@ -2,7 +2,7 @@
   "name": "bedrock-claude-code",
   "displayName": "Claude Code Personae",
   "description": "One Claude Code, every backend — Anthropic, AWS Bedrock, local models (Ollama, LM Studio, oMLX, vLLM), or proxies like OpenRouter and LiteLLM. Switch from the status bar.",
-  "version": "0.3.24",
+  "version": "0.3.25",
   "publisher": "easytocloud",
   "license": "MIT",
   "repository": {
