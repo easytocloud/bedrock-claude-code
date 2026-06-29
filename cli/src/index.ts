@@ -44,8 +44,8 @@ COMMANDS
   import <file|->                   Import a store from a file or stdin
 
 SCOPE (for \`switch\`)
-  --global, -g            Set the global preset (default)
-  --workspace, -w         Set the preset for a workspace (uses CWD)
+  --global, -g            Set the global preset (use with care — affects all workspaces)
+  --workspace, -w         Set the preset for a workspace (uses CWD, default)
   --path <dir>            Workspace directory to target (implies --workspace)
   --inherit               Workspace inherits the global preset (clears overrides)
   --manual                Workspace is managed manually (CLI leaves files alone)
@@ -61,9 +61,9 @@ OPTIONS
 
 EXAMPLES
   ccp list presets
-  ccp switch bedrock-prod            # set global preset
-  ccp switch dev --workspace         # set preset for the current project
-  ccp switch --workspace --inherit   # project inherits global again
+  ccp switch dev                     # set preset for the current workspace (default)
+  ccp switch bedrock-prod --global   # set global preset (affects all workspaces)
+  ccp switch --inherit               # current workspace inherits global again
   ccp apply                          # reprovision the current project's config
   ccp sync                           # re-apply every workspace after editing a preset
   ccp sync --dry-run                 # preview what sync would rewrite
@@ -183,9 +183,9 @@ function cmdCurrent(store: ProfileStore, values: Values): void {
 }
 
 function cmdSwitch(store: ProfileStore, presetArg: string | undefined, values: Values): void {
-  const toWorkspace = values.workspace || values.path !== undefined || values.inherit || values.manual;
+  const toGlobal = values.global && !values.workspace && values.path === undefined && !values.inherit && !values.manual;
 
-  if (toWorkspace && !values.global) {
+  if (!toGlobal) {
     const ws = workspaceDir(values);
     let scope: ScopeAssignment;
     let summary: string;
@@ -208,7 +208,7 @@ function cmdSwitch(store: ProfileStore, presetArg: string | undefined, values: V
     return;
   }
 
-  // Global (default)
+  // Global (explicit --global only)
   const preset = resolvePresetArg(store, presetArg);
   store.globalScope = { mode: 'preset', presetId: preset.id };
   writeProfileStore(store);

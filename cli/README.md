@@ -40,23 +40,25 @@ ccp <command> [options]
 
 ### Scope (for `switch`)
 
-By default `switch` sets the **global** preset. To target a project instead:
+By default `switch` sets the **current workspace** (CWD) preset — the smallest blast
+radius. Use `--global` only when you explicitly want to change the fallback that all
+inherited workspaces use.
 
 | Flag | Effect |
 |---|---|
-| `--global`, `-g` | Set the global preset (default). |
-| `--workspace`, `-w` | Set the preset for a workspace (uses the current directory). |
+| `--workspace`, `-w` | Set the preset for the current directory (default). |
 | `--path <dir>` | Workspace directory to target (implies `--workspace`). |
 | `--inherit` | Workspace inherits the global preset (removes its overrides). |
 | `--manual` | Workspace is managed manually (the CLI leaves its files alone). |
+| `--global`, `-g` | Set the global fallback preset (affects all inherited workspaces). |
 
 ### Examples
 
 ```bash
 ccp list presets
-ccp switch bedrock-prod               # set the global preset
-ccp switch dev --workspace            # set a preset for the current project
-ccp switch --workspace --inherit      # project goes back to inheriting global
+ccp switch dev                        # set a preset for the current workspace (default)
+ccp switch bedrock-prod --global      # set the global fallback (affects all inherited workspaces)
+ccp switch --inherit                  # current workspace goes back to inheriting global
 ccp apply                             # rewrite config files for this project
 ccp sync                              # re-apply every workspace after editing a preset
 ccp sync --dry-run                    # preview what sync would rewrite

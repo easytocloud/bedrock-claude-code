@@ -4,6 +4,17 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.2.5] — 2026-06-29
+
+### Changed
+- **`ccp switch` defaults to the current workspace** — previously `ccp switch <preset>` set the *global* preset, which affected all workspaces set to Inherit. The default scope is now the current directory (workspace). Use `--global` / `-g` to explicitly target the global fallback. The `--workspace` / `-w` flag still works but is now redundant.
+
+  ```bash
+  ccp switch dev                    # set preset for the current workspace (was: global)
+  ccp switch bedrock-prod --global  # set the global fallback (explicit opt-in)
+  ccp switch --inherit              # current workspace back to inheriting global
+  ```
+
 ## [0.2.4] — 2026-06-21
 
 ### Fixed

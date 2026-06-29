@@ -4,6 +4,14 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.3.26] — 2026-06-29
+
+### Changed
+- **Status bar quick-pick: workspace first, global protected** — the quick-pick now shows the VS Code Workspace section at the top (where you almost always want to act) and the Global section at the bottom. Three layers of protection against accidental global changes:
+  1. **Order** — workspace options are listed first, so the natural pick goes to the workspace.
+  2. **Gating** — when the workspace has an explicit preset or is set to Manual, the entire global preset list is replaced with a single `$(globe) Change Global Scope…` gateway item that opens a dedicated second picker. Only when the workspace is in Inherit mode (the user is already thinking globally) are the global presets shown directly.
+  3. **Confirmation** — any global scope change (via either path) requires confirming a modal warning dialog before the config is written.
+
 ## [0.3.25] — 2026-06-21
 
 ### Fixed
