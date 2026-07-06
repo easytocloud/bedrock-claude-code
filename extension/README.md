@@ -30,7 +30,7 @@ Presets are then assigned to **scopes**:
 | Scope | Config files written | Dropdown options |
 |---|---|---|
 | **Global** | `~/.claude/settings.json`, `~/.claude.json` | Any preset, or Manual |
-| **VS Code Workspace** | `{workspace}/.claude/settings.json`, `.mcp.json` | Any preset, Inherit from Global, or Manual |
+| **VS Code Workspace** | `{workspace}/.claude/settings.json`, `~/.claude.json` (per-project MCP servers) | Any preset, Inherit from Global, or Manual |
 
 Switching a scope's preset instantly reconfigures Claude Code — no manual file editing required.
 

@@ -31,12 +31,38 @@ export function readProjectMcpServers(workspaceRoot: string): Record<string, Mcp
   return readMcpJson(workspaceRoot).mcpServers ?? {};
 }
 
-/** Writes (only) the mcpServers key into {workspaceRoot}/.mcp.json, preserving other keys. */
-export function writeProjectMcpServers(workspaceRoot: string, servers: Record<string, McpServerConfig>): void {
-  const dir = workspaceRoot;
-  if (!fs.existsSync(dir)) { return; }
+/**
+ * Legacy cleanup: earlier versions wrote preset MCP servers into
+ * {workspaceRoot}/.mcp.json; they now live in ~/.claude.json. Removes only
+ * the named servers from the file's mcpServers key, drops the key when it
+ * becomes empty, and deletes the file when nothing else remains. Servers the
+ * user (or their team) added under other names are left untouched.
+ */
+export function cleanupLegacyMcpJson(workspaceRoot: string, serverNames: string[]): void {
+  if (serverNames.length === 0) { return; }
   const filePath = getMcpJsonPath(workspaceRoot);
+  if (!fs.existsSync(filePath)) { return; }
+
   const existing = readMcpJson(workspaceRoot);
-  const updated: McpJson = { ...existing, mcpServers: servers };
-  fs.writeFileSync(filePath, JSON.stringify(updated, null, 2) + '\n', 'utf8');
+  if (!existing.mcpServers) { return; }
+
+  const remaining = { ...existing.mcpServers };
+  let removed = false;
+  for (const name of serverNames) {
+    if (name in remaining) { delete remaining[name]; removed = true; }
+  }
+  if (!removed) { return; }
+
+  const updated: McpJson = { ...existing };
+  if (Object.keys(remaining).length > 0) {
+    updated.mcpServers = remaining;
+  } else {
+    delete updated.mcpServers;
+  }
+
+  if (Object.keys(updated).length === 0) {
+    fs.unlinkSync(filePath);
+  } else {
+    fs.writeFileSync(filePath, JSON.stringify(updated, null, 2) + '\n', 'utf8');
+  }
 }

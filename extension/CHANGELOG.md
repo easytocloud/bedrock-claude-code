@@ -4,6 +4,13 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-06
+
+### Changed
+- **Workspace MCP servers moved to `~/.claude.json`** — preset MCP servers for a VS Code Workspace are now written to `projects["<dir>"].mcpServers` in `~/.claude.json` (Claude Code's per-project "local" scope) instead of `<dir>/.mcp.json`. Nothing MCP-related is written inside the repository anymore — no accidental commits, no per-workspace trust-approval prompt.
+- **Ownership-aware merging** — the profile store records which server names were written (`mcpOwnership` in `coder-profiles.json`); on every apply only those names are replaced, so servers added by hand (e.g. `claude mcp add`) survive preset switches at both global and workspace level. The first apply after upgrading treats all existing top-level `mcpServers` in `~/.claude.json` as extension-owned (matching the old wholesale-replace behavior); from then on hand-added global servers are preserved.
+- **Legacy `.mcp.json` migration** — applying a preset to a workspace (or `ccp sync`) removes the servers previously written to that workspace's `.mcp.json`, drops the `mcpServers` key when it becomes empty, and deletes the file when nothing else remains. Team-managed servers under other names are left untouched. The `mcpOwnership` record is stripped from exports (it's machine-local state).
+
 ## [0.3.26] — 2026-06-29
 
 ### Changed

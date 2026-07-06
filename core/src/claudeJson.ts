@@ -3,9 +3,16 @@ import * as os from 'os';
 import * as path from 'path';
 import { McpServerConfig } from './types';
 
-/** Opaque shape of ~/.claude.json — we only touch the mcpServers key. */
+/** Per-project entry inside ~/.claude.json's projects block. */
+interface ClaudeJsonProject {
+  mcpServers?: Record<string, McpServerConfig>;
+  [key: string]: unknown;
+}
+
+/** Opaque shape of ~/.claude.json — we only touch mcpServers keys (top-level and per-project). */
 interface ClaudeJson {
   mcpServers?: Record<string, McpServerConfig>;
+  projects?: Record<string, ClaudeJsonProject>;
   [key: string]: unknown;
 }
 
@@ -46,10 +53,86 @@ export function ensureOnboardingComplete(): void {
   fs.writeFileSync(filePath, JSON.stringify(updated, null, 2) + '\n', 'utf8');
 }
 
-/** Writes (only) the mcpServers key into ~/.claude.json, preserving all other keys. */
-export function writeUserMcpServers(servers: Record<string, McpServerConfig>): void {
-  const filePath = getClaudeJsonPath();
+function writeClaudeJson(updated: ClaudeJson): void {
+  fs.writeFileSync(getClaudeJsonPath(), JSON.stringify(updated, null, 2) + '\n', 'utf8');
+}
+
+/**
+ * Ownership-aware merge: removes `previouslyOwned` names from the given
+ * mcpServers map, then adds the preset's servers. Hand-added servers survive.
+ * Returns the merged map (or undefined when the result is empty).
+ */
+function mergeOwned(
+  existing: Record<string, McpServerConfig> | undefined,
+  servers: Record<string, McpServerConfig>,
+  previouslyOwned: string[]
+): Record<string, McpServerConfig> | undefined {
+  const merged: Record<string, McpServerConfig> = { ...(existing ?? {}) };
+  for (const name of previouslyOwned) { delete merged[name]; }
+  Object.assign(merged, servers);
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
+/**
+ * Merges the preset's MCP servers into the top-level mcpServers of
+ * ~/.claude.json (global scope). Returns the names now owned by us.
+ */
+export function writeUserMcpServers(
+  servers: Record<string, McpServerConfig>,
+  previouslyOwned: string[] = []
+): string[] {
   const existing = readClaudeJson();
-  const updated: ClaudeJson = { ...existing, mcpServers: servers };
-  fs.writeFileSync(filePath, JSON.stringify(updated, null, 2) + '\n', 'utf8');
+  const merged = mergeOwned(existing.mcpServers, servers, previouslyOwned);
+  const updated: ClaudeJson = { ...existing };
+  if (merged) { updated.mcpServers = merged; } else { delete updated.mcpServers; }
+  writeClaudeJson(updated);
+  return Object.keys(servers);
+}
+
+/**
+ * Merges the preset's MCP servers into ~/.claude.json →
+ * projects[workspaceRoot].mcpServers (Claude Code's "local" scope for that
+ * project). Returns the names now owned by us.
+ */
+export function writeProjectMcpServersToClaudeJson(
+  workspaceRoot: string,
+  servers: Record<string, McpServerConfig>,
+  previouslyOwned: string[] = []
+): string[] {
+  const existing = readClaudeJson();
+  const projects = { ...(existing.projects ?? {}) };
+  const entry: ClaudeJsonProject = { ...(projects[workspaceRoot] ?? {}) };
+  const merged = mergeOwned(entry.mcpServers, servers, previouslyOwned);
+  if (merged) { entry.mcpServers = merged; } else { delete entry.mcpServers; }
+
+  // Don't create an otherwise-empty project entry for a no-server preset
+  if (Object.keys(entry).length > 0 || projects[workspaceRoot]) {
+    projects[workspaceRoot] = entry;
+  }
+  const updated: ClaudeJson = { ...existing };
+  if (Object.keys(projects).length > 0) { updated.projects = projects; }
+  writeClaudeJson(updated);
+  return Object.keys(servers);
+}
+
+/**
+ * Removes our owned MCP servers from projects[workspaceRoot] in ~/.claude.json
+ * (used when a workspace goes back to inheriting the global scope).
+ */
+export function removeProjectMcpServersFromClaudeJson(
+  workspaceRoot: string,
+  ownedNames: string[]
+): void {
+  if (ownedNames.length === 0) { return; }
+  const existing = readClaudeJson();
+  const entry = existing.projects?.[workspaceRoot];
+  if (!entry?.mcpServers) { return; }
+  const remaining = { ...entry.mcpServers };
+  for (const name of ownedNames) { delete remaining[name]; }
+  if (Object.keys(remaining).length > 0) {
+    entry.mcpServers = remaining;
+  } else {
+    delete entry.mcpServers;
+  }
+  writeClaudeJson(existing);
 }

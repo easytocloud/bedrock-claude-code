@@ -14,8 +14,15 @@ import {
   writeProjectSettings,
   getProjectSettingsPath,
 } from './claudeSettings';
-import { writeUserMcpServers, ensureOnboardingComplete } from './claudeJson';
-import { writeProjectMcpServers } from './mcpJson';
+import {
+  writeUserMcpServers,
+  readUserMcpServers,
+  writeProjectMcpServersToClaudeJson,
+  removeProjectMcpServersFromClaudeJson,
+  ensureOnboardingComplete,
+} from './claudeJson';
+import { cleanupLegacyMcpJson } from './mcpJson';
+import { writeProfileStore } from './profiles';
 import { knownProvider, normalizeKnownUrl } from './knownProviders';
 
 // ---------------------------------------------------------------------------
@@ -260,9 +267,19 @@ function preserveUnmanagedEnv(existing: Record<string, string>): Record<string, 
 /**
  * Apply a resolved config to the global scope:
  * - env vars → ~/.claude/settings.json
- * - MCP servers → ~/.claude.json
+ * - MCP servers → ~/.claude.json (top-level mcpServers, ownership-merged)
+ *
+ * `previouslyOwned` is the list of server names we wrote last time; exactly
+ * those are removed before merging so hand-added servers survive. Pass
+ * undefined on the first ownership-aware apply to treat every existing
+ * top-level server as ours (pre-ownership versions replaced the key
+ * wholesale, so historically it was all ccp-written).
+ * Returns the server names now owned by us.
  */
-export function applyGlobalConfig(resolved: ResolvedConfig): void {
+export function applyGlobalConfig(
+  resolved: ResolvedConfig,
+  previouslyOwned?: string[]
+): string[] {
   const settings = readClaudeSettings();
   const preservedEnv = preserveUnmanagedEnv(settings.env ?? {});
 
@@ -300,15 +317,24 @@ export function applyGlobalConfig(resolved: ResolvedConfig): void {
   }
 
   writeClaudeSettings(newSettings);
-  writeUserMcpServers(resolved.mcpServers);
+
+  // No ownership record yet → migrate: treat all existing top-level servers
+  // as ours, matching the old wholesale-replace behavior.
+  const owned = previouslyOwned ?? Object.keys(readUserMcpServers());
+  return writeUserMcpServers(resolved.mcpServers, owned);
 }
 
 /**
  * Remove managed env keys, allowedDirectories, and awsAuthRefresh from
  * {workspace}/.claude/settings.json so the project inherits from global.
- * Preserves any non-managed keys the user may have set.
+ * Preserves any non-managed keys the user may have set. Also removes our
+ * owned MCP servers from ~/.claude.json's projects block and from any
+ * legacy .mcp.json we wrote in earlier versions.
  */
-export function cleanProjectConfig(workspaceRoot: string): void {
+export function cleanProjectConfig(workspaceRoot: string, ownedMcpNames: string[] = []): void {
+  removeProjectMcpServersFromClaudeJson(workspaceRoot, ownedMcpNames);
+  cleanupLegacyMcpJson(workspaceRoot, ownedMcpNames);
+
   const settings = readProjectSettings(workspaceRoot);
   if (Object.keys(settings).length === 0) { return; } // nothing to clean
 
@@ -343,12 +369,17 @@ export function cleanProjectConfig(workspaceRoot: string): void {
 /**
  * Apply a resolved config to the project scope:
  * - env vars + directories → {workspace}/.claude/settings.json
- * - MCP servers → {workspace}/.mcp.json
+ * - MCP servers → ~/.claude.json projects[workspace].mcpServers
+ *   (ownership-merged; .mcp.json is no longer written — any servers we put
+ *   there in earlier versions are migrated out on this apply)
+ *
+ * Returns the MCP server names now owned by us for this workspace.
  */
 export function applyProjectConfig(
   resolved: ResolvedConfig,
-  workspaceRoot: string
-): void {
+  workspaceRoot: string,
+  previouslyOwned: string[] = []
+): string[] {
   // Write env vars and directories to project-level settings
   const globalEnv = readClaudeSettings().env ?? {};
   const settings = readProjectSettings(workspaceRoot);
@@ -379,16 +410,29 @@ export function applyProjectConfig(
 
   writeProjectSettings(workspaceRoot, newSettings);
 
-  // Write MCP servers to .mcp.json
-  writeProjectMcpServers(workspaceRoot, resolved.mcpServers);
+  // MCP servers → ~/.claude.json projects block (Claude Code "local" scope)
+  const owned = writeProjectMcpServersToClaudeJson(
+    workspaceRoot,
+    resolved.mcpServers,
+    previouslyOwned
+  );
+
+  // Migrate: earlier versions wrote these servers into {workspace}/.mcp.json.
+  // Remove them (previously owned + freshly applied names) so they don't
+  // load twice; other servers in the file are left alone.
+  cleanupLegacyMcpJson(workspaceRoot, [...new Set([...previouslyOwned, ...owned])]);
 
   // If the workspace is a VS Code extension, ensure .mcp.json and .claude/
   // are listed in .vscodeignore so they don't end up in published VSIXs.
   ensureVscodeignore(workspaceRoot);
+
+  return owned;
 }
 
 /**
  * Resolve and apply the active scope assignments from the store.
+ * Updates store.mcpOwnership (which server names we wrote where) and
+ * persists the store when the ownership record changed.
  */
 export function applyAllScopes(
   store: ProfileStore,
@@ -400,11 +444,15 @@ export function applyAllScopes(
   // not dependent on every caller remembering to invoke it separately.
   ensureOnboardingComplete();
 
+  const before = JSON.stringify(store.mcpOwnership ?? {});
+  store.mcpOwnership ??= {};
+  store.mcpOwnership.workspaces ??= {};
+
   // Global scope
   if (store.globalScope.mode === 'preset' && store.globalScope.presetId) {
     const resolved = resolvePreset(store, store.globalScope.presetId);
     if (resolved) {
-      applyGlobalConfig(resolved);
+      store.mcpOwnership.global = applyGlobalConfig(resolved, store.mcpOwnership.global);
     }
   }
 
@@ -412,17 +460,24 @@ export function applyAllScopes(
   if (workspaceRoot) {
     const wsScope = store.workspaceScopes[workspaceRoot];
     if (wsScope) {
+      const owned = store.mcpOwnership.workspaces[workspaceRoot] ?? [];
       if (wsScope.mode === 'preset' && wsScope.presetId) {
         const resolved = resolvePreset(store, wsScope.presetId);
         if (resolved) {
-          applyProjectConfig(resolved, workspaceRoot);
+          store.mcpOwnership.workspaces[workspaceRoot] =
+            applyProjectConfig(resolved, workspaceRoot, owned);
         }
       }
       if (wsScope.mode === 'inherit') {
-        cleanProjectConfig(workspaceRoot);
+        cleanProjectConfig(workspaceRoot, owned);
+        delete store.mcpOwnership.workspaces[workspaceRoot];
       }
       // 'manual' mode: user manages files themselves
     }
+  }
+
+  if (JSON.stringify(store.mcpOwnership) !== before) {
+    writeProfileStore(store);
   }
 }
 

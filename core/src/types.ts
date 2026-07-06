@@ -107,6 +107,16 @@ export interface ProfileStore {
   presets: Preset[];
   globalScope: ScopeAssignment;
   workspaceScopes: Record<string, ScopeAssignment>;
+  /**
+   * MCP server names last written by us into ~/.claude.json, per scope.
+   * On the next apply we remove exactly these names before merging in the
+   * preset's servers, so servers the user added by hand (e.g. via
+   * `claude mcp add`) survive preset switches.
+   */
+  mcpOwnership?: {
+    global?: string[];
+    workspaces?: Record<string, string[]>;
+  };
 }
 
 // ─── Panel State (extension ↔ webview) ───────────────────────────────

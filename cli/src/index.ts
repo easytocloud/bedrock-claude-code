@@ -39,7 +39,11 @@ COMMANDS
   current                           Show the active global + workspace preset
   switch <preset> [scope]           Set the active preset and apply it
   apply                             Re-apply the global + current-workspace scopes
-  sync                              Re-apply EVERY known workspace assignment
+  sync                              Re-align all config with the profile store:
+                                    global + EVERY known workspace assignment.
+                                    MCP servers are written to ~/.claude.json;
+                                    entries we once wrote to .mcp.json are
+                                    migrated out (other servers left alone)
   export                            Print the store as JSON (credentials scrubbed)
   import <file|->                   Import a store from a file or stdin
 
@@ -228,13 +232,22 @@ function cmdApply(store: ProfileStore, values: Values): void {
 function cmdSync(store: ProfileStore, values: Values): void {
   const dryRun = Boolean(values['dry-run']);
 
+  if (!dryRun) {
+    store.mcpOwnership ??= {};
+    store.mcpOwnership.workspaces ??= {};
+  }
+  const ownership = store.mcpOwnership;
+
   // Global scope
   if (store.globalScope.mode === 'preset' && store.globalScope.presetId) {
     const resolved = resolvePreset(store, store.globalScope.presetId);
     if (!resolved) {
       process.stderr.write(`global: preset missing — skipped\n`);
     } else {
-      if (!dryRun) { ensureOnboardingComplete(); applyGlobalConfig(resolved); }
+      if (!dryRun) {
+        ensureOnboardingComplete();
+        ownership!.global = applyGlobalConfig(resolved, ownership!.global);
+      }
       process.stdout.write(`${dryRun ? 'would apply' : 'applied'}  global: ${describeScope(store, store.globalScope)}\n`);
     }
   } else {
@@ -243,6 +256,7 @@ function cmdSync(store: ProfileStore, values: Values): void {
 
   const entries = Object.entries(store.workspaceScopes);
   if (entries.length === 0) {
+    if (!dryRun) { writeProfileStore(store); }
     process.stdout.write('no workspace assignments to sync.\n');
     return;
   }
@@ -265,7 +279,10 @@ function cmdSync(store: ProfileStore, values: Values): void {
       continue;
     }
     if (scope.mode === 'inherit') {
-      if (!dryRun) { cleanProjectConfig(ws); }
+      if (!dryRun) {
+        cleanProjectConfig(ws, ownership!.workspaces![ws] ?? []);
+        delete ownership!.workspaces![ws];
+      }
       process.stdout.write(`${dryRun ? 'would clear' : 'cleared  '}  ${ws}: inherit from global\n`);
       applied++;
       continue;
@@ -277,10 +294,14 @@ function cmdSync(store: ProfileStore, values: Values): void {
       skipped++;
       continue;
     }
-    if (!dryRun) { applyProjectConfig(resolved, ws); }
+    if (!dryRun) {
+      ownership!.workspaces![ws] = applyProjectConfig(resolved, ws, ownership!.workspaces![ws] ?? []);
+    }
     process.stdout.write(`${dryRun ? 'would apply' : 'applied  '}  ${ws}: ${desc}\n`);
     applied++;
   }
+
+  if (!dryRun) { writeProfileStore(store); }
 
   const verb = dryRun ? 'would sync' : 'synced';
   process.stdout.write(

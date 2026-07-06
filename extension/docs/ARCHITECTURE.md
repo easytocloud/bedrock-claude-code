@@ -19,9 +19,9 @@ Each **Preset** bundles one Provider with zero or more MCP Server Groups and Dir
 | `~/.claude/coder-profiles.json` | Primary store — all Providers, MCP Groups, Dir Groups, Presets, and Scope assignments |
 | `~/.claude/coder-profiles.draft.json` | Auto-saved copy of in-progress panel state; cleared on Save or Discard |
 | `~/.claude/settings.json` | Claude Code global env vars, MCP servers, allowed directories (written by resolver) |
-| `~/.claude.json` | Claude Code onboarding state — `hasCompletedOnboarding: true` written on save to suppress first-run login wizard |
+| `~/.claude.json` | MCP servers (top-level `mcpServers` for global scope, `projects["<ws>"].mcpServers` for workspace scope, ownership-merged) + onboarding state (`hasCompletedOnboarding: true` written on save to suppress first-run login wizard) |
 | `{workspace}/.claude/settings.json` | Workspace-scope overrides (written by resolver) |
-| `{workspace}/.mcp.json` | Workspace MCP servers (written by resolver) |
+| `{workspace}/.mcp.json` | **No longer written** (pre-0.4.0 legacy) — servers we once wrote there are migrated out on apply |
 | `~/.claude/bedrock-model-cache-<profile>-<region>.json` | Cached Bedrock models (1-hour TTL) — avoids redundant AWS CLI calls |
 
 The profile store is managed by `src/profiles.ts` (`readProfileStore` / `writeProfileStore`). A migration in `readProfileStore` handles the v0.2.1 rename of `projectScopes` → `workspaceScopes`.
@@ -35,10 +35,10 @@ The profile store is managed by `src/profiles.ts` (`readProfileStore` / `writePr
 1. **`resolvePreset(store, presetId)`** — looks up the Preset, finds its Provider and referenced Groups, and flattens everything into a `ResolvedConfig` (`env`, `allowedDirectories`, `mcpServers`, `awsAuthRefresh`). For Bedrock providers with an `awsEnv`, derives `AWS_CONFIG_FILE` from the stored env name. For Local/Other providers with `op://` credentials, writes `apiKeyHelper` instead of env vars.
 2. **`filterForGlobal(env)`** — strips no-op values (empty strings, `CLAUDE_CODE_USE_BEDROCK=0`) before writing to `~/.claude/settings.json`.
 3. **`filterForProject(env, globalEnv)`** — keeps empty/no-op values only when the global scope has that key set to a meaningful value (override needed); otherwise drops them.
-4. **`applyGlobalConfig(resolved)`** — merges resolved env vars (via `filterForGlobal`) into `~/.claude/settings.json`, preserving any keys not in `MANAGED_ENV_KEYS`.
-5. **`applyProjectConfig(resolved, workspaceRoot)`** — same merge (via `filterForProject`) into `{workspace}/.claude/settings.json` plus `.mcp.json`; also calls `ensureVscodeignore`.
-6. **`cleanProjectConfig(workspaceRoot)`** — removes all managed keys from the project settings file (used when workspace scope is set to Inherit).
-7. **`applyAllScopes(store, workspaceRoot)`** — orchestrates the above: resolves global scope, then workspace scope (or calls `cleanProjectConfig` if it inherits).
+4. **`applyGlobalConfig(resolved, previouslyOwned?)`** — merges resolved env vars (via `filterForGlobal`) into `~/.claude/settings.json`, preserving any keys not in `MANAGED_ENV_KEYS`; ownership-merges MCP servers into `~/.claude.json` and returns the owned names.
+5. **`applyProjectConfig(resolved, workspaceRoot, previouslyOwned)`** — same merge (via `filterForProject`) into `{workspace}/.claude/settings.json`; MCP servers go to `~/.claude.json` `projects` block; migrates legacy `.mcp.json` entries out; also calls `ensureVscodeignore`. Returns the owned names.
+6. **`cleanProjectConfig(workspaceRoot, ownedMcpNames)`** — removes all managed keys from the project settings file and our MCP servers from the `projects` block + legacy `.mcp.json` (used when workspace scope is set to Inherit).
+7. **`applyAllScopes(store, workspaceRoot)`** — orchestrates the above: resolves global scope, then workspace scope (or calls `cleanProjectConfig` if it inherits). Tracks written server names in `store.mcpOwnership` and persists the store when that record changes, so hand-added servers (`claude mcp add`) survive preset switches.
 
 `MANAGED_ENV_KEYS` (defined in `src/models.ts`) is the authoritative list of env var names the extension owns. Non-managed keys are preserved across writes via `preserveUnmanagedEnv()`.
 
@@ -57,8 +57,8 @@ The profile store is managed by `src/profiles.ts` (`readProfileStore` / `writePr
 | `src/models.ts` | Constants — `MANAGED_ENV_KEYS`, `AWS_REGIONS`, default model IDs, model catalogs |
 | `src/types.ts` | TypeScript interfaces — `ProfileStore`, `ProviderProfile`, `Preset`, `ScopeAssignment` |
 | `src/claudeSettings.ts` | Reads/writes `~/.claude/settings.json` |
-| `src/claudeJson.ts` | Reads/writes `~/.claude.json` (onboarding state) |
-| `src/mcpJson.ts` | Reads/writes `{workspace}/.mcp.json` |
+| `src/claudeJson.ts` | Reads/writes `~/.claude.json` — MCP servers (global + per-project `projects` block, ownership-merged) and onboarding state |
+| `src/mcpJson.ts` | Reads `{workspace}/.mcp.json` (migration import) + legacy cleanup of servers we once wrote there |
 
 ---
 

@@ -70,8 +70,17 @@ cat presets.json | ccp import - --mode replace
 
 - **Global scope** → `~/.claude/settings.json` (env vars, allowed directories,
   `awsAuthRefresh`/`apiKeyHelper`) and `~/.claude.json` (MCP servers).
-- **Workspace scope** → `<dir>/.claude/settings.json` and `<dir>/.mcp.json`
-  (only the keys that differ from global). `--inherit` removes these so global applies.
+- **Workspace scope** → `<dir>/.claude/settings.json` (only the keys that differ
+  from global) and `~/.claude.json` → `projects["<dir>"].mcpServers` (Claude
+  Code's per-project "local" scope). `--inherit` removes these so global applies.
+
+Nothing is written inside your repository except `.claude/settings.json` — MCP
+servers never touch a shareable `.mcp.json`, so there is nothing MCP-related to
+accidentally commit. Servers you add yourself (e.g. via `claude mcp add`) are
+preserved: ccp tracks which server names it wrote and only ever replaces those.
+If an earlier ccp version wrote servers into a workspace `.mcp.json`, the next
+`apply`/`sync` migrates them out (servers added by you or your team under other
+names are left alone).
 
 Presets are resolved by the exact same engine as the extension, so a Bedrock preset
 sets `CLAUDE_CODE_USE_BEDROCK=1`, `AWS_PROFILE`, `AWS_REGION`, the model overrides, etc.

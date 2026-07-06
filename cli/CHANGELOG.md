@@ -4,7 +4,16 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-06
+
+### Changed
+- **Workspace MCP servers moved to `~/.claude.json`** — preset MCP servers for a workspace are now written to `projects["<dir>"].mcpServers` in `~/.claude.json` (Claude Code's per-project "local" scope) instead of `<dir>/.mcp.json`. Nothing MCP-related is written inside the repository anymore, so there's nothing to accidentally commit and no trust-approval prompt.
+- **Ownership-aware merging** — the store records which server names ccp wrote (`mcpOwnership` in `coder-profiles.json`); on every apply only those names are replaced. Servers added by hand (e.g. `claude mcp add`) survive preset switches, at both global and workspace level. Migration note: the *first* apply after upgrading treats all existing top-level `mcpServers` in `~/.claude.json` as ccp-owned (matching the old wholesale-replace behavior); from then on hand-added global servers are preserved.
+- **`ccp sync` re-aligns `~/.claude.json` with the profile store** — sync (and apply/switch for the current workspace) now also migrates any servers ccp previously wrote into a workspace `.mcp.json`: matching names are removed, the `mcpServers` key is dropped when empty, and the file is deleted when nothing else remains. Servers your team added under other names are left untouched.
+
 ## [0.2.5] — 2026-06-29
+
+> Not published to npm (publish tooling issue); these changes first shipped in 0.3.0.
 
 ### Changed
 - **`ccp switch` defaults to the current workspace** — previously `ccp switch <preset>` set the *global* preset, which affected all workspaces set to Inherit. The default scope is now the current directory (workspace). Use `--global` / `-g` to explicitly target the global fallback. The `--workspace` / `-w` flag still works but is now redundant.

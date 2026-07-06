@@ -21,7 +21,7 @@ This repository is an **npm workspaces monorepo** with three packages:
 
 The extension and the CLI operate on the **same profile store**
 (`~/.claude/coder-profiles.json`) and write the same Claude Code config files
-(`~/.claude/settings.json`, `.mcp.json`). Author your providers/presets in the GUI;
+(`~/.claude/settings.json`, `~/.claude.json`). Author your providers/presets in the GUI;
 switch them from either the GUI or the CLI.
 
 ## Quick start

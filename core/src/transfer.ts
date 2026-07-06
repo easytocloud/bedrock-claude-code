@@ -57,10 +57,14 @@ function scrubProvider(provider: ProviderProfile): ProviderProfile {
 
 /** Scrub all credentials from a profile store for safe export. */
 export function scrubStore(store: ProfileStore): ProfileStore {
-  return {
+  const scrubbed: ProfileStore = {
     ...store,
     providers: store.providers.map(scrubProvider),
   };
+  // Machine-local state: which MCP server names we wrote into this machine's
+  // ~/.claude.json. Meaningless (and misleading) on another machine.
+  delete scrubbed.mcpOwnership;
+  return scrubbed;
 }
 
 /** Names of providers whose credentials are placeholders that need replacing. */
