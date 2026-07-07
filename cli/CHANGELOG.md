@@ -4,6 +4,13 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-07
+
+> Version jumps from 0.3.0 to 0.5.0 to align with the extension: engine-affecting releases now ship both packages under the same minor version ("same minor = same engine behavior"). There is no CLI 0.4.x.
+
+### Changed
+- **`import --mode merge` now upserts by ID** — entries whose UUID already exists locally are updated in place (they descend from the same original export); unknown UUIDs are added with their IDs kept intact. Re-importing the same file is idempotent — previously every merge duplicated all imported items under fresh IDs, with no way to distribute preset *updates*. Nothing is deleted by a merge (use `--mode replace` for that). Working credentials are preserved when the incoming provider carries scrubbed `<REPLACE_ME>` placeholders; real incoming values (including `op://` references) overwrite. Output now reports `N added, M updated`.
+
 ## [0.3.0] — 2026-07-06
 
 ### Changed

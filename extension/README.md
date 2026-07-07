@@ -117,7 +117,7 @@ After picking a 3rd-party preset, click **Save All** in the panel header, then *
 | 1Password support | Enter `op://Vault/Item/field` as the credential — the extension writes `apiKeyHelper` for Claude Code to resolve at startup |
 | Filterable dropdowns | Type-to-filter combobox for AWS profiles (100+) and model lists (500+ OpenRouter) — slot-matching models grouped first, alphabetical sort, keyboard nav, match highlighting |
 | Quick-switch status bar | Click the status bar item to switch presets for global or VS Code Workspace scope without opening the panel |
-| Import / Export | Share presets between machines or team members — credentials are scrubbed on export, recipients fill in their own |
+| Import / Export | Share presets between machines or team members — credentials are scrubbed on export, recipients fill in their own. Merge-importing an updated export refreshes existing items in place (no duplicates) |
 | Draft auto-save | Unsaved changes persist across panel close and are restored on re-open |
 | Dirty indicator | Save All button pulses with a `●` indicator when unsaved changes exist |
 | Drawer-based editing | Slide-out panels for editing all building blocks; closing with unsaved edits prompts a confirmation |

@@ -96,7 +96,7 @@ export async function importPresets(): Promise<void> {
 
   const mode = await vscode.window.showQuickPick(
     [
-      { label: 'Merge', description: 'Add imported items alongside existing ones', value: 'merge' as const },
+      { label: 'Merge', description: 'Update items with matching IDs in place, add new ones — nothing is deleted', value: 'merge' as const },
       { label: 'Replace', description: 'Replace all settings with imported file', value: 'replace' as const },
     ],
     { placeHolder: 'How should imported presets be combined with existing ones?' }
@@ -111,20 +111,22 @@ export async function importPresets(): Promise<void> {
     return;
   }
 
-  // Merge: add incoming items with fresh IDs to avoid collisions
-  const store = mergeIncomingStore(readProfileStore(), incoming);
+  // Merge: upsert by ID — same ID updates in place (credentials preserved
+  // when the import carries placeholders), unknown IDs are added
+  const result = { added: 0, updated: 0 };
+  const store = mergeIncomingStore(readProfileStore(), incoming, result);
   writeProfileStore(store);
   refreshStatusBar();
 
   const placeholders = providersNeedingCredentials(store);
   if (placeholders.length > 0) {
     vscode.window.showWarningMessage(
-      `Imported successfully. These providers have placeholder credentials that need replacing: ${placeholders.join(', ')}`
+      `Merged: ${result.added} added, ${result.updated} updated. ` +
+      `These providers have placeholder credentials that need replacing: ${placeholders.join(', ')}`
     );
   } else {
     vscode.window.showInformationMessage(
-      `Imported ${incoming.presets.length} preset(s), ${incoming.providers.length} provider(s), ` +
-      `${incoming.mcpGroups.length} MCP group(s), ${incoming.directoryGroups.length} directory group(s).`
+      `Merged: ${result.added} item(s) added, ${result.updated} updated.`
     );
   }
 }

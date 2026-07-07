@@ -1,5 +1,4 @@
 import { ProfileStore, ProviderProfile } from './types';
-import { generateId } from './profiles';
 
 // ---------------------------------------------------------------------------
 // Credential scrubbing — real keys must never leave the machine on export.
@@ -92,42 +91,76 @@ export function parseIncomingStore(raw: string): ProfileStore {
   return incoming;
 }
 
+/** Insert `incoming` or overwrite the entry with the same ID. */
+function upsertById<T extends { id: string }>(list: T[], incoming: T): 'added' | 'updated' {
+  const idx = list.findIndex(e => e.id === incoming.id);
+  if (idx >= 0) { list[idx] = incoming; return 'updated'; }
+  list.push(incoming);
+  return 'added';
+}
+
 /**
- * Merge an incoming store into a base store, re-generating all IDs to avoid
- * collisions and remapping preset → provider/group references. Mutates and
- * returns `base`.
+ * Keep the existing credential when the incoming one is a scrubbed
+ * placeholder (or absent) — a merge must never destroy working credentials.
+ * Real incoming values (including op:// references, which survive scrubbing)
+ * do overwrite.
  */
-export function mergeIncomingStore(base: ProfileStore, incoming: ProfileStore): ProfileStore {
-  const idMap = new Map<string, string>(); // old ID → new ID
+function preserveCredential(
+  incoming: string | undefined,
+  existing: string | undefined
+): string | undefined {
+  if (incoming === PLACEHOLDER || incoming === undefined || incoming === '') {
+    return existing ?? incoming;
+  }
+  return incoming;
+}
+
+export interface MergeResult {
+  added: number;
+  updated: number;
+}
+
+/**
+ * Merge an incoming store into a base store with upsert semantics: entries
+ * whose UUID already exists locally are overwritten in place (same lineage —
+ * an update from the original source); unknown UUIDs are added as-is. IDs are
+ * never regenerated, so re-importing the same export is idempotent and
+ * cross-references stay intact. Existing entries absent from the import are
+ * left alone (merge never deletes — use replace for that). Scope assignments
+ * and mcpOwnership are machine-local and not merged. Mutates and returns
+ * `base`; per-kind counts are written to `result` when provided.
+ */
+export function mergeIncomingStore(
+  base: ProfileStore,
+  incoming: ProfileStore,
+  result?: MergeResult
+): ProfileStore {
+  const tally: MergeResult = { added: 0, updated: 0 };
+  const count = (outcome: 'added' | 'updated') => { tally[outcome]++; };
 
   for (const provider of incoming.providers) {
-    const newId = generateId();
-    idMap.set(provider.id, newId);
-    base.providers.push({ ...provider, id: newId });
+    const existing = base.providers.find(p => p.id === provider.id);
+    count(upsertById(base.providers, {
+      ...provider,
+      anthropicApiKey: preserveCredential(provider.anthropicApiKey, existing?.anthropicApiKey),
+      proxyCredential: preserveCredential(provider.proxyCredential, existing?.proxyCredential),
+      proxyApiKey: preserveCredential(provider.proxyApiKey, existing?.proxyApiKey),
+      proxyAuthToken: preserveCredential(provider.proxyAuthToken, existing?.proxyAuthToken),
+    }));
   }
 
   for (const group of incoming.mcpGroups) {
-    const newId = generateId();
-    idMap.set(group.id, newId);
-    base.mcpGroups.push({ ...group, id: newId });
+    count(upsertById(base.mcpGroups, group));
   }
 
   for (const group of incoming.directoryGroups) {
-    const newId = generateId();
-    idMap.set(group.id, newId);
-    base.directoryGroups.push({ ...group, id: newId });
+    count(upsertById(base.directoryGroups, group));
   }
 
   for (const preset of incoming.presets) {
-    const newId = generateId();
-    base.presets.push({
-      ...preset,
-      id: newId,
-      providerId: idMap.get(preset.providerId) ?? preset.providerId,
-      mcpGroupIds: preset.mcpGroupIds.map(id => idMap.get(id) ?? id),
-      directoryGroupIds: preset.directoryGroupIds.map(id => idMap.get(id) ?? id),
-    });
+    count(upsertById(base.presets, preset));
   }
 
+  if (result) { Object.assign(result, tally); }
   return base;
 }

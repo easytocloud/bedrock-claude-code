@@ -38,6 +38,16 @@ ccp <command> [options]
 | `ccp export` | Print the store as JSON with **credentials scrubbed** (`-o <file>` to write). |
 | `ccp import <file\|->` | Import a store (`--mode merge` \| `replace`). `-` reads stdin. |
 
+### Import modes
+
+- **`--mode merge`** (default) — upserts by ID: entries whose UUID already exists
+  locally are **updated in place** (an update from the same original source);
+  unknown UUIDs are added. Re-importing the same export is idempotent — no
+  duplicates. Nothing is ever deleted by a merge. Your working credentials are
+  preserved when the import carries scrubbed `<REPLACE_ME>` placeholders; real
+  incoming values (including `op://` references) do overwrite.
+- **`--mode replace`** — wipes the local store and takes the import wholesale.
+
 ### Scope (for `switch`)
 
 By default `switch` sets the **current workspace** (CWD) preset — the smallest blast

@@ -4,6 +4,11 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-07
+
+### Changed
+- **Import Merge now upserts by ID** — imported entries whose UUID already exists locally are updated in place (they descend from the same original export); unknown UUIDs are added with their IDs kept intact. Re-importing the same file is idempotent — previously every merge duplicated all imported items under fresh IDs, with no way to distribute preset *updates*. Nothing is deleted by a merge (use Replace for that). Working credentials are preserved when the incoming provider carries scrubbed `<REPLACE_ME>` placeholders; real incoming values (including `op://` references) overwrite. The confirmation toast now reports how many items were added vs updated.
+
 ## [0.4.0] — 2026-07-06
 
 ### Changed

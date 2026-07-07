@@ -58,7 +58,11 @@ OPTIONS
   --json                  Machine-readable JSON output (list, current)
   --out, -o <file>        Write export to a file instead of stdout
   --no-scrub              Export without scrubbing credentials (dangerous)
-  --mode <merge|replace>  Import mode (default: merge)
+  --mode <merge|replace>  Import mode (default: merge). merge upserts by ID:
+                          same ID → entry is updated in place (credentials
+                          preserved when the import has placeholders), new ID
+                          → added; nothing is deleted. replace wipes the store
+                          and takes the import wholesale
   --dry-run               Preview only — show what \`sync\` would change, write nothing
   --help, -h              Show this help
   --version, -v           Show version
@@ -352,11 +356,13 @@ function cmdImport(src: string | undefined, values: Values): void {
     return;
   }
 
-  const store = mergeIncomingStore(readProfileStore(), incoming);
+  const result = { added: 0, updated: 0 };
+  const store = mergeIncomingStore(readProfileStore(), incoming, result);
   writeProfileStore(store);
   process.stdout.write(
-    `imported ${incoming.presets.length} preset(s), ${incoming.providers.length} provider(s), ` +
-    `${incoming.mcpGroups.length} MCP group(s), ${incoming.directoryGroups.length} directory group(s).\n`
+    `merged: ${result.added} added, ${result.updated} updated ` +
+    `(${incoming.presets.length} preset(s), ${incoming.providers.length} provider(s), ` +
+    `${incoming.mcpGroups.length} MCP group(s), ${incoming.directoryGroups.length} directory group(s) in import).\n`
   );
   const placeholders = providersNeedingCredentials(store);
   if (placeholders.length > 0) {
