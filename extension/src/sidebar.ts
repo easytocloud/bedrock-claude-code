@@ -60,7 +60,13 @@ function chipForProvider(provider: ProviderProfile | undefined): ChipSpec {
     return { icon: 'anthropic.svg', label: 'A', bg: '#D97757', fg: '#ffffff' };
   }
   if (provider.type === 'bedrock' || provider.proxyPreset === 'bedrock') {
-    return { icon: 'bedrock.svg', label: '✦', bg: '#232F3E', fg: '#FF9900' };
+    // AWS Machine Learning category gradient behind the official Bedrock glyph
+    return {
+      icon: 'bedrock.svg',
+      label: '✦',
+      bg: 'linear-gradient(135deg, #56C0A7 0%, #055F4E 100%)',
+      fg: '#ffffff',
+    };
   }
   switch (provider.proxyPreset) {
     case 'openrouter': return { icon: 'openrouter.svg', label: 'OR', bg: '#101828', fg: '#ffffff' };
