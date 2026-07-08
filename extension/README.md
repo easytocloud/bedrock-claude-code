@@ -2,7 +2,7 @@
 
 **One Claude Code. Every backend.** Point [Claude Code](https://docs.anthropic.com/en/docs/claude-code) at Anthropic, AWS Bedrock, a local model running on your own machine, or a proxy like OpenRouter — and switch in a single click.
 
-![Claude Code Personae screenshot](https://raw.githubusercontent.com/easytocloud/bedrock-claude-code/main/extension/images/screenshot.png)
+![The preset switcher in the VS Code sidebar](https://raw.githubusercontent.com/easytocloud/bedrock-claude-code/main/extension/images/screenshot.png)
 
 ## Four ways to run Claude Code
 
@@ -13,7 +13,7 @@
 | **Local models** | You want everything on-device — no API key, no telemetry, no data leaving the laptop. **Ollama**, **LM Studio**, **oMLX**, and **vLLM** all work out of the box. |
 | **Proxies / Gateways** | You want to mix Anthropic models with OpenAI, Llama, or anything else through a single API. **OpenRouter** and **LiteLLM** are first-class; any custom Anthropic-compatible endpoint also works. |
 
-Each combination of backend + MCP servers + allowed directories is a **Preset** you build once and apply globally or per workspace. Mix and match freely — "Bedrock for client work, Ollama offline, OpenRouter for niche models" — and switch from the VS Code status bar.
+Each combination of backend + MCP servers + allowed directories is a **Preset** you build once and apply globally or per workspace. Mix and match freely — "Bedrock for client work, Ollama offline, OpenRouter for niche models" — and switch from the sidebar (shown above) or the status bar.
 
 ## Concept
 
@@ -24,6 +24,10 @@ Build **presets** from three types of building blocks:
 - **Directory Groups** — additional directories Claude Code may access
 
 A **preset** bundles one provider + any number of MCP server groups + any number of directory groups into a single switchable configuration.
+
+Building blocks and presets are composed in the full editor panel:
+
+![The compose/edit panel](https://raw.githubusercontent.com/easytocloud/bedrock-claude-code/main/extension/images/screenshot-panel.png)
 
 Presets are then assigned to **scopes**:
 
@@ -48,7 +52,7 @@ A sample configuration is included in [`examples/coder-profiles.json`](examples/
 
 ## Getting Started
 
-1. Open the Command Palette → **Open Claude Code Personae**
+1. Click the Claude Code Personae sparkle in the Activity Bar, then **Create New Preset** (or open the Command Palette → **Open Claude Code Personae**)
 2. Create a **Provider** (e.g. AWS Bedrock with your profile and region)
 3. Optionally create **MCP Server Groups** and **Directory Groups**
 4. Create a **Preset** that combines your provider with any groups
@@ -116,6 +120,7 @@ After picking a 3rd-party preset, click **Save All** in the panel header, then *
 | Model compatibility testing | Per-slot **Test** pill verifies the model speaks Anthropic's `/v1/messages` API; results persisted per provider |
 | 1Password support | Enter `op://Vault/Item/field` as the credential — the extension writes `apiKeyHelper` for Claude Code to resolve at startup |
 | Filterable dropdowns | Type-to-filter combobox for AWS profiles (100+) and model lists (500+ OpenRouter) — slot-matching models grouped first, alphabetical sort, keyboard nav, match highlighting |
+| Sidebar preset switcher | Activity Bar view with the active preset for the workspace and one-click switching — provider brand icons, MCP/directory summary, Inherit from Global |
 | Quick-switch status bar | Click the status bar item to switch presets for global or VS Code Workspace scope without opening the panel |
 | Import / Export | Share presets between machines or team members — credentials are scrubbed on export, recipients fill in their own. Merge-importing an updated export refreshes existing items in place (no duplicates) |
 | Draft auto-save | Unsaved changes persist across panel close and are restored on re-open |
