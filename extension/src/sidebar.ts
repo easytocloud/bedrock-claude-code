@@ -39,6 +39,7 @@ interface SidebarSelected {
   name: string;
   subtitle?: string;
   meta?: string;
+  chip?: ChipSpec;
   /** e.g. "Inherited from Global" — shown under the card when relevant */
   scopeNote?: string;
 }
@@ -52,30 +53,67 @@ interface SidebarState {
   presets: SidebarPresetItem[];
 }
 
-function chipForProvider(provider: ProviderProfile | undefined): ChipSpec {
+type ProxyFlavor = NonNullable<ProviderProfile['proxyPreset']>;
+
+/**
+ * Work out which known provider a proxy really is. `proxyPreset` is only set
+ * on records created since v0.3.21 and stays 'custom' when the user picked
+ * Custom despite pointing at a known service — so fall back to recognizable
+ * URLs, default ports, and finally the provider/preset names.
+ */
+function inferProxyFlavor(provider: ProviderProfile, presetName?: string): ProxyFlavor {
+  if (provider.proxyPreset && provider.proxyPreset !== 'custom') {
+    return provider.proxyPreset;
+  }
+
+  const url = (provider.proxyBaseUrl ?? '').toLowerCase();
+  if (url.includes('openrouter.ai')) { return 'openrouter'; }
+  if (url.includes('bedrock') || url.includes('amazonaws.com')) { return 'bedrock'; }
+  if (/:11434(?:\/|$)/.test(url)) { return 'ollama'; }   // Ollama default port
+  if (/:1234(?:\/|$)/.test(url)) { return 'lmstudio'; }  // LM Studio default port
+  if (/:8000(?:\/|$)/.test(url)) { return 'vllm'; }      // vLLM default port
+  if (/:4000(?:\/|$)/.test(url)) { return 'litellm'; }   // LiteLLM default port
+
+  const names = `${provider.name} ${presetName ?? ''}`.toLowerCase();
+  if (names.includes('openrouter')) { return 'openrouter'; }
+  if (names.includes('vllm')) { return 'vllm'; }
+  if (names.includes('ollama')) { return 'ollama'; }
+  if (names.includes('lm studio') || names.includes('lmstudio')) { return 'lmstudio'; }
+  if (names.includes('litellm')) { return 'litellm'; }
+  if (names.includes('omlx')) { return 'omlx'; }
+  if (names.includes('bedrock')) { return 'bedrock'; }
+
+  return 'custom';
+}
+
+const BEDROCK_CHIP: ChipSpec = {
+  // AWS Machine Learning category gradient behind the official Bedrock glyph
+  icon: 'bedrock.svg',
+  label: '✦',
+  bg: 'linear-gradient(135deg, #56C0A7 0%, #055F4E 100%)',
+  fg: '#ffffff',
+};
+
+function chipForProvider(provider: ProviderProfile | undefined, presetName?: string): ChipSpec {
   if (!provider) {
     return { label: '?', bg: '#6B7280', fg: '#ffffff' };
   }
   if (provider.type === 'anthropic') {
     return { icon: 'anthropic.svg', label: 'A', bg: '#D97757', fg: '#ffffff' };
   }
-  if (provider.type === 'bedrock' || provider.proxyPreset === 'bedrock') {
-    // AWS Machine Learning category gradient behind the official Bedrock glyph
-    return {
-      icon: 'bedrock.svg',
-      label: '✦',
-      bg: 'linear-gradient(135deg, #56C0A7 0%, #055F4E 100%)',
-      fg: '#ffffff',
-    };
+  if (provider.type === 'bedrock') {
+    return BEDROCK_CHIP;
   }
-  switch (provider.proxyPreset) {
+  switch (inferProxyFlavor(provider, presetName)) {
+    case 'bedrock': return BEDROCK_CHIP;
     case 'openrouter': return { icon: 'openrouter.svg', label: 'OR', bg: '#101828', fg: '#ffffff' };
     case 'ollama': return { icon: 'ollama.svg', label: 'OL', bg: '#F4F4F5', fg: '#18181B' };
     case 'lmstudio': return { icon: 'lmstudio.svg', label: 'LM', bg: '#4F46E5', fg: '#ffffff' };
     case 'omlx': return { label: 'MX', bg: '#0EA5E9', fg: '#ffffff' };
     case 'vllm': return { icon: 'vllm.svg', label: 'VL', bg: '#334155', fg: '#ffffff' };
     case 'litellm': return { label: 'LL', bg: '#10B981', fg: '#ffffff' };
-    default: return { label: 'C', bg: '#6B7280', fg: '#ffffff' };
+    // Custom — our own layered-squares logo on the extension's banner color
+    default: return { icon: 'custom.svg', label: 'C', bg: '#1a1a2e', fg: '#ffffff' };
   }
 }
 
@@ -122,6 +160,7 @@ function selectedFromScope(
         name: preset.name,
         subtitle: subtitleForProvider(provider),
         meta: metaForPreset(preset, store),
+        chip: chipForProvider(provider, preset.name),
         scopeNote,
       };
     }
@@ -171,7 +210,7 @@ function buildSidebarState(): SidebarState {
         id: p.id,
         name: p.name,
         subtitle: subtitleForProvider(provider),
-        chip: chipForProvider(provider),
+        chip: chipForProvider(provider, p.name),
       };
     });
 
@@ -344,28 +383,27 @@ const SIDEBAR_STYLES = /* css */ `
     border: 1px solid color-mix(in srgb, var(--vscode-focusBorder) 55%, transparent);
     background: color-mix(in srgb, var(--vscode-focusBorder) 10%, var(--vscode-sideBar-background, transparent));
   }
-  .selected-head {
+  .selected-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 12px;
   }
+  .selected-row .chip {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+  }
+  .selected-row .chip .chip-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .selected-text { min-width: 0; }
   .selected-name {
     font-size: 14px;
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .badge {
-    flex: none;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    background: rgba(35, 134, 54, 0.35);
-    color: #57d98f;
-    border: 1px solid rgba(87, 217, 143, 0.35);
   }
   .selected-sub {
     margin-top: 6px;

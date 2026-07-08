@@ -43,23 +43,25 @@
 
   function renderSelectedCard(selected) {
     const card = el('div', 'selected-card');
+    const row = el('div', 'selected-row');
 
-    const head = el('div', 'selected-head');
-    head.appendChild(el('div', 'selected-name', selected.name));
-    if (selected.mode === 'preset') {
-      head.appendChild(el('div', 'badge', 'Active'));
+    if (selected.chip) {
+      row.appendChild(renderChip(selected.chip));
     }
-    card.appendChild(head);
 
+    const text = el('div', 'selected-text');
+    text.appendChild(el('div', 'selected-name', selected.name));
     if (selected.subtitle) {
-      card.appendChild(el('div', 'selected-sub', selected.subtitle));
+      text.appendChild(el('div', 'selected-sub', selected.subtitle));
     }
     if (selected.meta) {
-      card.appendChild(el('div', 'selected-meta', selected.meta));
+      text.appendChild(el('div', 'selected-meta', selected.meta));
     }
     if (selected.scopeNote) {
-      card.appendChild(el('div', 'scope-note', selected.scopeNote));
+      text.appendChild(el('div', 'scope-note', selected.scopeNote));
     }
+    row.appendChild(text);
+    card.appendChild(row);
     return card;
   }
 

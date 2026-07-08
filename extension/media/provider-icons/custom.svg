@@ -1,0 +1,6 @@
+<svg viewBox="28 28 200 200" xmlns="http://www.w3.org/2000/svg">
+  <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#4ec970" transform="matrix(0.84,0.38,-0.84,0.38,128,144)" opacity="0.78"/>
+  <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#b48eda" transform="matrix(0.72,0.32,-0.72,0.32,128,114)" opacity="0.78"/>
+  <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#e8973e" transform="matrix(0.60,0.27,-0.60,0.27,128,86)" opacity="0.82"/>
+  <rect x="-50" y="-50" width="100" height="100" rx="7" ry="7" fill="#d97857" transform="matrix(0.40,0.18,-0.40,0.18,128,60)" opacity="0.88"/>
+</svg>
