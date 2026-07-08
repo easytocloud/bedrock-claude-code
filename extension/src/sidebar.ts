@@ -19,6 +19,8 @@ export const PRESETS_VIEW_ID = 'bedrock-claude-code.presetsView';
 // ---------------------------------------------------------------------------
 
 interface ChipSpec {
+  /** SVG filename in media/provider-icons/ — falls back to the monogram label */
+  icon?: string;
   label: string;
   bg: string;
   fg: string;
@@ -55,17 +57,17 @@ function chipForProvider(provider: ProviderProfile | undefined): ChipSpec {
     return { label: '?', bg: '#6B7280', fg: '#ffffff' };
   }
   if (provider.type === 'anthropic') {
-    return { label: 'A', bg: '#D97757', fg: '#ffffff' };
+    return { icon: 'anthropic.svg', label: 'A', bg: '#D97757', fg: '#ffffff' };
   }
   if (provider.type === 'bedrock' || provider.proxyPreset === 'bedrock') {
-    return { label: '✦', bg: '#FF9900', fg: '#1a1a2e' };
+    return { icon: 'bedrock.svg', label: '✦', bg: '#232F3E', fg: '#FF9900' };
   }
   switch (provider.proxyPreset) {
-    case 'openrouter': return { label: 'OR', bg: '#6467F2', fg: '#ffffff' };
-    case 'ollama': return { label: 'OL', bg: '#71717A', fg: '#ffffff' };
-    case 'lmstudio': return { label: 'LM', bg: '#4F46E5', fg: '#ffffff' };
+    case 'openrouter': return { icon: 'openrouter.svg', label: 'OR', bg: '#101828', fg: '#ffffff' };
+    case 'ollama': return { icon: 'ollama.svg', label: 'OL', bg: '#F4F4F5', fg: '#18181B' };
+    case 'lmstudio': return { icon: 'lmstudio.svg', label: 'LM', bg: '#4F46E5', fg: '#ffffff' };
     case 'omlx': return { label: 'MX', bg: '#0EA5E9', fg: '#ffffff' };
-    case 'vllm': return { label: 'VL', bg: '#F59E0B', fg: '#1a1a2e' };
+    case 'vllm': return { icon: 'vllm.svg', label: 'VL', bg: '#334155', fg: '#ffffff' };
     case 'litellm': return { label: 'LL', bg: '#10B981', fg: '#ffffff' };
     default: return { label: 'C', bg: '#6B7280', fg: '#ffffff' };
   }
@@ -279,6 +281,9 @@ export class PresetsSidebarProvider implements vscode.WebviewViewProvider {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this._context.extensionUri, 'media', 'sidebar.js')
     ).toString();
+    const iconBase = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._context.extensionUri, 'media', 'provider-icons')
+    ).toString();
     // <-escape so preset names can't break out of the inline script
     const stateJson = JSON.stringify(buildSidebarState()).replace(/</g, '\\u003c');
 
@@ -287,12 +292,15 @@ export class PresetsSidebarProvider implements vscode.WebviewViewProvider {
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}' ${webview.cspSource};" />
+        content="default-src 'none'; style-src 'nonce-${nonce}'; img-src ${webview.cspSource}; script-src 'nonce-${nonce}' ${webview.cspSource};" />
   <style nonce="${nonce}">${SIDEBAR_STYLES}</style>
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}">window.__SIDEBAR_DATA__ = ${stateJson};</script>
+  <script nonce="${nonce}">
+    window.__ICON_BASE__ = ${JSON.stringify(iconBase)};
+    window.__SIDEBAR_DATA__ = ${stateJson};
+  </script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
@@ -416,6 +424,11 @@ const SIDEBAR_STYLES = /* css */ `
     border-radius: 8px;
     font-size: 12px;
     font-weight: 700;
+  }
+  .chip-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
   }
   .row-text { min-width: 0; }
   .row-name {

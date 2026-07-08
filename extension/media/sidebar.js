@@ -23,9 +23,21 @@
   }
 
   function renderChip(spec) {
-    const chip = el('div', 'chip', spec.label);
+    const chip = el('div', 'chip');
     chip.style.background = spec.bg;
     chip.style.color = spec.fg;
+    if (spec.icon && window.__ICON_BASE__) {
+      const img = el('img', 'chip-icon');
+      img.src = window.__ICON_BASE__ + '/' + spec.icon;
+      img.alt = '';
+      // If the icon fails to load, fall back to the monogram label
+      img.addEventListener('error', function () {
+        chip.textContent = spec.label;
+      });
+      chip.appendChild(img);
+    } else {
+      chip.textContent = spec.label;
+    }
     return chip;
   }
 
