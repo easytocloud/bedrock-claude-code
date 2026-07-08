@@ -4,6 +4,8 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-07-08
+
 ### Changed
 - **Main panel is now compose-only** — the VS Code Workspace scope card is gone from the settings panel. The panel is for composing building blocks and Presets and setting the **Global** default; workspaces inherit Global by default, and per-workspace switching happens in the sidebar (or the status bar quick-pick). Existing per-workspace assignments keep working and are still stored/applied exactly as before.
 

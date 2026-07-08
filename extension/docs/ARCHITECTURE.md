@@ -10,6 +10,8 @@ Dir Groups ─┘                           {workspace}/.claude/settings.json
 
 Each **Preset** bundles one Provider with zero or more MCP Server Groups and Directory Groups. **Scopes** (Global and per-Workspace) hold a `ScopeAssignment` that points to a Preset, sets Manual mode, or inherits from Global.
 
+Two UI surfaces (since 0.7.0): the **main panel** composes building blocks/Presets and assigns the Global scope only; the **Activity Bar sidebar** (`src/sidebar.ts` + `media/sidebar.js`) shows the effective preset per workspace and handles per-workspace switching. Workspaces inherit Global unless the sidebar (or status bar quick-pick) sets an override.
+
 ---
 
 ## Data storage
@@ -68,14 +70,17 @@ The settings panel (`src/panel.ts`) hosts a VS Code Webview. The HTML is assembl
 
 | Module | Role |
 |--------|------|
-| `index.ts` | Assembles the full HTML page; injects `window.__DATA__` |
-| `layout.ts` | Renders the top-level scope cards and preset/building-block sections |
+| `index.ts` | Assembles the full HTML page; injects `window.__DATA__` and `window.__ICON_BASE__` |
+| `layout.ts` | Renders the Global scope card (the only scope in the panel) and preset/building-block sections, incl. provider brand tiles |
+| `../providerIcons.ts` | Shared provider-flavor inference + brand tile catalog (used by panel layout and sidebar; mirrored browser-side in `media/webview.js`) |
 | `components.ts` | Shared HTML primitives (chips, badges, form fields) |
 | `drawers.ts` | Drawer HTML for editing Providers, MCP Groups, Dir Groups, Presets |
 | `styles.ts` | All CSS as a tagged template literal |
 | `script.ts` | Builds the `window.__DATA__` inline script (model catalogs, default IDs) |
 
 All browser-side JavaScript lives in `media/webview.js` (plain JS, **not** inside a TypeScript template literal). The file is loaded via `<script src="...">` using a webview URI. Extension-side data is injected as `window.__DATA__` in a separate inline `<script>` tag built by `script.ts`.
+
+The sidebar view follows the same pattern on a smaller scale: `src/sidebar.ts` (WebviewViewProvider, state projection, styles) + `media/sidebar.js` (plain JS renderer). Provider logos ship as SVGs in `media/provider-icons/` and are served via `asWebviewUri` (`img-src` is in both CSPs). Panel tile colors use `flavor-*` CSS classes because the CSP blocks inline `style` attributes; the sidebar sets colors via the CSSOM, which CSP permits.
 
 This separation was introduced in v0.3.0 to eliminate an entire class of escaping bugs where regex literals and TypeScript annotations leaked through the template literal into the browser.
 
