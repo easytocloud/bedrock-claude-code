@@ -146,8 +146,51 @@ console.log('[WEBVIEW] Script loaded');
     if (!region) return ['global', ''];
     if (region.startsWith('us-')) return ['us', 'global', ''];
     if (region.startsWith('eu-')) return ['eu', 'global', ''];
-    if (region.startsWith('ap-')) return ['ap', 'global', ''];
+    if (region.startsWith('ap-')) return ['apac', 'jp', 'au', 'global', ''];
     return ['global', ''];
+  }
+
+  // AWS Bedrock geo prefixes applicable to a region, for the scope pill.
+  // Cross-region inference profile IDs are prefixed per geography:
+  // us. / eu. / apac. / jp. (Japan) / au. (Australia) / us-gov. / global.
+  // Ordered most-restrictive first — the first entry is the default selection.
+  function bedrockGeosForRegion(region) {
+    if (!region) return [];
+    if (region.startsWith('us-gov-')) return [{ val: 'us-gov', label: 'US Gov' }];
+    if (region.startsWith('us-')) return [{ val: 'us', label: 'US' }];
+    if (region.startsWith('eu-')) return [{ val: 'eu', label: 'EU' }];
+    // Japan (Tokyo/Osaka) and Australia (Sydney/Melbourne) have their own
+    // data-residency geos on newer models, alongside the broader APAC geo
+    if (region === 'ap-northeast-1' || region === 'ap-northeast-3') {
+      return [{ val: 'jp', label: 'JP' }, { val: 'apac', label: 'APAC' }];
+    }
+    if (region === 'ap-southeast-2' || region === 'ap-southeast-4') {
+      return [{ val: 'au', label: 'AU' }, { val: 'apac', label: 'APAC' }];
+    }
+    if (region.startsWith('ap-')) return [{ val: 'apac', label: 'APAC' }];
+    return []; // ca-*, sa-*: no geo profiles — Global only
+  }
+
+  // Rebuild the scope pill row for the given region: geo options first
+  // (most restrictive leads and is the default), Global last. Preserves the
+  // current selection when it still applies; `forceDefault` resets to the
+  // first (most restrictive) option.
+  function renderBedrockScopePills(region, forceDefault) {
+    let container = document.getElementById('bedrock-scope-pills');
+    if (!container) return;
+    let options = bedrockGeosForRegion(region).concat([{ val: 'global', label: 'Global' }]);
+    let current = forceDefault ? options[0].val : bedrockScope();
+    if (!options.some(function(o) { return o.val === current; })) { current = options[0].val; }
+    container.innerHTML = '';
+    options.forEach(function(o) {
+      let btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill-btn' + (o.val === current ? ' sel' : '');
+      btn.dataset.pill = 'bedrock-scope';
+      btn.dataset.val = o.val;
+      btn.textContent = o.label;
+      container.appendChild(btn);
+    });
   }
 
   function filterModels(models, region) {
@@ -221,6 +264,9 @@ console.log('[WEBVIEW] Script loaded');
     });
     // Active segmented buttons / pills / toggles (selection lives in CSS classes, not form values)
     drawer.querySelectorAll('[data-seg].sel, [data-pill].sel, [data-toggle].on').forEach(function(el) {
+      // bedrock-scope / bedrock-pds are view filters on the model list, not
+      // provider state — flipping them must not trip the unsaved-changes guard
+      if (el.dataset.pill === 'bedrock-scope' || el.dataset.pill === 'bedrock-pds') { return; }
       parts.push('@' + (el.dataset.seg || el.dataset.pill || el.dataset.toggle) + '=' + (el.dataset.val || 'on'));
     });
     // Pending lists for not-yet-saved MCP / directory groups are kept in `editing`, not in inputs
@@ -648,6 +694,16 @@ console.log('[WEBVIEW] Script loaded');
       btn.classList.toggle('sel', btn.dataset.val === authMode);
     });
 
+    // Bedrock region-scope pill — view filter, reset on every open to the
+    // most restrictive option for the region (the region's geo, or Global
+    // when the region has no geo profiles)
+    renderBedrockScopePills(document.getElementById('provider-aws-region').value, true);
+
+    // Provider-data-share opt-in — always back to the safe default (No)
+    document.querySelectorAll('[data-pill="bedrock-pds"]').forEach(function(btn) {
+      btn.classList.toggle('sel', btn.dataset.val === 'no');
+    });
+
     // Refresh op:// hints after values are populated
     updateCredentialHint();
     updateAnthropicCredentialHint();
@@ -850,10 +906,80 @@ console.log('[WEBVIEW] Script loaded');
 
   function showProxyAuthSection() { /* no-op: single credential field, pill only affects semantics */ }
 
+  // Selected Global/US/EU pill for the Bedrock model list (view filter, not persisted)
+  function bedrockScope() {
+    let sel = document.querySelector('[data-pill="bedrock-scope"].sel');
+    return sel ? sel.dataset.val : 'global';
+  }
+
+  // Global shows everything; a geo scope keeps only IDs with that geo's prefix
+  function filterByBedrockScope(models) {
+    let scope = bedrockScope();
+    if (scope === 'global') { return models; }
+    let prefix = scope + '.';
+    return models.filter(function(m) { return m.id.indexOf(prefix) === 0; });
+  }
+
+  // Best-effort version extraction from a Claude model/profile ID. Anthropic's
+  // Bedrock naming has changed over time:
+  //   anthropic.claude-3-5-haiku-20241022-v1:0   (version before family)
+  //   anthropic.claude-haiku-4-5-20251001-v1:0   (version after family)
+  //   anthropic.claude-sonnet-4-6 / claude-sonnet-5 (no date)
+  // Returns { family, version, date } — version 0 when unparseable, so unknown
+  // patterns sort last instead of wrongly sorting first.
+  function parseModelVersion(id) {
+    let s = id.toLowerCase();
+    let fam = (s.match(/(haiku|sonnet|opus|fable|mythos)/) || [])[1] || '';
+    let version = 0;
+    if (fam) {
+      // digits after the family keyword (claude-haiku-4-5); a segment >= 100
+      // is a date, not a version — reject it
+      let after = s.match(new RegExp(fam + '-(\\d+)(?:-(\\d+))?'));
+      if (after && parseInt(after[1], 10) < 100) {
+        version = parseInt(after[1], 10) + (after[2] && parseInt(after[2], 10) < 100 ? parseInt(after[2], 10) / 100 : 0);
+      } else {
+        // digits before the family keyword (claude-3-5-haiku)
+        let before = s.match(new RegExp('claude-(\\d+)(?:-(\\d+))?-' + fam));
+        if (before) {
+          version = parseInt(before[1], 10) + (before[2] ? parseInt(before[2], 10) / 100 : 0);
+        }
+      }
+    }
+    let date = (s.match(/-(20\d{6})/) || [])[1] || '';
+    return { family: fam, version: version, date: date };
+  }
+
+  // Newest-first within each model family; families in slot order
+  // (sonnet, haiku, opus), unknown families after, unparseable IDs last.
+  var MODEL_FAMILY_ORDER = { sonnet: 0, haiku: 1, opus: 2 };
+  function sortModelsByVersion(models) {
+    return models.slice().sort(function(a, b) {
+      let va = parseModelVersion(a.id);
+      let vb = parseModelVersion(b.id);
+      let fa = va.family in MODEL_FAMILY_ORDER ? MODEL_FAMILY_ORDER[va.family] : 9;
+      let fb = vb.family in MODEL_FAMILY_ORDER ? MODEL_FAMILY_ORDER[vb.family] : 9;
+      if (fa !== fb) return fa - fb;
+      if (va.family !== vb.family) return va.family < vb.family ? -1 : 1;
+      if (va.version !== vb.version) return vb.version - va.version;
+      if (va.date !== vb.date) return vb.date > va.date ? 1 : -1;
+      return a.id < b.id ? -1 : 1;
+    });
+  }
+
+  // Hide models that share inference data with the provider (pds flag from the
+  // backend) unless the user explicitly flipped the pill to Yes
+  function filterByDataShare(models) {
+    let sel = document.querySelector('[data-pill="bedrock-pds"].sel');
+    if (sel && sel.dataset.val === 'yes') { return models; }
+    return models.filter(function(m) { return !m.pds; });
+  }
+
   function rebuildModelSelects(type, provider) {
     const region = document.getElementById('provider-aws-region').value;
 
     if (type === 'bedrock') {
+      // Scope pill follows the region: Global + the region's geo(s)
+      renderBedrockScopePills(region);
       // Smart presets (curated list filtered by region) + any fetched account models
       let sonnetPresets = filterModels(SONNET_MODELS, region);
       let haikuPresets = filterModels(HAIKU_MODELS, region);
@@ -861,22 +987,26 @@ console.log('[WEBVIEW] Script loaded');
       if (fetched.bedrockModels.length > 0) {
         // Merge: smart presets first, then fetched models not already in presets
         let presetIds = new Set(sonnetPresets.concat(haikuPresets, opusPresets).map(function(m) { return m.id; }));
-        let extra = fetched.bedrockModels.filter(function(m) { return !presetIds.has(m.id); });
+        let extra = filterByDataShare(fetched.bedrockModels).filter(function(m) { return !presetIds.has(m.id); });
         // All three selects get the full merged list so any model can go in any slot
-        let allModels = sonnetPresets.concat(haikuPresets, opusPresets, extra);
-        // Deduplicate by id
+        let allModels = filterByBedrockScope(sonnetPresets.concat(haikuPresets, opusPresets, extra));
+        // Deduplicate by id, then newest-first within each family
         let seen = new Set();
         let merged = [];
         for (let i = 0; i < allModels.length; i++) {
           if (!seen.has(allModels[i].id)) { seen.add(allModels[i].id); merged.push(allModels[i]); }
         }
+        merged = sortModelsByVersion(merged);
+        // Counter follows the active filters — only what's actually selectable
+        let statusEl = document.getElementById('bedrock-fetch-status');
+        if (statusEl) { statusEl.textContent = merged.length + ' model' + (merged.length === 1 ? '' : 's') + ' selectable'; }
         populateModelSelect('provider-model-sonnet', merged, provider?.primaryModel, true);
         populateModelSelect('provider-model-haiku', merged, provider?.smallFastModel, true);
         populateModelSelect('provider-model-opus', merged, provider?.opusModel, true);
       } else {
-        populateModelSelect('provider-model-sonnet', sonnetPresets, provider?.primaryModel, true);
-        populateModelSelect('provider-model-haiku', haikuPresets, provider?.smallFastModel, true);
-        populateModelSelect('provider-model-opus', opusPresets, provider?.opusModel, true);
+        populateModelSelect('provider-model-sonnet', filterByBedrockScope(sonnetPresets), provider?.primaryModel, true);
+        populateModelSelect('provider-model-haiku', filterByBedrockScope(haikuPresets), provider?.smallFastModel, true);
+        populateModelSelect('provider-model-opus', filterByBedrockScope(opusPresets), provider?.opusModel, true);
       }
     } else if (type === 'anthropic') {
       populateModelSelect('provider-model-sonnet', [], provider?.primaryModel || ANTHROPIC_DEFAULTS.sonnet, false);
@@ -884,7 +1014,7 @@ console.log('[WEBVIEW] Script loaded');
       populateModelSelect('provider-model-opus', [], provider?.opusModel || ANTHROPIC_DEFAULTS.opus, false);
     } else if (type === 'proxy') {
       if (fetched.proxyModels.length > 1) {
-        const modelList = fetched.proxyModels.map(id => ({ id, label: id }));
+        const modelList = sortModelsByVersion(fetched.proxyModels.map(id => ({ id, label: id })));
         populateModelSelect('provider-model-sonnet', modelList, provider?.primaryModel || '', true);
         populateModelSelect('provider-model-haiku', modelList, provider?.smallFastModel || '', true);
         populateModelSelect('provider-model-opus', modelList, provider?.opusModel || '', true);
@@ -949,10 +1079,9 @@ console.log('[WEBVIEW] Script loaded');
   }
 
   function applyFetchedBedrockModels(models) {
-    // models: [{id, label}]
+    // models: [{id, label, pds?}] — rebuildModelSelects sets the status line
+    // to the post-filter selectable count
     fetched.bedrockModels = models;
-    let statusEl = document.getElementById('bedrock-fetch-status');
-    if (statusEl) statusEl.textContent = 'Found ' + models.length + ' models — smart presets + account models merged below';
     let currentProvider = editing.providerId
       ? state.store.providers.find(function(p) { return p.id === editing.providerId; })
       : null;
@@ -992,8 +1121,12 @@ console.log('[WEBVIEW] Script loaded');
         filtered.push(item);
       }
 
-      // Sort alphabetically by label
-      filtered.sort(function(a, b) { return a.label.localeCompare(b.label); });
+      // Model selects (slotHint set) arrive pre-sorted newest-first by
+      // version — keep that order. Other comboboxes (AWS profiles) sort
+      // alphabetically by label.
+      if (!slotHint) {
+        filtered.sort(function(a, b) { return a.label.localeCompare(b.label); });
+      }
 
       // Split into matching-slot group and rest when a slotHint is provided and no filter active
       let top = [], rest = [];
@@ -2296,6 +2429,12 @@ console.log('[WEBVIEW] Script loaded');
     if (pillName === 'proxy-auth') {
       showProxyAuthSection(pillVal);
       resetAllTestPills();
+    }
+    if (pillName === 'bedrock-scope' || pillName === 'bedrock-pds') {
+      let currentProvider = editing.providerId
+        ? state.store.providers.find(function(p) { return p.id === editing.providerId; })
+        : null;
+      rebuildModelSelects('bedrock', currentProvider);
     }
   });
 

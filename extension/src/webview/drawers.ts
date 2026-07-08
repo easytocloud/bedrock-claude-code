@@ -219,6 +219,21 @@ export function renderProviderDrawer(): string {
       </div>
       <div id="provider-models-info" class="info-box" style="display:none">Smart presets filtered by region — or fetch all models from your account.</div>
       <div id="bedrock-fetch-row" style="display:none" class="form-group">
+        <div class="label-row">
+          <label class="form-label">Region scope</label>
+          <!-- Buttons rendered by renderBedrockScopePills(): Global + the AWS region's geo(s) -->
+          <div class="pill-toggle" id="bedrock-scope-pills">
+            <button type="button" class="pill-btn sel" data-pill="bedrock-scope" data-val="global">Global</button>
+          </div>
+        </div>
+        <div class="label-row"
+             title="Some models (Claude Fable/Mythos) require Bedrock to share your prompts and completions with the model provider, which retains them for up to 30 days. All other Bedrock models keep inference data inside AWS.">
+          <label class="form-label">Allow provider data share</label>
+          <div class="pill-toggle" id="bedrock-pds-pills">
+            <button type="button" class="pill-btn sel" data-pill="bedrock-pds" data-val="no">No</button>
+            <button type="button" class="pill-btn" data-pill="bedrock-pds" data-val="yes">Yes</button>
+          </div>
+        </div>
         <button type="button" class="btn btn-primary" data-action="fetch-bedrock-models">Fetch models from AWS</button>
         <div id="bedrock-fetch-status" class="form-hint form-hint-mt"></div>
       </div>

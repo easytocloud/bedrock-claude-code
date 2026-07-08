@@ -68,7 +68,7 @@ The provider drawer has two top-level types — **Anthropic** and **3rd party**.
 
 - Pick **3rd party**, then choose **Amazon Bedrock** from the Provider dropdown
 - Fill in your AWS profile name and region
-- Pick models from the smart presets or click **Fetch models from AWS** to discover all inference profiles and foundation models in your account
+- Pick models from the smart presets or click **Fetch models from AWS** to discover the Anthropic inference profiles and foundation models in your account (newest versions first). A **Region scope** pill limits the list to your region's geography (US/EU/APAC/JP/AU — most restrictive selected by default), and models that share inference data with the model provider (Claude Fable/Mythos) stay hidden unless you flip **Allow provider data share** to Yes
 - **Test models** — each model slot has a **Test** pill that calls `aws bedrock-runtime converse` to verify profile and model access. Results (OK / Fail) are persisted on the provider
 - Optionally set an auth-refresh command (e.g. `aws sso login --profile my-profile`)
 - Claude Code's login/logout commands are automatically disabled when using Bedrock

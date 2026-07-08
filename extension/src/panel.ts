@@ -3,7 +3,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getClaudeSettingsPath } from '@easytocloud/claude-personae-core';
+import { getClaudeSettingsPath, requiresProviderDataShare } from '@easytocloud/claude-personae-core';
 import { readAwsProfiles, readAwsProfilesFrom, getAwsConfigInfo } from '@easytocloud/claude-personae-core';
 import { readProfileStore, writeProfileStore, createEmptyStore, generateId } from '@easytocloud/claude-personae-core';
 import { applyAllScopes } from '@easytocloud/claude-personae-core';
@@ -589,18 +589,26 @@ export class ClaudeCodeSettingsPanel {
     return path.join(os.homedir(), '.claude', `bedrock-model-cache-${key}.json`);
   }
 
-  private static _readModelCache(cachePath: string): { id: string; label: string }[] | null {
+  // Bump when the fetch-time filtering changes so pre-filter caches are discarded
+  private static readonly _MODEL_CACHE_VERSION = 4;
+
+  private static _readModelCache(cachePath: string): { id: string; label: string; pds?: boolean }[] | null {
     try {
       const raw = fs.readFileSync(cachePath, 'utf8');
-      const { ts, models } = JSON.parse(raw) as { ts: number; models: { id: string; label: string }[] };
+      const { v, ts, models } = JSON.parse(raw) as { v?: number; ts: number; models: { id: string; label: string; pds?: boolean }[] };
+      if (v !== ClaudeCodeSettingsPanel._MODEL_CACHE_VERSION) { return null; }
       if (Date.now() - ts < 60 * 60 * 1000) { return models; } // 1-hour TTL
     } catch { /* cache miss or corrupt */ }
     return null;
   }
 
-  private static _writeModelCache(cachePath: string, models: { id: string; label: string }[]): void {
+  private static _writeModelCache(cachePath: string, models: { id: string; label: string; pds?: boolean }[]): void {
     try {
-      fs.writeFileSync(cachePath, JSON.stringify({ ts: Date.now(), models }, null, 2), 'utf8');
+      fs.writeFileSync(
+        cachePath,
+        JSON.stringify({ v: ClaudeCodeSettingsPanel._MODEL_CACHE_VERSION, ts: Date.now(), models }, null, 2),
+        'utf8'
+      );
     } catch { /* best effort */ }
   }
 
@@ -623,21 +631,37 @@ export class ClaudeCodeSettingsPanel {
       const opts = { encoding: 'utf8' as const, env, timeout: 30000 };
 
       // Fetch inference profiles (cross-region) and foundation models
-      const models: { id: string; label: string }[] = [];
+      const models: { id: string; label: string; pds?: boolean }[] = [];
       const seen = new Set<string>();
       const fetchErrors: string[] = [];
+      // Mark models whose terms share inference data with the provider so the
+      // UI can hide them unless explicitly allowed
+      const withPds = (id: string, label: string): { id: string; label: string; pds?: boolean } =>
+        requiresProviderDataShare(id)
+          ? { id, label: `${label} — shares data with provider`, pds: true }
+          : { id, label };
 
       try {
         const profilesJson = execSync(
           'aws bedrock list-inference-profiles --output json', opts
         );
         const profiles = JSON.parse(profilesJson) as {
-          inferenceProfileSummaries?: { inferenceProfileId: string; inferenceProfileName: string }[];
+          inferenceProfileSummaries?: {
+            inferenceProfileId: string;
+            inferenceProfileName: string;
+            status?: string;
+            type?: string;
+          }[];
         };
         for (const p of profiles.inferenceProfileSummaries ?? []) {
+          // Only usable Anthropic profiles: the unfiltered list includes other
+          // vendors' models and application-defined / inactive profiles.
+          if (p.status !== 'ACTIVE') { continue; }
+          if (p.type !== 'SYSTEM_DEFINED') { continue; }
+          if (!p.inferenceProfileId.includes('anthropic')) { continue; }
           if (!seen.has(p.inferenceProfileId)) {
             seen.add(p.inferenceProfileId);
-            models.push({ id: p.inferenceProfileId, label: `${p.inferenceProfileName} (inference profile)` });
+            models.push(withPds(p.inferenceProfileId, p.inferenceProfileName));
           }
         }
       } catch (err) {
@@ -654,7 +678,7 @@ export class ClaudeCodeSettingsPanel {
         for (const m of fm.modelSummaries ?? []) {
           if (!seen.has(m.modelId)) {
             seen.add(m.modelId);
-            models.push({ id: m.modelId, label: `${m.modelName} (${m.modelId})` });
+            models.push(withPds(m.modelId, `${m.modelName} (${m.modelId})`));
           }
         }
       } catch (err) {

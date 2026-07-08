@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 
 export interface ModelEntry {
-  /** Region prefix: 'global' | 'us' | 'eu' | 'ap' | '' (regional — always shown) */
+  /** Geo prefix: 'global' | 'us' | 'eu' | 'apac' | 'jp' | 'au' | '' (regional — always shown) */
   prefix: string;
   /** Full model identifier */
   id: string;
@@ -13,35 +13,32 @@ export interface ModelEntry {
 }
 
 export const HAIKU_MODELS: ModelEntry[] = [
-  { prefix: 'us',     id: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',  label: 'Claude Haiku 4.5 — US Cross-Region' },
-  { prefix: 'eu',     id: 'eu.anthropic.claude-haiku-4-5-20251001-v1:0',  label: 'Claude Haiku 4.5 — EU Cross-Region' },
-  { prefix: 'ap',     id: 'ap.anthropic.claude-haiku-4-5-20251001-v1:0',  label: 'Claude Haiku 4.5 — AP Cross-Region' },
-  { prefix: '',       id: 'anthropic.claude-3-5-haiku-20241022-v1:0',      label: 'Claude Haiku 3.5 — Regional' },
-  { prefix: '',       id: 'anthropic.claude-3-haiku-20240307-v1:0',        label: 'Claude Haiku 3 — Regional' },
+  { prefix: 'global', id: 'global.anthropic.claude-haiku-4-5-20251001-v1:0', label: 'Claude Haiku 4.5 — Global' },
+  { prefix: 'us',     id: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',     label: 'Claude Haiku 4.5 — US Cross-Region' },
+  { prefix: 'eu',     id: 'eu.anthropic.claude-haiku-4-5-20251001-v1:0',     label: 'Claude Haiku 4.5 — EU Cross-Region' },
+  { prefix: 'jp',     id: 'jp.anthropic.claude-haiku-4-5-20251001-v1:0',     label: 'Claude Haiku 4.5 — Japan Cross-Region' },
+  { prefix: 'au',     id: 'au.anthropic.claude-haiku-4-5-20251001-v1:0',     label: 'Claude Haiku 4.5 — Australia Cross-Region' },
 ];
 
 export const SONNET_MODELS: ModelEntry[] = [
-  { prefix: 'global', id: 'global.anthropic.claude-sonnet-4-6',             label: 'Claude Sonnet 4.6 — Global' },
-  { prefix: 'us',     id: 'us.anthropic.claude-sonnet-4-6',                 label: 'Claude Sonnet 4.6 — US Cross-Region' },
-  { prefix: 'eu',     id: 'eu.anthropic.claude-sonnet-4-6',                 label: 'Claude Sonnet 4.6 — EU Cross-Region' },
-  { prefix: 'us',     id: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',   label: 'Claude Sonnet 4.5 — US Cross-Region' },
-  { prefix: 'eu',     id: 'eu.anthropic.claude-sonnet-4-5-20250929-v1:0',   label: 'Claude Sonnet 4.5 — EU Cross-Region' },
-  { prefix: '',       id: 'anthropic.claude-sonnet-4-20250514-v1:0',        label: 'Claude Sonnet 4 — Regional' },
-  { prefix: '',       id: 'anthropic.claude-3-7-sonnet-20250219-v1:0',      label: 'Claude Sonnet 3.7 — Regional' },
+  { prefix: 'global', id: 'global.anthropic.claude-sonnet-5',                label: 'Claude Sonnet 5 — Global' },
+  { prefix: 'us',     id: 'us.anthropic.claude-sonnet-5',                    label: 'Claude Sonnet 5 — US Cross-Region' },
+  { prefix: 'eu',     id: 'eu.anthropic.claude-sonnet-5',                    label: 'Claude Sonnet 5 — EU Cross-Region' },
 ];
 
 export const OPUS_MODELS: ModelEntry[] = [
-  { prefix: 'us',     id: 'us.anthropic.claude-opus-4-6-v1',               label: 'Claude Opus 4.6 — US Cross-Region' },
-  { prefix: 'eu',     id: 'eu.anthropic.claude-opus-4-6-v1',               label: 'Claude Opus 4.6 — EU Cross-Region' },
-  { prefix: '',       id: 'anthropic.claude-opus-4-20250514-v1:0',          label: 'Claude Opus 4 — Regional' },
-  { prefix: '',       id: 'anthropic.claude-opus-4-5-20251101-v1:0',        label: 'Claude Opus 4.5 — Regional' },
+  { prefix: 'global', id: 'global.anthropic.claude-opus-4-8',                label: 'Claude Opus 4.8 — Global' },
+  { prefix: 'us',     id: 'us.anthropic.claude-opus-4-8',                    label: 'Claude Opus 4.8 — US Cross-Region' },
+  { prefix: 'eu',     id: 'eu.anthropic.claude-opus-4-8',                    label: 'Claude Opus 4.8 — EU Cross-Region' },
+  { prefix: 'jp',     id: 'jp.anthropic.claude-opus-4-8',                    label: 'Claude Opus 4.8 — Japan Cross-Region' },
+  { prefix: 'au',     id: 'au.anthropic.claude-opus-4-8',                    label: 'Claude Opus 4.8 — Australia Cross-Region' },
 ];
 
 /** Default model IDs for Anthropic Direct API (no region prefix needed) */
 export const ANTHROPIC_DEFAULTS = {
-  sonnet: 'claude-sonnet-4-6-20250514',
+  sonnet: 'claude-sonnet-5',
   haiku: 'claude-haiku-4-5-20251001',
-  opus: 'claude-opus-4-6-20250514',
+  opus: 'claude-opus-4-8',
 };
 
 export const AWS_REGIONS = [
@@ -59,7 +56,7 @@ export const AWS_REGIONS = [
 export function getRegionPrefixes(region: string): string[] {
   if (region.startsWith('us-')) { return ['us', 'global', '']; }
   if (region.startsWith('eu-')) { return ['eu', 'global', '']; }
-  if (region.startsWith('ap-')) { return ['ap', 'global', '']; }
+  if (region.startsWith('ap-')) { return ['apac', 'jp', 'au', 'global', '']; }
   return ['global', ''];
 }
 
@@ -67,6 +64,23 @@ export function getRegionPrefixes(region: string): string[] {
 export function filterModelsByRegion(models: ModelEntry[], region: string): ModelEntry[] {
   const prefixes = getRegionPrefixes(region);
   return models.filter(m => prefixes.includes(m.prefix));
+}
+
+/**
+ * Model families whose Bedrock terms require sharing inference data with the
+ * model provider (data-retention allowed_modes == ["provider_data_share"]):
+ * prompts and completions leave the AWS boundary and are retained by the
+ * provider (currently up to 30 days, for trust & safety). All other Bedrock
+ * models keep data inside AWS.
+ *
+ * Curated list because allowed_modes is only queryable via the bedrock-mantle
+ * API (Bedrock API key), not the SigV4 CLI used for model fetching.
+ */
+export const PROVIDER_DATA_SHARE_PATTERNS = ['fable', 'mythos'];
+
+export function requiresProviderDataShare(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  return PROVIDER_DATA_SHARE_PATTERNS.some(p => id.includes(p));
 }
 
 /** Environment variable keys managed by this extension. */

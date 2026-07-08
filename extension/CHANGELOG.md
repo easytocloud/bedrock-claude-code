@@ -4,6 +4,20 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-07-08
+
+### Added
+- **Region scope pill for the Bedrock model picker** — shows the AWS region's geography first and selected by default (e.g. `EU | Global` for eu-west-1), so the most restrictive filter leads. Geo mapping covers US, EU, APAC, Japan (`jp.`), Australia (`au.`), and US GovCloud (`us-gov.`); Japan/Australia regions get their sub-geo before APAC (`JP | APAC | Global`). Global shows everything. Regions without geo profiles (ca/sa) show Global only.
+- **"Allow provider data share" pill (No/Yes, default No)** — models whose Bedrock terms share prompts/completions with the model provider (currently Claude Fable/Mythos: `allowed_modes: ["provider_data_share"]`, 30-day provider retention) are hidden by default and labelled "— shares data with provider" when revealed. This is a view filter, not enforcement — pair with an SCP on `bedrock:DataRetentionMode` for a hard guarantee.
+- **Version-aware model sorting** — model dropdowns now list newest versions first within each family (Sonnet → Haiku → Opus), parsing versions across all of AWS's naming eras (`claude-3-5-haiku`, `claude-sonnet-4-6`, `claude-sonnet-5`); a bare major version sorts as `.0`. Unparseable IDs sort last. Also applies to proxy model lists (OpenRouter etc.).
+
+### Changed
+- **Bedrock model fetch is filtered** — only inference profiles with `status ACTIVE`, `type SYSTEM_DEFINED`, and `anthropic` in the ID are offered (excludes other vendors' models and application/inactive profiles). The "(inference profile)" label suffix is gone; the status line shows the post-filter "N models selectable" count and updates live as filters change.
+- **Curated models refreshed** — smart presets are now Claude Sonnet 5, Claude Opus 4.8, and Claude Haiku 4.5 (Global/US/EU, plus Japan/Australia where AWS documents them); older entries removed. Anthropic Direct defaults updated to `claude-sonnet-5` / `claude-opus-4-8`.
+
+### Fixed
+- **APAC preset IDs corrected** — the curated catalog offered `ap.anthropic.…` model IDs, but AWS's Asia-Pacific geo prefix is `apac.` — those preset entries could never resolve.
+
 ## [0.5.0] — 2026-07-07
 
 ### Changed

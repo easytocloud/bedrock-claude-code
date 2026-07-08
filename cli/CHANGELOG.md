@@ -4,6 +4,14 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-07-08
+
+### Changed
+- **Default Anthropic models updated** — the built-in Anthropic provider now defaults to `claude-sonnet-5` and `claude-opus-4-8` (Haiku unchanged). Applied on the next store read/apply.
+
+### Fixed
+- **APAC preset IDs corrected** — the shared curated catalog offered `ap.anthropic.…` Bedrock model IDs, but AWS's Asia-Pacific geo prefix is `apac.` — those entries could never resolve.
+
 ## [0.5.0] — 2026-07-07
 
 > Version jumps from 0.3.0 to 0.5.0 to align with the extension: engine-affecting releases now ship both packages under the same minor version ("same minor = same engine behavior"). There is no CLI 0.4.x.
