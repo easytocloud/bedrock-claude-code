@@ -61,9 +61,9 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
           <a class="intro-link green" data-jump="panel:dir-groups" role="link" tabindex="0">Directory Groups</a>
           as Building Blocks. Combine them into
           <a class="intro-link red" data-jump="panel:presets" role="link" tabindex="0">Presets</a>,
-          then assign a Preset to the
-          <a class="intro-link blue" data-jump="scope:global" role="link" tabindex="0">Global</a> or
-          <a class="intro-link teal" data-jump="scope:workspace" role="link" tabindex="0">VS Code Workspace</a> Scope.
+          then assign one to the
+          <a class="intro-link blue" data-jump="scope:global" role="link" tabindex="0">Global</a> Scope.
+          Every VS Code Workspace inherits Global — switch a workspace to another Preset from the sidebar.
         </div>
       </div>
     </div>

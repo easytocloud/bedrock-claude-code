@@ -4,6 +4,9 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+### Changed
+- **Main panel is now compose-only** — the VS Code Workspace scope card is gone from the settings panel. The panel is for composing building blocks and Presets and setting the **Global** default; workspaces inherit Global by default, and per-workspace switching happens in the sidebar (or the status bar quick-pick). Existing per-workspace assignments keep working and are still stored/applied exactly as before.
+
 ### Added
 - **Activity Bar sidebar view** — Claude Code Personae now has its own icon in the Activity Bar, opening a compact preset switcher: a "Selected for this workspace" card (provider icon, preset name, model/endpoint, MCP server count, directory-group access, inherited-from-Global note), an "All Presets" list with brand-icon tiles, and a "Create New Preset" button that opens the full settings panel. Clicking a preset applies it to the workspace scope (or, with confirmation, to the Global scope when no workspace is open); "Inherit from Global" is one click when the workspace has an explicit preset. The view stays in sync with the status bar, quick-switch, settings panel, and import/export.
 - **Provider brand icons** — preset tiles show real logos (Anthropic, AWS Bedrock's official architecture glyph on the ML teal gradient, OpenRouter, LM Studio, Ollama, vLLM). Recognition doesn't rely solely on the stored provider kind: recognizable base URLs (openrouter.ai, amazonaws), default ports (11434 Ollama, 1234 LM Studio, 8000 vLLM, 4000 LiteLLM), and provider/preset names are also checked, so legacy and "Custom" providers pointing at a known service still get the right logo. Genuinely custom providers get the extension's own layered-squares mark.

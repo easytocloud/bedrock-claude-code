@@ -515,9 +515,9 @@ select {
         <a class="intro-link purple">MCP Server Groups</a>, and
         <a class="intro-link green">Directory Groups</a>
         as Building Blocks. Combine them into
-        <a class="intro-link red">Presets</a>, then assign a Preset to the
-        <a class="intro-link blue">Global</a> or
-        <a class="intro-link teal">VS Code Workspace</a> Scope.
+        <a class="intro-link red">Presets</a>, then assign one to the
+        <a class="intro-link blue">Global</a> Scope.
+        Every VS Code Workspace inherits Global &mdash; switch a workspace to another Preset from the sidebar.
       </div>
     </div>
   </div>
@@ -534,7 +534,7 @@ select {
             Global Scope
             <span class="scope-badge blue">Work (EU Bedrock)</span>
           </div>
-          <div class="scope-subtitle">~/.claude/settings.json</div>
+          <div class="scope-subtitle">~/.claude/settings.json &mdash; the default for every VS Code Workspace; switch per workspace from the sidebar</div>
         </div>
         <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
@@ -552,8 +552,8 @@ select {
               <span class="bb-chip-name">Bedrock EU</span>
               <span class="bb-chip-detail">bedrock &middot; my-company-sso</span>
               <span class="bb-chip-detail bb-chip-spacer">eu.anthropic.claude-haiku-4-5-20251001-v1:0</span>
-              <span class="bb-chip-detail">eu.anthropic.claude-sonnet-4-6</span>
-              <span class="bb-chip-detail">eu.anthropic.claude-opus-4-6-v1</span>
+              <span class="bb-chip-detail">eu.anthropic.claude-sonnet-5</span>
+              <span class="bb-chip-detail">eu.anthropic.claude-opus-4-8</span>
             </div>
           </div>
           <!-- MCP chips -->
@@ -576,57 +576,6 @@ select {
               <span class="bb-chip-name">Shared Libraries</span>
               <span class="bb-chip-detail">/opt/shared/libs</span>
               <span class="bb-chip-detail">/opt/shared/configs</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Workspace Scope -->
-    <div class="scope-card collapsed" data-scope="project">
-      <div class="scope-header">
-        <div class="scope-indicator workspace"></div>
-        <div class="scope-title-area">
-          <div class="scope-title">
-            Workspace Scope
-            <span class="scope-badge orange">Offline (Ollama)</span>
-          </div>
-          <div class="scope-subtitle">ml-pipeline &middot; .claude/settings.json</div>
-        </div>
-        <div class="panel-toggle"><span></span><span></span><span></span></div>
-      </div>
-      <div class="scope-body">
-        <div class="scope-preset-row">
-          <label>Preset:</label>
-          <select>
-            <option>Offline (Ollama)</option>
-          </select>
-        </div>
-        <div class="bb-chips">
-          <!-- Provider chip -->
-          <div class="bb-chip orange">
-            <div class="bb-chip-text">
-              <span class="bb-chip-name">Ollama</span>
-              <span class="bb-chip-detail">ollama &middot; http://localhost:11434</span>
-              <span class="bb-chip-detail bb-chip-spacer">qwen2.5-coder:7b</span>
-              <span class="bb-chip-detail">qwen2.5-coder:32b</span>
-              <span class="bb-chip-detail">qwen2.5-coder:32b</span>
-            </div>
-          </div>
-          <!-- MCP chips -->
-          <div class="bb-chip purple">
-            <div class="bb-chip-text">
-              <span class="bb-chip-name">Web &amp; Search</span>
-              <span class="bb-chip-detail">brave-search</span>
-              <span class="bb-chip-detail">fetch</span>
-            </div>
-          </div>
-          <!-- Directory chips -->
-          <div class="bb-chip green">
-            <div class="bb-chip-text">
-              <span class="bb-chip-name">Home Projects</span>
-              <span class="bb-chip-detail">/Users/demo/projects</span>
-              <span class="bb-chip-detail">/Users/demo/notes</span>
             </div>
           </div>
         </div>

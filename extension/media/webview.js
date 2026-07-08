@@ -423,12 +423,6 @@ console.log('[WEBVIEW] Script loaded');
 
     const globalBadge = document.querySelector('[data-scope="global"] .scope-badge');
     if (globalBadge) globalBadge.textContent = badgeTextFor(store.globalScope);
-
-    const wsBadge = document.querySelector('[data-scope="workspace"] .scope-badge');
-    if (wsBadge) {
-      const wsScope = (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
-      wsBadge.textContent = badgeTextFor(wsScope);
-    }
   }
 
   // ─── Populate scope blocks ─────────────────────────────────────
@@ -456,24 +450,9 @@ console.log('[WEBVIEW] Script loaded');
     if (!container || !state) return;
 
     const store = state.store;
-    let assignment;
-    if (scope === 'global') {
-      assignment = store.globalScope;
-    } else {
-      assignment = (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
-    }
+    // Only the Global Scope card exists in the panel
+    const assignment = store.globalScope;
 
-    if (assignment.mode === 'inherit') {
-      // Show the global preset's tiles but dimmed
-      const globalPresetId = store.globalScope.mode === 'preset' ? store.globalScope.presetId : null;
-      const chips = globalPresetId ? renderPresetChips(globalPresetId) : '';
-      if (chips) {
-        container.innerHTML = '<div class="bb-chips-inherited">' + chips + '</div>';
-      } else {
-        container.innerHTML = '<div class="empty-state">No global preset configured.</div>';
-      }
-      return;
-    }
     if (assignment.mode === 'manual') {
       container.innerHTML = '<div class="empty-state">Manually configured. Edit settings files directly.</div>';
       return;
@@ -951,7 +930,7 @@ console.log('[WEBVIEW] Script loaded');
 
   // Newest-first within each model family; families in slot order
   // (sonnet, haiku, opus), unknown families after, unparseable IDs last.
-  var MODEL_FAMILY_ORDER = { sonnet: 0, haiku: 1, opus: 2 };
+  const MODEL_FAMILY_ORDER = { sonnet: 0, haiku: 1, opus: 2 };
   function sortModelsByVersion(models) {
     return models.slice().sort(function(a, b) {
       let va = parseModelVersion(a.id);
@@ -1943,19 +1922,14 @@ console.log('[WEBVIEW] Script loaded');
       return;
     }
 
-    if (scope === 'global') {
-      store.globalScope = assignment;
-    } else if (state.workspacePath) {
-      store.workspaceScopes[state.workspacePath] = assignment;
-    }
+    // Only the Global Scope is editable in the panel — per-workspace
+    // assignment happens in the sidebar / status bar quick-switch.
+    if (scope !== 'global') return;
+    store.globalScope = assignment;
 
     markDirty();
     updateScopeBadges();
-    updateScopeBlocks(scope);
-    // If global changed, workspace scope may inherit from it
-    if (scope === 'global') {
-      updateScopeBlocks('workspace');
-    }
+    updateScopeBlocks('global');
   }
 
   // ─── Full UI refresh ──────────────────────────────────────────
@@ -1965,13 +1939,7 @@ console.log('[WEBVIEW] Script loaded');
     updatePanelBadges();
     updateScopeBadges();
     updateScopeBlocks('global');
-    if (state.hasWorkspace) {
-      updateScopeBlocks('workspace');
-    }
     updateScopeDropdown('global');
-    if (state.hasWorkspace) {
-      updateScopeDropdown('workspace');
-    }
   }
 
   function renderPresetGrid() {
@@ -2073,15 +2041,10 @@ console.log('[WEBVIEW] Script loaded');
     if (!sel) return;
 
     const store = state.store;
-    const assignment = scope === 'global'
-      ? store.globalScope
-      : (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
+    // Only the Global Scope card exists in the panel
+    const assignment = store.globalScope;
 
-    let html = '';
-    if (scope === 'workspace') {
-      html += '<option value="inherit"' + (assignment.mode === 'inherit' ? ' selected' : '') + '>Inherit from Global</option>';
-    }
-    html += '<option value="manual"' + (assignment.mode === 'manual' ? ' selected' : '') + '>Configure manually</option>';
+    let html = '<option value="manual"' + (assignment.mode === 'manual' ? ' selected' : '') + '>Configure manually</option>';
 
     for (const p of store.presets) {
       const selected = assignment.mode === 'preset' && assignment.presetId === p.id;

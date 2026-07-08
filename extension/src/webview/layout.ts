@@ -7,104 +7,52 @@ import { DEFAULT_PRESET_ID } from '@easytocloud/claude-personae-core';
 import { esc } from './components';
 
 // ---------------------------------------------------------------------------
-// Scope cards
+// Scope card — Global only. Per-workspace assignment lives in the sidebar
+// (and the status bar quick-switch); workspaces inherit Global by default.
 // ---------------------------------------------------------------------------
 
-function renderScopeCard(attrs: {
-  scope: 'global' | 'workspace';
-  title: string;
-  subtitle: string;
-  badgeText: string;
-  badgeColor: string;
-  presetId: string | undefined;
-  presetMode: string;
-  presets: Preset[];
-}): string {
-  const { scope, title, subtitle, badgeText, badgeColor, presetId, presetMode, presets } = attrs;
+export function renderScopeCards(state: PanelState): string {
+  const { store } = state;
 
-  // Build preset dropdown options
+  const globalPresetId = store.globalScope.presetId;
+  const globalMode = store.globalScope.mode;
+
+  const badgeText = globalMode === 'preset'
+    ? (store.presets.find(p => p.id === globalPresetId)?.name ?? 'None')
+    : globalMode === 'manual' ? 'Manual' : 'None';
+
   const modeOptions = [
-    scope === 'workspace'
-      ? `<option value="inherit"${presetMode === 'inherit' ? ' selected' : ''}>Inherit from Global</option>`
-      : '',
-    `<option value="manual"${presetMode === 'manual' ? ' selected' : ''}>Configure manually</option>`,
-    ...presets.map(p =>
-      `<option value="preset:${esc(p.id)}"${presetMode === 'preset' && presetId === p.id ? ' selected' : ''}>${esc(p.name)}</option>`
+    `<option value="manual"${globalMode === 'manual' ? ' selected' : ''}>Configure manually</option>`,
+    ...store.presets.map(p =>
+      `<option value="preset:${esc(p.id)}"${globalMode === 'preset' && globalPresetId === p.id ? ' selected' : ''}>${esc(p.name)}</option>`
     ),
-  ].filter(Boolean).join('');
+  ].join('');
 
   return `
-    <div class="scope-card collapsed" data-scope="${scope}">
-      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle ${esc(title)}">
-        <div class="scope-indicator ${scope}"></div>
+    <div class="scope-section">
+    <div class="scope-card collapsed" data-scope="global">
+      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle Global Scope">
+        <div class="scope-indicator global"></div>
         <div class="scope-title-area">
           <div class="scope-title">
-            ${esc(title)}
-            <span class="scope-badge ${badgeColor}">${esc(badgeText)}</span>
+            Global Scope
+            <span class="scope-badge blue">${esc(badgeText)}</span>
           </div>
-          <div class="scope-subtitle">${esc(subtitle)}</div>
+          <div class="scope-subtitle">~/.claude/settings.json — the default for every VS Code Workspace; switch per workspace from the sidebar</div>
         </div>
         <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="scope-body">
         <div class="scope-preset-row">
           <label>Preset:</label>
-          <select data-scope-preset="${scope}">${modeOptions}</select>
+          <select data-scope-preset="global">${modeOptions}</select>
         </div>
-        <div class="bb-chips" data-scope-blocks="${scope}">
+        <div class="bb-chips" data-scope-blocks="global">
           <!-- Populated by JS based on active preset -->
         </div>
       </div>
+    </div>
     </div>`;
-}
-
-export function renderScopeCards(state: PanelState): string {
-  const { store } = state;
-
-  // Global scope
-  const globalPresetId = store.globalScope.presetId;
-  const globalMode = store.globalScope.mode;
-
-  // Workspace scope
-  const wsScope = state.workspacePath
-    ? (store.workspaceScopes[state.workspacePath] ?? { mode: 'inherit' })
-    : { mode: 'inherit' as const };
-
-  let html = '<div class="scope-section">';
-
-  // Global card
-  html += renderScopeCard({
-    scope: 'global',
-    title: 'Global Scope',
-    subtitle: '~/.claude/settings.json',
-    badgeText: globalMode === 'preset'
-      ? (store.presets.find(p => p.id === globalPresetId)?.name ?? 'None')
-      : globalMode === 'manual' ? 'Manual' : 'None',
-    badgeColor: 'blue',
-    presetId: globalPresetId,
-    presetMode: globalMode,
-    presets: store.presets,
-  });
-
-  // Workspace card (only if workspace is open)
-  if (state.hasWorkspace) {
-    const wsPresetId = wsScope.presetId;
-    html += renderScopeCard({
-      scope: 'workspace',
-      title: 'VS Code Workspace Scope',
-      subtitle: `${state.workspaceName ?? state.workspacePath ?? ''} · .claude/settings.json`,
-      badgeText: wsScope.mode === 'preset'
-        ? (store.presets.find(p => p.id === wsPresetId)?.name ?? 'None')
-        : wsScope.mode === 'inherit' ? 'Inherited' : 'Manual',
-      badgeColor: 'teal',
-      presetId: wsPresetId,
-      presetMode: wsScope.mode,
-      presets: store.presets,
-    });
-  }
-
-  html += '</div>';
-  return html;
 }
 
 // ---------------------------------------------------------------------------
@@ -164,7 +112,7 @@ export function renderPresetGrid(state: PanelState): string {
 
   let html = `
     <div class="canvas-heading">Presets</div>
-    <div class="canvas-hint">A Preset combines one Provider with optional MCP Server Groups and Directory Groups into a reusable configuration. Assign Presets to Scopes above.</div>
+    <div class="canvas-hint">A Preset combines one Provider with optional MCP Server Groups and Directory Groups into a reusable configuration. Set the Global default above; pick a different Preset per VS Code Workspace from the sidebar.</div>
 
     <div class="panel-section collapsed" data-panel="presets">
       <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="false">
