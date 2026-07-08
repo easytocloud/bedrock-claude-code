@@ -5,6 +5,17 @@
 import { PanelState, Preset, ProviderProfile, McpServerGroup, DirectoryGroup, KNOWN_PROVIDERS } from '@easytocloud/claude-personae-core';
 import { DEFAULT_PRESET_ID } from '@easytocloud/claude-personae-core';
 import { esc } from './components';
+import { chipForProvider, ChipSpec } from '../providerIcons';
+
+// Brand tile for a provider — mirrors providerTileHtml() in media/webview.js.
+// Colors come from flavor-* classes in styles.ts (inline style attributes are
+// blocked by the webview CSP).
+function providerTileHtml(chip: ChipSpec, iconBase: string): string {
+  const inner = chip.icon
+    ? `<img src="${esc(iconBase)}/${esc(chip.icon)}" alt="" />`
+    : esc(chip.label);
+  return `<span class="provider-tile flavor-${esc(chip.flavor)}" aria-hidden="true">${inner}</span>`;
+}
 
 // ---------------------------------------------------------------------------
 // Scope card — Global only. Per-workspace assignment lives in the sidebar
@@ -75,6 +86,7 @@ function renderPresetCard(
   providers: ProviderProfile[],
   mcpGroups: McpServerGroup[],
   dirGroups: DirectoryGroup[],
+  iconBase: string,
 ): string {
   const provider = providers.find(p => p.id === preset.providerId);
   const providerLabel = provider ? `${provider.type} · ${provider.name}` : 'No provider';
@@ -91,6 +103,7 @@ function renderPresetCard(
   return `
     <div class="preset-card card card-red" data-action="edit-preset" data-id="${esc(preset.id)}">
       <div class="preset-card-header">
+        ${providerTileHtml(chipForProvider(provider, preset.name), iconBase)}
         <span class="preset-card-name">${esc(preset.name)}</span>
         ${isDefault ? '<span class="preset-card-default">Default</span>' : ''}
       </div>
@@ -106,7 +119,7 @@ function renderPresetCard(
     </div>`;
 }
 
-export function renderPresetGrid(state: PanelState): string {
+export function renderPresetGrid(state: PanelState, iconBase: string): string {
   const { store } = state;
   const count = store.presets.length;
 
@@ -130,7 +143,7 @@ export function renderPresetGrid(state: PanelState): string {
         <div class="preset-grid" data-grid="presets">`;
 
   for (const preset of store.presets) {
-    html += renderPresetCard(preset, store.providers, store.mcpGroups, store.directoryGroups);
+    html += renderPresetCard(preset, store.providers, store.mcpGroups, store.directoryGroups, iconBase);
   }
 
   // Dashed "new" card
@@ -162,16 +175,18 @@ function providerTypeLabel(p: ProviderProfile): string {
 }
 
 // Generic chip renderer — mirrors renderChipHtml() in media/webview.js.
-// items: Array of { text, spacer? }
+// items: Array of { text, spacer? }; tile: optional leading brand tile HTML
 function renderChip(
   color: string, action: string, id: string,
-  name: string, items: { text: string; spacer?: boolean }[]
+  name: string, items: { text: string; spacer?: boolean }[],
+  tile = ''
 ): string {
   const itemHtml = items
     .map(i => `<span class="bb-chip-detail${i.spacer ? ' bb-chip-spacer' : ''}">${esc(i.text)}</span>`)
     .join('');
   return `
     <div class="bb-chip card card-${color}" data-action="${action}" data-id="${esc(id)}">
+      ${tile}
       <div class="bb-chip-text">
         <span class="bb-chip-name">${esc(name)}</span>
         ${itemHtml}
@@ -179,13 +194,13 @@ function renderChip(
     </div>`;
 }
 
-function renderProviderChip(p: ProviderProfile): string {
+function renderProviderChip(p: ProviderProfile, iconBase: string): string {
   return renderChip('orange', 'edit-provider', p.id, p.name, [
     { text: providerTypeLabel(p) },
     { text: p.smallFastModel || '—', spacer: true },
     { text: p.primaryModel || '—' },
     { text: p.opusModel || '—' },
-  ]);
+  ], providerTileHtml(chipForProvider(p), iconBase));
 }
 
 function renderMcpGroupChip(g: McpServerGroup): string {
@@ -198,7 +213,7 @@ function renderDirGroupChip(g: DirectoryGroup): string {
     g.directories.map(d => ({ text: d })));
 }
 
-export function renderBuildingBlocks(state: PanelState): string {
+export function renderBuildingBlocks(state: PanelState, iconBase: string): string {
   const { store } = state;
   const provCount = store.providers.length;
   const mcpCount = store.mcpGroups.length;
@@ -223,7 +238,7 @@ export function renderBuildingBlocks(state: PanelState): string {
       </div>
       <div class="panel-body">
         <div class="bb-chips" data-chips="providers">
-          ${store.providers.map(p => renderProviderChip(p)).join('')}
+          ${store.providers.map(p => renderProviderChip(p, iconBase)).join('')}
           <div class="bb-chip card card-new card-orange" data-action="new-provider-standalone">+ New Provider</div>
         </div>
       </div>

@@ -60,6 +60,26 @@
   --transition: 0.18s ease;
 }
 
+/* ─── Provider brand tiles (mirrors styles.ts) ──────────────────── */
+.provider-tile {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+}
+.provider-tile img { width: 14px; height: 14px; display: block; }
+.flavor-anthropic { background: #D97757; }
+.flavor-bedrock { background: linear-gradient(135deg, #56C0A7 0%, #055F4E 100%); }
+.flavor-openrouter { background: #101828; }
+.flavor-ollama { background: #F4F4F5; color: #18181B; }
+.flavor-litellm { background: #10B981; }
+
 /* ─── Reset & Base ──────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -603,6 +623,7 @@ select {
         <!-- Default -->
         <div class="preset-card">
           <div class="preset-card-header">
+            <span class="provider-tile flavor-anthropic"><img src="../media/provider-icons/anthropic.svg" alt=""/></span>
             <span class="preset-card-name">Default</span>
             <span class="preset-card-default">Default</span>
           </div>
@@ -614,6 +635,7 @@ select {
         <!-- Work (EU Bedrock) -->
         <div class="preset-card">
           <div class="preset-card-header">
+            <span class="provider-tile flavor-bedrock"><img src="../media/provider-icons/bedrock.svg" alt=""/></span>
             <span class="preset-card-name">Work (EU Bedrock)</span>
           </div>
           <div class="preset-card-section">
@@ -631,6 +653,7 @@ select {
         <!-- Offline (Ollama) — local model -->
         <div class="preset-card">
           <div class="preset-card-header">
+            <span class="provider-tile flavor-ollama"><img src="../media/provider-icons/ollama.svg" alt=""/></span>
             <span class="preset-card-name">Offline (Ollama)</span>
           </div>
           <div class="preset-card-section">
@@ -647,6 +670,7 @@ select {
         <!-- OpenRouter — gateway -->
         <div class="preset-card">
           <div class="preset-card-header">
+            <span class="provider-tile flavor-openrouter"><img src="../media/provider-icons/openrouter.svg" alt=""/></span>
             <span class="preset-card-name">OpenRouter (any model)</span>
           </div>
           <div class="preset-card-section">
@@ -664,6 +688,7 @@ select {
         <!-- Research (LiteLLM) — gateway -->
         <div class="preset-card">
           <div class="preset-card-header">
+            <span class="provider-tile flavor-litellm">LL</span>
             <span class="preset-card-name">Research (LiteLLM)</span>
           </div>
           <div class="preset-card-section">

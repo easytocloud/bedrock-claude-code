@@ -231,8 +231,11 @@ export class ClaudeCodeSettingsPanel {
     const scriptUri = this._panel.webview.asWebviewUri(
       vscode.Uri.joinPath(this._context.extensionUri, 'media', 'webview.js')
     ).toString();
+    const iconBase = this._panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this._context.extensionUri, 'media', 'provider-icons')
+    ).toString();
     const state = this._buildState();
-    this._panel.webview.html = buildHtml(state, nonce, cspSource, scriptUri);
+    this._panel.webview.html = buildHtml(state, nonce, cspSource, scriptUri, iconBase);
   }
 
   private _buildState(): PanelState {
