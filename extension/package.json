@@ -74,6 +74,26 @@
         "icon": "$(import)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "claude-personae",
+          "title": "Claude Code Personae",
+          "icon": "media/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "claude-personae": [
+        {
+          "type": "webview",
+          "id": "bedrock-claude-code.presetsView",
+          "name": "Presets",
+          "icon": "media/sidebar-icon.svg",
+          "contextualTitle": "Claude Code Personae"
+        }
+      ]
+    },
     "menus": {
       "commandPalette": [
         {
@@ -81,6 +101,13 @@
         },
         {
           "command": "bedrock-claude-code.openSettingsFile"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "bedrock-claude-code.openSettings",
+          "when": "view == bedrock-claude-code.presetsView",
+          "group": "navigation"
         }
       ]
     }

@@ -1,12 +1,23 @@
 import * as vscode from 'vscode';
 import { ClaudeCodeSettingsPanel } from './panel';
 import { getClaudeSettingsPath } from '@easytocloud/claude-personae-core';
-import { createStatusBar } from './statusBar';
+import { createStatusBar, setSidebarRefreshHook } from './statusBar';
 import { exportPresets, importPresets } from './importExport';
+import { PresetsSidebarProvider, PRESETS_VIEW_ID } from './sidebar';
 
 export function activate(context: vscode.ExtensionContext): void {
   // Status bar — preset quick-switcher and scope indicator
   createStatusBar(context);
+
+  // Activity bar sidebar — compact preset switcher
+  const sidebar = new PresetsSidebarProvider(context);
+  setSidebarRefreshHook(() => sidebar.refresh());
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(PRESETS_VIEW_ID, sidebar, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => sidebar.refresh()),
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('bedrock-claude-code.openSettings', () => {
