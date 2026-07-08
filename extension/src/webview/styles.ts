@@ -494,6 +494,31 @@ export function buildStyles(): string {
       gap: 8px;
       margin-bottom: 12px;
     }
+
+    /* ─── Provider brand tiles (colors keyed by flavor, see providerIcons.ts) ── */
+    .provider-tile {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .provider-tile img { width: 14px; height: 14px; display: block; }
+    .flavor-anthropic { background: #D97757; }
+    .flavor-bedrock { background: linear-gradient(135deg, #56C0A7 0%, #055F4E 100%); }
+    .flavor-openrouter { background: #101828; }
+    .flavor-ollama { background: #F4F4F5; color: #18181B; }
+    .flavor-lmstudio { background: #4F46E5; }
+    .flavor-omlx { background: #0EA5E9; }
+    .flavor-vllm { background: #334155; }
+    .flavor-litellm { background: #10B981; }
+    .flavor-custom { background: #1a1a2e; }
+    .flavor-unknown { background: #6B7280; }
     .preset-card-name {
       font-weight: 600;
       font-size: 13px;
@@ -550,10 +575,12 @@ export function buildStyles(): string {
     .spacer { flex: 1; }
     .bb-chip {
       display: flex;
+      gap: 10px;
       padding: 8px 12px;
       min-width: 160px;
       max-width: 280px;
     }
+    .bb-chip .provider-tile { margin-top: 1px; }
     .bb-chip-text { min-width: 0; }
     .bb-chip-name {
       display: block;

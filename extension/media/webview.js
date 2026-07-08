@@ -373,13 +373,64 @@ console.log('[WEBVIEW] Script loaded');
     return [provider.smallFastModel || '—', provider.primaryModel || '—', provider.opusModel || '—'];
   }
 
+  // Provider brand tiles — mirrors chipForProvider()/providerTileHtml() in
+  // src/providerIcons.ts and src/webview/layout.ts. Colors come from the
+  // flavor-* classes in styles.ts; icons load from window.__ICON_BASE__.
+  const PROVIDER_TILES = {
+    unknown: { label: '?' },
+    anthropic: { icon: 'anthropic.svg', label: 'A' },
+    bedrock: { icon: 'bedrock.svg', label: '✦' },
+    openrouter: { icon: 'openrouter.svg', label: 'OR' },
+    ollama: { icon: 'ollama.svg', label: 'OL' },
+    lmstudio: { icon: 'lmstudio.svg', label: 'LM' },
+    omlx: { label: 'MX' },
+    vllm: { icon: 'vllm.svg', label: 'VL' },
+    litellm: { label: 'LL' },
+    custom: { icon: 'custom.svg', label: 'C' },
+  };
+
+  function providerFlavor(provider, presetName) {
+    if (!provider) return 'unknown';
+    if (provider.type === 'anthropic') return 'anthropic';
+    if (provider.type === 'bedrock') return 'bedrock';
+    if (provider.proxyPreset && provider.proxyPreset !== 'custom') return provider.proxyPreset;
+
+    const url = (provider.proxyBaseUrl || '').toLowerCase();
+    if (url.includes('openrouter.ai')) return 'openrouter';
+    if (url.includes('bedrock') || url.includes('amazonaws.com')) return 'bedrock';
+    if (/:11434(?:\/|$)/.test(url)) return 'ollama';   // Ollama default port
+    if (/:1234(?:\/|$)/.test(url)) return 'lmstudio';  // LM Studio default port
+    if (/:8000(?:\/|$)/.test(url)) return 'vllm';      // vLLM default port
+    if (/:4000(?:\/|$)/.test(url)) return 'litellm';   // LiteLLM default port
+
+    const names = (provider.name + ' ' + (presetName || '')).toLowerCase();
+    if (names.includes('openrouter')) return 'openrouter';
+    if (names.includes('vllm')) return 'vllm';
+    if (names.includes('ollama')) return 'ollama';
+    if (names.includes('lm studio') || names.includes('lmstudio')) return 'lmstudio';
+    if (names.includes('litellm')) return 'litellm';
+    if (names.includes('omlx')) return 'omlx';
+    if (names.includes('bedrock')) return 'bedrock';
+    return 'custom';
+  }
+
+  function providerTileHtml(provider, presetName) {
+    const flavor = providerFlavor(provider, presetName);
+    const tile = PROVIDER_TILES[flavor] || PROVIDER_TILES.custom;
+    const inner = (tile.icon && window.__ICON_BASE__)
+      ? '<img src="' + escHtml(window.__ICON_BASE__ + '/' + tile.icon) + '" alt="" />'
+      : escHtml(tile.label);
+    return '<span class="provider-tile flavor-' + flavor + '" aria-hidden="true">' + inner + '</span>';
+  }
+
   // Generic chip renderer — mirrors renderChip() in src/webview/layout.ts.
-  // items: Array of { text, spacer? }
-  function renderChipHtml(color, action, id, name, items) {
+  // items: Array of { text, spacer? }; tile: optional leading brand tile HTML
+  function renderChipHtml(color, action, id, name, items, tile) {
     const itemHtml = items.map(i =>
       `<span class="bb-chip-detail${i.spacer ? ' bb-chip-spacer' : ''}">${escHtml(i.text)}</span>`
     ).join('');
     return `<div class="bb-chip card card-${color}" data-action="${action}" data-id="${escHtml(id)}">
+      ${tile || ''}
       <div class="bb-chip-text">
         <span class="bb-chip-name">${escHtml(name)}</span>
         ${itemHtml}
@@ -394,7 +445,7 @@ console.log('[WEBVIEW] Script loaded');
       { text: haiku, spacer: true },
       { text: sonnet },
       { text: opus },
-    ]);
+    ], providerTileHtml(p));
   }
 
   function renderMcpGroupChipHtml(g) {
@@ -423,12 +474,6 @@ console.log('[WEBVIEW] Script loaded');
 
     const globalBadge = document.querySelector('[data-scope="global"] .scope-badge');
     if (globalBadge) globalBadge.textContent = badgeTextFor(store.globalScope);
-
-    const wsBadge = document.querySelector('[data-scope="workspace"] .scope-badge');
-    if (wsBadge) {
-      const wsScope = (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
-      wsBadge.textContent = badgeTextFor(wsScope);
-    }
   }
 
   // ─── Populate scope blocks ─────────────────────────────────────
@@ -456,24 +501,9 @@ console.log('[WEBVIEW] Script loaded');
     if (!container || !state) return;
 
     const store = state.store;
-    let assignment;
-    if (scope === 'global') {
-      assignment = store.globalScope;
-    } else {
-      assignment = (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
-    }
+    // Only the Global Scope card exists in the panel
+    const assignment = store.globalScope;
 
-    if (assignment.mode === 'inherit') {
-      // Show the global preset's tiles but dimmed
-      const globalPresetId = store.globalScope.mode === 'preset' ? store.globalScope.presetId : null;
-      const chips = globalPresetId ? renderPresetChips(globalPresetId) : '';
-      if (chips) {
-        container.innerHTML = '<div class="bb-chips-inherited">' + chips + '</div>';
-      } else {
-        container.innerHTML = '<div class="empty-state">No global preset configured.</div>';
-      }
-      return;
-    }
     if (assignment.mode === 'manual') {
       container.innerHTML = '<div class="empty-state">Manually configured. Edit settings files directly.</div>';
       return;
@@ -951,7 +981,7 @@ console.log('[WEBVIEW] Script loaded');
 
   // Newest-first within each model family; families in slot order
   // (sonnet, haiku, opus), unknown families after, unparseable IDs last.
-  var MODEL_FAMILY_ORDER = { sonnet: 0, haiku: 1, opus: 2 };
+  const MODEL_FAMILY_ORDER = { sonnet: 0, haiku: 1, opus: 2 };
   function sortModelsByVersion(models) {
     return models.slice().sort(function(a, b) {
       let va = parseModelVersion(a.id);
@@ -1943,19 +1973,14 @@ console.log('[WEBVIEW] Script loaded');
       return;
     }
 
-    if (scope === 'global') {
-      store.globalScope = assignment;
-    } else if (state.workspacePath) {
-      store.workspaceScopes[state.workspacePath] = assignment;
-    }
+    // Only the Global Scope is editable in the panel — per-workspace
+    // assignment happens in the sidebar / status bar quick-switch.
+    if (scope !== 'global') return;
+    store.globalScope = assignment;
 
     markDirty();
     updateScopeBadges();
-    updateScopeBlocks(scope);
-    // If global changed, workspace scope may inherit from it
-    if (scope === 'global') {
-      updateScopeBlocks('workspace');
-    }
+    updateScopeBlocks('global');
   }
 
   // ─── Full UI refresh ──────────────────────────────────────────
@@ -1965,13 +1990,7 @@ console.log('[WEBVIEW] Script loaded');
     updatePanelBadges();
     updateScopeBadges();
     updateScopeBlocks('global');
-    if (state.hasWorkspace) {
-      updateScopeBlocks('workspace');
-    }
     updateScopeDropdown('global');
-    if (state.hasWorkspace) {
-      updateScopeDropdown('workspace');
-    }
   }
 
   function renderPresetGrid() {
@@ -2005,6 +2024,7 @@ console.log('[WEBVIEW] Script loaded');
       html += `
         <div class="preset-card card card-red" data-action="edit-preset" data-id="${escHtml(preset.id)}">
           <div class="preset-card-header">
+            ${providerTileHtml(provider, preset.name)}
             <span class="preset-card-name">${escHtml(preset.name)}</span>
             ${isDefault ? '<span class="preset-card-default">Default</span>' : ''}
           </div>
@@ -2073,15 +2093,10 @@ console.log('[WEBVIEW] Script loaded');
     if (!sel) return;
 
     const store = state.store;
-    const assignment = scope === 'global'
-      ? store.globalScope
-      : (state.workspacePath && store.workspaceScopes[state.workspacePath]) || { mode: 'inherit' };
+    // Only the Global Scope card exists in the panel
+    const assignment = store.globalScope;
 
-    let html = '';
-    if (scope === 'workspace') {
-      html += '<option value="inherit"' + (assignment.mode === 'inherit' ? ' selected' : '') + '>Inherit from Global</option>';
-    }
-    html += '<option value="manual"' + (assignment.mode === 'manual' ? ' selected' : '') + '>Configure manually</option>';
+    let html = '<option value="manual"' + (assignment.mode === 'manual' ? ' selected' : '') + '>Configure manually</option>';
 
     for (const p of store.presets) {
       const selected = assignment.mode === 'preset' && assignment.presetId === p.id;

@@ -32,8 +32,12 @@ export function createStatusBar(context: vscode.ExtensionContext): void {
   );
 }
 
-/** Call this after saving the store to update the status bar. */
+/** Call this after saving the store to update the status bar (and sidebar). */
 export function refreshStatusBar(): void {
+  // Every store-changing code path already calls this, so it doubles as the
+  // change notification for the sidebar preset view.
+  if (sidebarRefresh) { sidebarRefresh(); }
+
   if (!statusBarItem) { return; }
 
   const store = readProfileStore();
@@ -281,4 +285,19 @@ let ClaudeCodeSettingsPanel_refresh: (() => void) | undefined;
 
 export function setRefreshHook(fn: () => void): void {
   ClaudeCodeSettingsPanel_refresh = fn;
+}
+
+/** Refresh the settings panel if it is open — for callers outside panel.ts. */
+export function refreshOpenPanel(): void {
+  if (ClaudeCodeSettingsPanel_refresh) { ClaudeCodeSettingsPanel_refresh(); }
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar refresh hook — set by extension.ts when the preset view is registered
+// ---------------------------------------------------------------------------
+
+let sidebarRefresh: (() => void) | undefined;
+
+export function setSidebarRefreshHook(fn: () => void): void {
+  sidebarRefresh = fn;
 }

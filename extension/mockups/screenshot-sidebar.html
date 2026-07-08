@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Claude Code Personae — Sidebar Screenshot</title>
+<style>
+  /* VS Code-ish frame around the real sidebar view */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #1e1e1e; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Activity bar ── */
+  .activitybar {
+    width: 48px;
+    flex: none;
+    background: #181818;
+    border-right: 1px solid #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 4px;
+  }
+  .ab-item {
+    width: 48px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7a7a7a;
+    position: relative;
+  }
+  .ab-item.active {
+    color: #e8e8e8;
+  }
+  .ab-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 6px; bottom: 6px;
+    width: 2px;
+    background: #e8e8e8;
+  }
+  .ab-item svg { width: 24px; height: 24px; }
+
+  /* ── Sidebar chrome ── */
+  .sidebar {
+    width: 380px;
+    flex: none;
+    background: #1b1b22;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-title {
+    padding: 10px 16px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a0a0aa;
+  }
+  .sidebar-body { flex: 1; overflow: hidden; }
+
+  /* Theme variables consumed by the real sidebar styles */
+  :root {
+    --vscode-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --vscode-foreground: #cccccc;
+    --vscode-sideBar-foreground: #cccccc;
+    --vscode-sideBar-background: #1b1b22;
+    --vscode-descriptionForeground: #9d9daa;
+    --vscode-focusBorder: #4d78cc;
+    --vscode-textLink-foreground: #4daafc;
+  }
+
+  /* ── Editor area hint (empty, subtle) ── */
+  .editor {
+    flex: 1;
+    background: #1e1e1e;
+    border-left: 1px solid #2a2a2a;
+  }
+</style>
+<style id="sidebar-styles"><!-- injected from src/sidebar.ts by screenshot.sh --></style>
+</head>
+<body>
+  <div class="activitybar">
+    <div class="ab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/></svg></div>
+    <div class="ab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="11" cy="11" r="5.5"/><path d="M15 15l4.5 4.5"/></svg></div>
+    <div class="ab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="6" r="2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="10" r="2"/><path d="M7 8v8M7 12c6 0 4-2 10-2"/></svg></div>
+    <div class="ab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="7"/><path d="M12 5v-2M12 21v-2M5 12H3M21 12h-2M7.5 7.5L6 6M18 18l-1.5-1.5M16.5 7.5L18 6M6 18l1.5-1.5"/></svg></div>
+    <div class="ab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 8h6V4h6v4h4v6h-4v6h-6v-4H4z"/></svg></div>
+    <div class="ab-item active"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 3 L13.3 8.7 L19 11 L13.3 13.3 L11 19 L8.7 13.3 L3 11 L8.7 8.7 Z"/><path d="M18.5 14.5 L19.6 17.4 L22.5 18.5 L19.6 19.6 L18.5 22.5 L17.4 19.6 L14.5 18.5 L17.4 17.4 Z"/></svg></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-title">Claude Code Personae: Presets</div>
+    <div class="sidebar-body"><div id="root"></div></div>
+  </div>
+
+  <div class="editor"></div>
+
+  <script>
+    // Stub the VS Code webview API for the static screenshot
+    window.__ICON_BASE__ = '../media/provider-icons';
+    function acquireVsCodeApi() {
+      return { postMessage: function () {} };
+    }
+    window.__SIDEBAR_DATA__ = {
+      hasWorkspace: true,
+      workspaceName: 'my-project',
+      canInherit: true,
+      selected: {
+        mode: 'preset',
+        presetId: 'p1',
+        name: 'Bedrock – Claude Sonnet 5',
+        subtitle: 'eu.anthropic.claude-sonnet-5',
+        meta: 'MCPs: 4 servers  •  Access: Project, Docs',
+        chip: { icon: 'bedrock.svg', label: '✦', bg: 'linear-gradient(135deg, #56C0A7 0%, #055F4E 100%)', fg: '#ffffff' }
+      },
+      presets: [
+        { id: 'p2', name: 'Anthropic – Claude Sonnet 5', subtitle: 'api.anthropic.com', chip: { icon: 'anthropic.svg', label: 'A', bg: '#D97757', fg: '#ffffff' } },
+        { id: 'p3', name: 'OpenRouter – Qwen3 Coder Next', subtitle: 'https://openrouter.ai/api', chip: { icon: 'openrouter.svg', label: 'OR', bg: '#101828', fg: '#ffffff' } },
+        { id: 'p4', name: 'LM Studio – Qwen3 Coder Next', subtitle: 'http://localhost:1234', chip: { icon: 'lmstudio.svg', label: 'LM', bg: '#4F46E5', fg: '#ffffff' } },
+        { id: 'p5', name: 'Bedrock – Claude Haiku 4.5', subtitle: 'eu.anthropic.claude-haiku-4-5-20251001-v1:0', chip: { icon: 'bedrock.svg', label: '✦', bg: 'linear-gradient(135deg, #56C0A7 0%, #055F4E 100%)', fg: '#ffffff' } },
+        { id: 'p6', name: 'Local – Ollama – Llama 3.1 70B', subtitle: 'http://localhost:11434', chip: { icon: 'ollama.svg', label: 'OL', bg: '#F4F4F5', fg: '#18181B' } }
+      ]
+    };
+  </script>
+  <script src="./sidebar-styles.gen.js"></script>
+  <script src="../media/sidebar.js"></script>
+</body>
+</html>

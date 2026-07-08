@@ -5,106 +5,65 @@
 import { PanelState, Preset, ProviderProfile, McpServerGroup, DirectoryGroup, KNOWN_PROVIDERS } from '@easytocloud/claude-personae-core';
 import { DEFAULT_PRESET_ID } from '@easytocloud/claude-personae-core';
 import { esc } from './components';
+import { chipForProvider, ChipSpec } from '../providerIcons';
+
+// Brand tile for a provider — mirrors providerTileHtml() in media/webview.js.
+// Colors come from flavor-* classes in styles.ts (inline style attributes are
+// blocked by the webview CSP).
+function providerTileHtml(chip: ChipSpec, iconBase: string): string {
+  const inner = chip.icon
+    ? `<img src="${esc(iconBase)}/${esc(chip.icon)}" alt="" />`
+    : esc(chip.label);
+  return `<span class="provider-tile flavor-${esc(chip.flavor)}" aria-hidden="true">${inner}</span>`;
+}
 
 // ---------------------------------------------------------------------------
-// Scope cards
+// Scope card — Global only. Per-workspace assignment lives in the sidebar
+// (and the status bar quick-switch); workspaces inherit Global by default.
 // ---------------------------------------------------------------------------
 
-function renderScopeCard(attrs: {
-  scope: 'global' | 'workspace';
-  title: string;
-  subtitle: string;
-  badgeText: string;
-  badgeColor: string;
-  presetId: string | undefined;
-  presetMode: string;
-  presets: Preset[];
-}): string {
-  const { scope, title, subtitle, badgeText, badgeColor, presetId, presetMode, presets } = attrs;
+export function renderScopeCards(state: PanelState): string {
+  const { store } = state;
 
-  // Build preset dropdown options
+  const globalPresetId = store.globalScope.presetId;
+  const globalMode = store.globalScope.mode;
+
+  const badgeText = globalMode === 'preset'
+    ? (store.presets.find(p => p.id === globalPresetId)?.name ?? 'None')
+    : globalMode === 'manual' ? 'Manual' : 'None';
+
   const modeOptions = [
-    scope === 'workspace'
-      ? `<option value="inherit"${presetMode === 'inherit' ? ' selected' : ''}>Inherit from Global</option>`
-      : '',
-    `<option value="manual"${presetMode === 'manual' ? ' selected' : ''}>Configure manually</option>`,
-    ...presets.map(p =>
-      `<option value="preset:${esc(p.id)}"${presetMode === 'preset' && presetId === p.id ? ' selected' : ''}>${esc(p.name)}</option>`
+    `<option value="manual"${globalMode === 'manual' ? ' selected' : ''}>Configure manually</option>`,
+    ...store.presets.map(p =>
+      `<option value="preset:${esc(p.id)}"${globalMode === 'preset' && globalPresetId === p.id ? ' selected' : ''}>${esc(p.name)}</option>`
     ),
-  ].filter(Boolean).join('');
+  ].join('');
 
   return `
-    <div class="scope-card collapsed" data-scope="${scope}">
-      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle ${esc(title)}">
-        <div class="scope-indicator ${scope}"></div>
+    <div class="scope-section">
+    <div class="scope-card collapsed" data-scope="global">
+      <div class="scope-header" data-action="toggle-scope" role="button" tabindex="0" aria-expanded="false" aria-label="Toggle Global Scope">
+        <div class="scope-indicator global"></div>
         <div class="scope-title-area">
           <div class="scope-title">
-            ${esc(title)}
-            <span class="scope-badge ${badgeColor}">${esc(badgeText)}</span>
+            Global Scope
+            <span class="scope-badge blue">${esc(badgeText)}</span>
           </div>
-          <div class="scope-subtitle">${esc(subtitle)}</div>
+          <div class="scope-subtitle">~/.claude/settings.json — the default for every VS Code Workspace; switch per workspace from the sidebar</div>
         </div>
         <div class="panel-toggle"><span></span><span></span><span></span></div>
       </div>
       <div class="scope-body">
         <div class="scope-preset-row">
           <label>Preset:</label>
-          <select data-scope-preset="${scope}">${modeOptions}</select>
+          <select data-scope-preset="global">${modeOptions}</select>
         </div>
-        <div class="bb-chips" data-scope-blocks="${scope}">
+        <div class="bb-chips" data-scope-blocks="global">
           <!-- Populated by JS based on active preset -->
         </div>
       </div>
+    </div>
     </div>`;
-}
-
-export function renderScopeCards(state: PanelState): string {
-  const { store } = state;
-
-  // Global scope
-  const globalPresetId = store.globalScope.presetId;
-  const globalMode = store.globalScope.mode;
-
-  // Workspace scope
-  const wsScope = state.workspacePath
-    ? (store.workspaceScopes[state.workspacePath] ?? { mode: 'inherit' })
-    : { mode: 'inherit' as const };
-
-  let html = '<div class="scope-section">';
-
-  // Global card
-  html += renderScopeCard({
-    scope: 'global',
-    title: 'Global Scope',
-    subtitle: '~/.claude/settings.json',
-    badgeText: globalMode === 'preset'
-      ? (store.presets.find(p => p.id === globalPresetId)?.name ?? 'None')
-      : globalMode === 'manual' ? 'Manual' : 'None',
-    badgeColor: 'blue',
-    presetId: globalPresetId,
-    presetMode: globalMode,
-    presets: store.presets,
-  });
-
-  // Workspace card (only if workspace is open)
-  if (state.hasWorkspace) {
-    const wsPresetId = wsScope.presetId;
-    html += renderScopeCard({
-      scope: 'workspace',
-      title: 'VS Code Workspace Scope',
-      subtitle: `${state.workspaceName ?? state.workspacePath ?? ''} · .claude/settings.json`,
-      badgeText: wsScope.mode === 'preset'
-        ? (store.presets.find(p => p.id === wsPresetId)?.name ?? 'None')
-        : wsScope.mode === 'inherit' ? 'Inherited' : 'Manual',
-      badgeColor: 'teal',
-      presetId: wsPresetId,
-      presetMode: wsScope.mode,
-      presets: store.presets,
-    });
-  }
-
-  html += '</div>';
-  return html;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +86,7 @@ function renderPresetCard(
   providers: ProviderProfile[],
   mcpGroups: McpServerGroup[],
   dirGroups: DirectoryGroup[],
+  iconBase: string,
 ): string {
   const provider = providers.find(p => p.id === preset.providerId);
   const providerLabel = provider ? `${provider.type} · ${provider.name}` : 'No provider';
@@ -143,6 +103,7 @@ function renderPresetCard(
   return `
     <div class="preset-card card card-red" data-action="edit-preset" data-id="${esc(preset.id)}">
       <div class="preset-card-header">
+        ${providerTileHtml(chipForProvider(provider, preset.name), iconBase)}
         <span class="preset-card-name">${esc(preset.name)}</span>
         ${isDefault ? '<span class="preset-card-default">Default</span>' : ''}
       </div>
@@ -158,13 +119,13 @@ function renderPresetCard(
     </div>`;
 }
 
-export function renderPresetGrid(state: PanelState): string {
+export function renderPresetGrid(state: PanelState, iconBase: string): string {
   const { store } = state;
   const count = store.presets.length;
 
   let html = `
     <div class="canvas-heading">Presets</div>
-    <div class="canvas-hint">A Preset combines one Provider with optional MCP Server Groups and Directory Groups into a reusable configuration. Assign Presets to Scopes above.</div>
+    <div class="canvas-hint">A Preset combines one Provider with optional MCP Server Groups and Directory Groups into a reusable configuration. Set the Global default above; pick a different Preset per VS Code Workspace from the sidebar.</div>
 
     <div class="panel-section collapsed" data-panel="presets">
       <div class="panel-header" data-action="toggle-panel" role="button" tabindex="0" aria-expanded="false">
@@ -182,7 +143,7 @@ export function renderPresetGrid(state: PanelState): string {
         <div class="preset-grid" data-grid="presets">`;
 
   for (const preset of store.presets) {
-    html += renderPresetCard(preset, store.providers, store.mcpGroups, store.directoryGroups);
+    html += renderPresetCard(preset, store.providers, store.mcpGroups, store.directoryGroups, iconBase);
   }
 
   // Dashed "new" card
@@ -214,16 +175,18 @@ function providerTypeLabel(p: ProviderProfile): string {
 }
 
 // Generic chip renderer — mirrors renderChipHtml() in media/webview.js.
-// items: Array of { text, spacer? }
+// items: Array of { text, spacer? }; tile: optional leading brand tile HTML
 function renderChip(
   color: string, action: string, id: string,
-  name: string, items: { text: string; spacer?: boolean }[]
+  name: string, items: { text: string; spacer?: boolean }[],
+  tile = ''
 ): string {
   const itemHtml = items
     .map(i => `<span class="bb-chip-detail${i.spacer ? ' bb-chip-spacer' : ''}">${esc(i.text)}</span>`)
     .join('');
   return `
     <div class="bb-chip card card-${color}" data-action="${action}" data-id="${esc(id)}">
+      ${tile}
       <div class="bb-chip-text">
         <span class="bb-chip-name">${esc(name)}</span>
         ${itemHtml}
@@ -231,13 +194,13 @@ function renderChip(
     </div>`;
 }
 
-function renderProviderChip(p: ProviderProfile): string {
+function renderProviderChip(p: ProviderProfile, iconBase: string): string {
   return renderChip('orange', 'edit-provider', p.id, p.name, [
     { text: providerTypeLabel(p) },
     { text: p.smallFastModel || '—', spacer: true },
     { text: p.primaryModel || '—' },
     { text: p.opusModel || '—' },
-  ]);
+  ], providerTileHtml(chipForProvider(p), iconBase));
 }
 
 function renderMcpGroupChip(g: McpServerGroup): string {
@@ -250,7 +213,7 @@ function renderDirGroupChip(g: DirectoryGroup): string {
     g.directories.map(d => ({ text: d })));
 }
 
-export function renderBuildingBlocks(state: PanelState): string {
+export function renderBuildingBlocks(state: PanelState, iconBase: string): string {
   const { store } = state;
   const provCount = store.providers.length;
   const mcpCount = store.mcpGroups.length;
@@ -275,7 +238,7 @@ export function renderBuildingBlocks(state: PanelState): string {
       </div>
       <div class="panel-body">
         <div class="bb-chips" data-chips="providers">
-          ${store.providers.map(p => renderProviderChip(p)).join('')}
+          ${store.providers.map(p => renderProviderChip(p, iconBase)).join('')}
           <div class="bb-chip card card-new card-orange" data-action="new-provider-standalone">+ New Provider</div>
         </div>
       </div>

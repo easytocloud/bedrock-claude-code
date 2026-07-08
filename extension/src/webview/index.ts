@@ -9,13 +9,13 @@ import { renderScopeCards, renderPresetGrid, renderBuildingBlocks } from './layo
 import { renderAllDrawers } from './drawers';
 import { buildScriptData } from './script';
 
-export function buildHtml(state: PanelState, nonce: string, cspSource: string, scriptUri: string): string {
+export function buildHtml(state: PanelState, nonce: string, cspSource: string, scriptUri: string, iconBase: string): string {
   const styles = buildStyles();
   const scopeCards = renderScopeCards(state);
-  const presetGrid = renderPresetGrid(state);
-  const buildingBlocks = renderBuildingBlocks(state);
+  const presetGrid = renderPresetGrid(state, iconBase);
+  const buildingBlocks = renderBuildingBlocks(state, iconBase);
   const drawers = renderAllDrawers();
-  const dataScript = buildScriptData();
+  const dataScript = `window.__ICON_BASE__ = ${JSON.stringify(iconBase)};\n${buildScriptData()}`;
 
   return /* html */ `<!DOCTYPE html>
 <html lang="en">
@@ -23,7 +23,7 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src ${cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}' ${cspSource};" />
+        content="default-src 'none'; style-src ${cspSource} 'nonce-${nonce}'; img-src ${cspSource}; script-src 'nonce-${nonce}' ${cspSource};" />
   <title>Claude Code Personae</title>
   <style nonce="${nonce}">${styles}</style>
 </head>
@@ -61,9 +61,9 @@ export function buildHtml(state: PanelState, nonce: string, cspSource: string, s
           <a class="intro-link green" data-jump="panel:dir-groups" role="link" tabindex="0">Directory Groups</a>
           as Building Blocks. Combine them into
           <a class="intro-link red" data-jump="panel:presets" role="link" tabindex="0">Presets</a>,
-          then assign a Preset to the
-          <a class="intro-link blue" data-jump="scope:global" role="link" tabindex="0">Global</a> or
-          <a class="intro-link teal" data-jump="scope:workspace" role="link" tabindex="0">VS Code Workspace</a> Scope.
+          then assign one to the
+          <a class="intro-link blue" data-jump="scope:global" role="link" tabindex="0">Global</a> Scope.
+          Every VS Code Workspace inherits Global — switch a workspace to another Preset from the sidebar.
         </div>
       </div>
     </div>
