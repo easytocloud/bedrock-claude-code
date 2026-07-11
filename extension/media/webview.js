@@ -40,6 +40,10 @@ console.log('[WEBVIEW] Script loaded');
   const fetched = {
     proxyModels: [],
     bedrockModels: [],
+    // True while a fetch was kicked off to backfill an empty Mantle/non-Mantle
+    // list after a pill toggle — tells applyFetchedBedrockModels() to
+    // auto-select once the real data lands, same as the immediate rebuild did.
+    autoSelectOnNextBedrockFetch: false,
   };
 
   // ─── Helpers ───────────────────────────────────────────────────
@@ -734,6 +738,13 @@ console.log('[WEBVIEW] Script loaded');
       btn.classList.toggle('sel', btn.dataset.val === 'no');
     });
 
+    // Mantle endpoint — persisted per-provider (unlike the two filters above),
+    // restore the saved value rather than resetting to a default.
+    let mantleOn = !!(provider && provider.useMantle);
+    document.querySelectorAll('[data-pill="bedrock-mantle"]').forEach(function(btn) {
+      btn.classList.toggle('sel', btn.dataset.val === (mantleOn ? 'yes' : 'no'));
+    });
+
     // Refresh op:// hints after values are populated
     updateCredentialHint();
     updateAnthropicCredentialHint();
@@ -804,6 +815,13 @@ console.log('[WEBVIEW] Script loaded');
       applyKnownProviderToForm(knownProviderById(presetId));
     }
     if (typeVal) rebuildModelSelects(typeVal, provider);
+
+    // Auto-fetch on open when AWS credentials are already configured, so the
+    // picker shows the account's real models instead of just the curated
+    // presets without the user having to click "Fetch models" first.
+    if (typeVal === 'bedrock' && provider && provider.awsProfile) {
+      fetchBedrockModels();
+    }
 
     // Disable model selects for default provider (they're fixed to Anthropic defaults)
     ['provider-model-sonnet', 'provider-model-haiku', 'provider-model-opus'].forEach(id => {
@@ -1004,7 +1022,23 @@ console.log('[WEBVIEW] Script loaded');
     return models.filter(function(m) { return !m.pds; });
   }
 
-  function rebuildModelSelects(type, provider) {
+  // Selected No/Yes pill for routing through the Mantle endpoint (view filter,
+  // not persisted — the persisted state is provider.useMantle)
+  function mantleEnabled() {
+    let sel = document.querySelector('[data-pill="bedrock-mantle"].sel');
+    return !!(sel && sel.dataset.val === 'yes');
+  }
+
+  // Mantle uses a separate model lineup (bare `anthropic.claude-*` IDs, no
+  // region prefix) that only works when CLAUDE_CODE_USE_MANTLE=1. When the
+  // pill is on, restrict the picker to Mantle-format IDs; otherwise exclude
+  // them (they'd fail against the regular Invoke API).
+  function filterByMantle(models) {
+    let on = mantleEnabled();
+    return models.filter(function(m) { return on ? (m.prefix === 'mantle' || m.mantle) : (m.prefix !== 'mantle' && !m.mantle); });
+  }
+
+  function rebuildModelSelects(type, provider, autoSelectFirst) {
     const region = document.getElementById('provider-aws-region').value;
 
     if (type === 'bedrock') {
@@ -1014,12 +1048,24 @@ console.log('[WEBVIEW] Script loaded');
       let sonnetPresets = filterModels(SONNET_MODELS, region);
       let haikuPresets = filterModels(HAIKU_MODELS, region);
       let opusPresets = filterModels(OPUS_MODELS, region);
+      // Mantle presets aren't region-prefixed, so filterModels() above always
+      // excludes them — pull them in separately, gated by the Mantle pill.
+      let mantlePresets = filterByMantle(SONNET_MODELS.concat(HAIKU_MODELS, OPUS_MODELS).filter(function(m) { return m.prefix === 'mantle'; }));
+      // Auto-select falls back to "top of the list" per slot only when the
+      // provider has no explicit value for that slot (never overrides a
+      // real, still-valid selection).
+      let pick = function(models, selectId, explicitValue) {
+        if (explicitValue) { return explicitValue; }
+        return autoSelectFirst ? firstModelForSlot(models, selectId) : '';
+      };
       if (fetched.bedrockModels.length > 0) {
         // Merge: smart presets first, then fetched models not already in presets
-        let presetIds = new Set(sonnetPresets.concat(haikuPresets, opusPresets).map(function(m) { return m.id; }));
-        let extra = filterByDataShare(fetched.bedrockModels).filter(function(m) { return !presetIds.has(m.id); });
+        let presetIds = new Set(sonnetPresets.concat(haikuPresets, opusPresets, mantlePresets).map(function(m) { return m.id; }));
+        let extra = filterByMantle(filterByDataShare(fetched.bedrockModels)).filter(function(m) { return !presetIds.has(m.id); });
         // All three selects get the full merged list so any model can go in any slot
-        let allModels = filterByBedrockScope(sonnetPresets.concat(haikuPresets, opusPresets, extra));
+        let allModels = mantleEnabled()
+          ? mantlePresets.concat(extra)
+          : filterByBedrockScope(sonnetPresets.concat(haikuPresets, opusPresets, extra));
         // Deduplicate by id, then newest-first within each family
         let seen = new Set();
         let merged = [];
@@ -1030,13 +1076,23 @@ console.log('[WEBVIEW] Script loaded');
         // Counter follows the active filters — only what's actually selectable
         let statusEl = document.getElementById('bedrock-fetch-status');
         if (statusEl) { statusEl.textContent = merged.length + ' model' + (merged.length === 1 ? '' : 's') + ' selectable'; }
-        populateModelSelect('provider-model-sonnet', merged, provider?.primaryModel, true);
-        populateModelSelect('provider-model-haiku', merged, provider?.smallFastModel, true);
-        populateModelSelect('provider-model-opus', merged, provider?.opusModel, true);
+        populateModelSelect('provider-model-sonnet', merged, pick(merged, 'provider-model-sonnet', provider?.primaryModel), true);
+        populateModelSelect('provider-model-haiku', merged, pick(merged, 'provider-model-haiku', provider?.smallFastModel), true);
+        populateModelSelect('provider-model-opus', merged, pick(merged, 'provider-model-opus', provider?.opusModel), true);
+      } else if (mantleEnabled()) {
+        let sonnetMantle = filterByMantle(SONNET_MODELS.filter(function(m) { return m.prefix === 'mantle'; }));
+        let haikuMantle = filterByMantle(HAIKU_MODELS.filter(function(m) { return m.prefix === 'mantle'; }));
+        let opusMantle = filterByMantle(OPUS_MODELS.filter(function(m) { return m.prefix === 'mantle'; }));
+        populateModelSelect('provider-model-sonnet', sonnetMantle, pick(sonnetMantle, 'provider-model-sonnet', provider?.primaryModel), true);
+        populateModelSelect('provider-model-haiku', haikuMantle, pick(haikuMantle, 'provider-model-haiku', provider?.smallFastModel), true);
+        populateModelSelect('provider-model-opus', opusMantle, pick(opusMantle, 'provider-model-opus', provider?.opusModel), true);
       } else {
-        populateModelSelect('provider-model-sonnet', filterByBedrockScope(sonnetPresets), provider?.primaryModel, true);
-        populateModelSelect('provider-model-haiku', filterByBedrockScope(haikuPresets), provider?.smallFastModel, true);
-        populateModelSelect('provider-model-opus', filterByBedrockScope(opusPresets), provider?.opusModel, true);
+        let sonnetScoped = filterByBedrockScope(sonnetPresets);
+        let haikuScoped = filterByBedrockScope(haikuPresets);
+        let opusScoped = filterByBedrockScope(opusPresets);
+        populateModelSelect('provider-model-sonnet', sonnetScoped, pick(sonnetScoped, 'provider-model-sonnet', provider?.primaryModel), true);
+        populateModelSelect('provider-model-haiku', haikuScoped, pick(haikuScoped, 'provider-model-haiku', provider?.smallFastModel), true);
+        populateModelSelect('provider-model-opus', opusScoped, pick(opusScoped, 'provider-model-opus', provider?.opusModel), true);
       }
     } else if (type === 'anthropic') {
       populateModelSelect('provider-model-sonnet', [], provider?.primaryModel || ANTHROPIC_DEFAULTS.sonnet, false);
@@ -1109,13 +1165,23 @@ console.log('[WEBVIEW] Script loaded');
   }
 
   function applyFetchedBedrockModels(models) {
-    // models: [{id, label, pds?}] — rebuildModelSelects sets the status line
-    // to the post-filter selectable count
+    // models: [{id, label, pds?, mantle?}] — rebuildModelSelects sets the
+    // status line to the post-filter selectable count
     fetched.bedrockModels = models;
     let currentProvider = editing.providerId
       ? state.store.providers.find(function(p) { return p.id === editing.providerId; })
       : null;
-    rebuildModelSelects('bedrock', currentProvider);
+    let autoSelect = fetched.autoSelectOnNextBedrockFetch;
+    if (autoSelect) {
+      fetched.autoSelectOnNextBedrockFetch = false;
+      // This fetch was backfilling an empty list after a pill toggle —
+      // don't let the stale pre-toggle model IDs from the store win over
+      // auto-select.
+      currentProvider = currentProvider ? Object.assign({}, currentProvider, {
+        primaryModel: '', smallFastModel: '', opusModel: '',
+      }) : currentProvider;
+    }
+    rebuildModelSelects('bedrock', currentProvider, autoSelect);
   }
 
   // ─── Filterable Combobox ──────────────────────────────────────
@@ -1293,6 +1359,22 @@ console.log('[WEBVIEW] Script loaded');
     'provider-model-haiku': 'haiku',
     'provider-model-opus': 'opus'
   };
+
+  // Mirrors the combobox's own top-group ordering (matching-family models
+  // first, in existing — already newest-first — order) so "top of the list"
+  // here is the same model the user would see highlighted first if they
+  // opened the dropdown themselves.
+  function firstModelForSlot(models, selectId) {
+    if (!models.length) { return ''; }
+    let hint = (SLOT_HINTS[selectId] || '').toLowerCase();
+    if (hint) {
+      let match = models.find(function(m) {
+        return m.label.toLowerCase().indexOf(hint) >= 0 || m.id.toLowerCase().indexOf(hint) >= 0;
+      });
+      if (match) { return match.id; }
+    }
+    return models[0].id;
+  }
 
   function populateModelSelect(selectId, models, currentValue, showDropdown) {
     let existing = document.getElementById(selectId);
@@ -1571,6 +1653,9 @@ console.log('[WEBVIEW] Script loaded');
         let sel = document.getElementById('provider-aws-env');
         return (sel && sel.offsetParent !== null) ? (sel.value || undefined) : undefined;
       })(),
+      useMantle: type === 'bedrock'
+        ? (document.querySelector('[data-pill="bedrock-mantle"].sel') || {}).dataset?.val === 'yes'
+        : undefined,
       proxyBaseUrl: (function() {
         let raw = document.getElementById('provider-proxy-url').value || '';
         // Defence in depth: re-impose catalog scheme + path on save in case the user
@@ -2445,11 +2530,28 @@ console.log('[WEBVIEW] Script loaded');
       showProxyAuthSection(pillVal);
       resetAllTestPills();
     }
-    if (pillName === 'bedrock-scope' || pillName === 'bedrock-pds') {
+    if (pillName === 'bedrock-scope' || pillName === 'bedrock-pds' || pillName === 'bedrock-mantle') {
       let currentProvider = editing.providerId
         ? state.store.providers.find(function(p) { return p.id === editing.providerId; })
         : null;
-      rebuildModelSelects('bedrock', currentProvider);
+      if (pillName === 'bedrock-mantle') {
+        resetAllTestPills();
+        // Switching endpoints changes the entire eligible model set (Mantle
+        // IDs vs. region/Invoke-API IDs are disjoint) — carrying over the old
+        // selection would leave a stale, incompatible ID sitting in the box.
+        currentProvider = currentProvider ? Object.assign({}, currentProvider, {
+          primaryModel: '', smallFastModel: '', opusModel: '',
+        }) : currentProvider;
+        // Mantle access is account-gated — the curated one-per-family preset
+        // may not reflect what's actually granted. Fetch the real list (if
+        // we haven't already) so auto-select below picks from live data
+        // instead of assuming the curated entry works.
+        if (fetched.bedrockModels.length === 0 && getModelValue('provider-aws-profile').trim()) {
+          fetched.autoSelectOnNextBedrockFetch = true;
+          fetchBedrockModels();
+        }
+      }
+      rebuildModelSelects('bedrock', currentProvider, pillName === 'bedrock-mantle');
     }
   });
 

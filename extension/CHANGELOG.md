@@ -4,6 +4,16 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-07-11
+
+### Added
+- **Amazon Bedrock Mantle support** — a new "Use Mantle" pill (No/Yes, default No) next to the Bedrock model picker's Region scope and Allow-provider-data-share pills. When enabled, writes `CLAUDE_CODE_USE_MANTLE=1` and restricts the Sonnet/Haiku/Opus pickers to Mantle-format model IDs (bare `anthropic.claude-<family>`, no region prefix, no version suffix) — Mantle serves Claude through the native Anthropic Messages API shape rather than the Bedrock Invoke API. Toggling the pill clears the current model selections (they're not valid on the other endpoint), auto-fetches the account's real Mantle models if none have been fetched yet, and auto-selects the top-of-list model for each slot instead of leaving the picker empty.
+- **Mantle-aware model testing** — the Test button now detects Mantle-format model IDs and signs a request directly against the Mantle endpoint (SigV4, service `bedrock-mantle`) instead of using the Bedrock Invoke/Converse API, which uses an incompatible request shape for Mantle.
+- **Auto-fetch Bedrock models on drawer open** — when a Bedrock provider already has an AWS profile configured, opening its drawer now fetches the account's live model list in the background automatically, instead of requiring a manual "Fetch models" click.
+
+### Changed
+- Model-picker pills (Region scope, Allow provider data share, Use Mantle) are now sized to match the model Test/OK/Fail pill instead of being visibly larger.
+
 ## [0.7.0] — 2026-07-08
 
 ### Changed

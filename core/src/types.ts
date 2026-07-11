@@ -19,6 +19,11 @@ export interface ProviderProfile {
    *  ~/.aws/aws-envs/<awsEnv>/config — stored per-provider so each provider carries
    *  its own config independently of the live filesystem symlink. */
   awsEnv?: string;
+  /** Route this Bedrock provider's requests through the Mantle endpoint
+   *  (native Anthropic API shape) instead of the Invoke API. Writes
+   *  CLAUDE_CODE_USE_MANTLE=1. Requires Mantle-format model IDs
+   *  (e.g. `anthropic.claude-sonnet-5`) in the model slots. */
+  useMantle?: boolean;
 
   // Anthropic-specific
   anthropicApiKey?: string;

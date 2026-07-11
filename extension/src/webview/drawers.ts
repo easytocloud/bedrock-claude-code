@@ -234,6 +234,14 @@ export function renderProviderDrawer(): string {
             <button type="button" class="pill-btn" data-pill="bedrock-pds" data-val="yes">Yes</button>
           </div>
         </div>
+        <div class="label-row"
+             title="Mantle is a separate Bedrock endpoint that serves Claude models through the native Anthropic API shape. It uses bare model IDs (e.g. anthropic.claude-sonnet-5) with no region prefix, so enabling it restricts the picker to Mantle-format models. Writes CLAUDE_CODE_USE_MANTLE=1.">
+          <label class="form-label">Use Mantle</label>
+          <div class="pill-toggle" id="bedrock-mantle-pills">
+            <button type="button" class="pill-btn sel" data-pill="bedrock-mantle" data-val="no">No</button>
+            <button type="button" class="pill-btn" data-pill="bedrock-mantle" data-val="yes">Yes</button>
+          </div>
+        </div>
         <button type="button" class="btn btn-primary" data-action="fetch-bedrock-models">Fetch models from AWS</button>
         <div id="bedrock-fetch-status" class="form-hint form-hint-mt"></div>
       </div>

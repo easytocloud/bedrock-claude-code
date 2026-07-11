@@ -68,6 +68,7 @@ export function resolvePreset(
     switch (provider.type) {
       case 'bedrock': {
         env['CLAUDE_CODE_USE_BEDROCK'] = '1';
+        env['CLAUDE_CODE_USE_MANTLE'] = provider.useMantle ? '1' : '0';
         if (provider.awsProfile) { env['AWS_PROFILE'] = provider.awsProfile; }
         if (provider.awsRegion) {
           if (!AWS_REGIONS.includes(provider.awsRegion)) {
@@ -225,6 +226,7 @@ export function resolvePreset(
 function isNoOp(key: string, value: string): boolean {
   if (value === '') { return true; }
   if (key === 'CLAUDE_CODE_USE_BEDROCK' && value === '0') { return true; }
+  if (key === 'CLAUDE_CODE_USE_MANTLE' && value === '0') { return true; }
   if (key === 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC' && value === '0') { return true; }
   return false;
 }

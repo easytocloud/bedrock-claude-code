@@ -3,7 +3,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getClaudeSettingsPath, requiresProviderDataShare } from '@easytocloud/claude-personae-core';
+import { getClaudeSettingsPath, requiresProviderDataShare, isMantleModelId } from '@easytocloud/claude-personae-core';
 import { readAwsProfiles, readAwsProfilesFrom, getAwsConfigInfo } from '@easytocloud/claude-personae-core';
 import { readProfileStore, writeProfileStore, createEmptyStore, generateId } from '@easytocloud/claude-personae-core';
 import { applyAllScopes } from '@easytocloud/claude-personae-core';
@@ -322,7 +322,11 @@ export class ClaudeCodeSettingsPanel {
         break;
 
       case 'testBedrockModel':
-        await this._testBedrockModel(msg.awsProfile as string, msg.awsRegion as string, msg.awsEnv as string | undefined, msg.modelId as string, msg.slot as string);
+        if (isMantleModelId(msg.modelId as string)) {
+          await this._testMantleModel(msg.awsProfile as string, msg.awsRegion as string, msg.awsEnv as string | undefined, msg.modelId as string, msg.slot as string);
+        } else {
+          await this._testBedrockModel(msg.awsProfile as string, msg.awsRegion as string, msg.awsEnv as string | undefined, msg.modelId as string, msg.slot as string);
+        }
         break;
 
       case 'confirmDelete':
@@ -553,6 +557,84 @@ export class ClaudeCodeSettingsPanel {
     }
   }
 
+  // Mantle is a separate Bedrock endpoint (native Anthropic API shape, not the
+  // Invoke/Converse API) reachable at https://bedrock-mantle.{region}.api.aws/anthropic
+  // (base path confirmed from @anthropic-ai/bedrock-sdk's mantle-client.ts —
+  // the SDK's own Messages resource appends /v1/messages on top of that base,
+  // and signs with SigV4 service name "bedrock-mantle", not "bedrock").
+  // There is no AWS CLI command for it, so we sign and POST it ourselves
+  // rather than shelling out to `aws`.
+  private async _testMantleModel(awsProfile: string, awsRegion: string, awsEnv: string | undefined, modelId: string, slot: string): Promise<void> {
+    try {
+      if (!modelId) { throw new Error('No model selected'); }
+      if (!awsProfile) { throw new Error('No AWS profile configured'); }
+      if (!awsRegion) { throw new Error('No AWS region configured'); }
+
+      const { execSync } = require('child_process') as typeof import('child_process');
+      const env: Record<string, string> = { ...process.env as Record<string, string> };
+      env['AWS_PROFILE'] = awsProfile;
+      if (awsEnv) {
+        env['AWS_CONFIG_FILE'] = path.join(os.homedir(), '.aws', 'aws-envs', awsEnv, 'config');
+      }
+
+      const credsJson = execSync('aws configure export-credentials --output json', {
+        encoding: 'utf8', env, timeout: 15000,
+      });
+      const creds = JSON.parse(credsJson) as {
+        AccessKeyId: string; SecretAccessKey: string; SessionToken?: string;
+      };
+
+      const { SignatureV4 } = require('@smithy/signature-v4') as typeof import('@smithy/signature-v4');
+      const { HttpRequest } = require('@smithy/protocol-http') as typeof import('@smithy/protocol-http');
+      const { Sha256 } = require('@aws-crypto/sha256-js') as typeof import('@aws-crypto/sha256-js');
+
+      const host = `bedrock-mantle.${awsRegion}.api.aws`;
+      const requestPath = '/anthropic/v1/messages';
+      const bodyObj = { model: modelId, max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] };
+      const body = JSON.stringify(bodyObj);
+
+      const request = new HttpRequest({
+        method: 'POST',
+        protocol: 'https:',
+        hostname: host,
+        path: requestPath,
+        headers: {
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01',
+          host,
+        },
+        body,
+      });
+
+      const signer = new SignatureV4({
+        service: 'bedrock-mantle',
+        region: awsRegion,
+        credentials: {
+          accessKeyId: creds.AccessKeyId,
+          secretAccessKey: creds.SecretAccessKey,
+          sessionToken: creds.SessionToken,
+        },
+        sha256: Sha256,
+      });
+      const signed = await signer.sign(request);
+
+      const res = await (globalThis as any).fetch(`https://${host}${requestPath}`, {
+        method: 'POST',
+        headers: signed.headers,
+        body,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}${text ? ': ' + text.slice(0, 120) : ''}`);
+      }
+
+      this._panel.webview.postMessage({ type: 'testModelResult', slot, ok: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message.split('\n')[0] : String(err);
+      this._panel.webview.postMessage({ type: 'testModelResult', slot, ok: false, message });
+    }
+  }
+
   private async _testMcpServer(server: McpServerEntry): Promise<void> {
     try {
       const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
@@ -593,19 +675,19 @@ export class ClaudeCodeSettingsPanel {
   }
 
   // Bump when the fetch-time filtering changes so pre-filter caches are discarded
-  private static readonly _MODEL_CACHE_VERSION = 4;
+  private static readonly _MODEL_CACHE_VERSION = 5;
 
-  private static _readModelCache(cachePath: string): { id: string; label: string; pds?: boolean }[] | null {
+  private static _readModelCache(cachePath: string): { id: string; label: string; pds?: boolean; mantle?: boolean }[] | null {
     try {
       const raw = fs.readFileSync(cachePath, 'utf8');
-      const { v, ts, models } = JSON.parse(raw) as { v?: number; ts: number; models: { id: string; label: string; pds?: boolean }[] };
+      const { v, ts, models } = JSON.parse(raw) as { v?: number; ts: number; models: { id: string; label: string; pds?: boolean; mantle?: boolean }[] };
       if (v !== ClaudeCodeSettingsPanel._MODEL_CACHE_VERSION) { return null; }
       if (Date.now() - ts < 60 * 60 * 1000) { return models; } // 1-hour TTL
     } catch { /* cache miss or corrupt */ }
     return null;
   }
 
-  private static _writeModelCache(cachePath: string, models: { id: string; label: string; pds?: boolean }[]): void {
+  private static _writeModelCache(cachePath: string, models: { id: string; label: string; pds?: boolean; mantle?: boolean }[]): void {
     try {
       fs.writeFileSync(
         cachePath,
@@ -634,15 +716,25 @@ export class ClaudeCodeSettingsPanel {
       const opts = { encoding: 'utf8' as const, env, timeout: 30000 };
 
       // Fetch inference profiles (cross-region) and foundation models
-      const models: { id: string; label: string; pds?: boolean }[] = [];
+      const models: { id: string; label: string; pds?: boolean; mantle?: boolean }[] = [];
       const seen = new Set<string>();
       const fetchErrors: string[] = [];
       // Mark models whose terms share inference data with the provider so the
-      // UI can hide them unless explicitly allowed
-      const withPds = (id: string, label: string): { id: string; label: string; pds?: boolean } =>
-        requiresProviderDataShare(id)
-          ? { id, label: `${label} — shares data with provider`, pds: true }
-          : { id, label };
+      // UI can hide them unless explicitly allowed. Also mark Mantle-format
+      // IDs (bare `anthropic.claude-*`, no version suffix/date) so the UI can
+      // filter to them when the Mantle pill is on.
+      const withPds = (id: string, label: string): { id: string; label: string; pds?: boolean; mantle?: boolean } => {
+        const mantle = isMantleModelId(id);
+        const pds = requiresProviderDataShare(id);
+        const suffix = [pds ? 'shares data with provider' : '', mantle ? 'Mantle' : '']
+          .filter(Boolean).join(', ');
+        return {
+          id,
+          label: suffix ? `${label} — ${suffix}` : label,
+          ...(pds ? { pds: true } : {}),
+          ...(mantle ? { mantle: true } : {}),
+        };
+      };
 
       try {
         const profilesJson = execSync(

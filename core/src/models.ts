@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 
 export interface ModelEntry {
-  /** Geo prefix: 'global' | 'us' | 'eu' | 'apac' | 'jp' | 'au' | '' (regional — always shown) */
+  /** Geo prefix: 'global' | 'us' | 'eu' | 'apac' | 'jp' | 'au' | 'mantle' | '' (regional — always shown) */
   prefix: string;
   /** Full model identifier */
   id: string;
@@ -18,12 +18,14 @@ export const HAIKU_MODELS: ModelEntry[] = [
   { prefix: 'eu',     id: 'eu.anthropic.claude-haiku-4-5-20251001-v1:0',     label: 'Claude Haiku 4.5 — EU Cross-Region' },
   { prefix: 'jp',     id: 'jp.anthropic.claude-haiku-4-5-20251001-v1:0',     label: 'Claude Haiku 4.5 — Japan Cross-Region' },
   { prefix: 'au',     id: 'au.anthropic.claude-haiku-4-5-20251001-v1:0',     label: 'Claude Haiku 4.5 — Australia Cross-Region' },
+  { prefix: 'mantle', id: 'anthropic.claude-haiku-4-5',                      label: 'Claude Haiku 4.5 — Mantle' },
 ];
 
 export const SONNET_MODELS: ModelEntry[] = [
   { prefix: 'global', id: 'global.anthropic.claude-sonnet-5',                label: 'Claude Sonnet 5 — Global' },
   { prefix: 'us',     id: 'us.anthropic.claude-sonnet-5',                    label: 'Claude Sonnet 5 — US Cross-Region' },
   { prefix: 'eu',     id: 'eu.anthropic.claude-sonnet-5',                    label: 'Claude Sonnet 5 — EU Cross-Region' },
+  { prefix: 'mantle', id: 'anthropic.claude-sonnet-5',                       label: 'Claude Sonnet 5 — Mantle' },
 ];
 
 export const OPUS_MODELS: ModelEntry[] = [
@@ -32,6 +34,7 @@ export const OPUS_MODELS: ModelEntry[] = [
   { prefix: 'eu',     id: 'eu.anthropic.claude-opus-4-8',                    label: 'Claude Opus 4.8 — EU Cross-Region' },
   { prefix: 'jp',     id: 'jp.anthropic.claude-opus-4-8',                    label: 'Claude Opus 4.8 — Japan Cross-Region' },
   { prefix: 'au',     id: 'au.anthropic.claude-opus-4-8',                    label: 'Claude Opus 4.8 — Australia Cross-Region' },
+  { prefix: 'mantle', id: 'anthropic.claude-opus-4-8',                       label: 'Claude Opus 4.8 — Mantle' },
 ];
 
 /** Default model IDs for Anthropic Direct API (no region prefix needed) */
@@ -83,9 +86,28 @@ export function requiresProviderDataShare(modelId: string): boolean {
   return PROVIDER_DATA_SHARE_PATTERNS.some(p => id.includes(p));
 }
 
+/**
+ * Mantle is a separate Bedrock endpoint (native Anthropic API shape) that
+ * uses bare model IDs like `anthropic.claude-sonnet-5` or
+ * `anthropic.claude-haiku-4-5` — `anthropic.` prefix, no geo prefix
+ * (us./eu./global./...), and critically no Bedrock foundation-model version
+ * suffix (`-v1:0`, `-v2:0`, ...) or embedded date (`-20250929`). Foundation
+ * models returned by `list-foundation-models` for the same families DO carry
+ * that suffix/date (e.g. `anthropic.claude-haiku-4-5-20251001-v1:0`), so
+ * checking for the absence of both is what actually distinguishes a
+ * Mantle-format ID from a same-family Invoke API one.
+ */
+export function isMantleModelId(modelId: string): boolean {
+  if (!/^anthropic\.claude-/i.test(modelId)) { return false; }
+  if (/-v\d+(:\d+)?$/i.test(modelId)) { return false; }  // Bedrock version suffix
+  if (/-\d{8}/.test(modelId)) { return false; }           // embedded date
+  return true;
+}
+
 /** Environment variable keys managed by this extension. */
 export const MANAGED_ENV_KEYS = new Set([
   'CLAUDE_CODE_USE_BEDROCK',
+  'CLAUDE_CODE_USE_MANTLE',
   'AWS_PROFILE',
   'AWS_REGION',
   'AWS_CONFIG_FILE',

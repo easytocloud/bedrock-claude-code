@@ -764,7 +764,7 @@ export function buildStyles(): string {
       flex-shrink: 0;
     }
     .pill-btn {
-      padding: 4px 12px;
+      padding: 1px 8px;
       font-size: 11px;
       font-family: inherit;
       cursor: pointer;

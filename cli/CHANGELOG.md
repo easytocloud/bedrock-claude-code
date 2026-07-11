@@ -4,6 +4,13 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-07-11
+
+Version jumps 0.6.0 → 0.8.0 to align with the extension's minor version — this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
+
+### Added
+- **Amazon Bedrock Mantle support** — providers can now set `useMantle: true` to route requests through the Bedrock Mantle endpoint (`CLAUDE_CODE_USE_MANTLE=1`), which serves Claude via the native Anthropic Messages API shape instead of the Bedrock Invoke API. Mantle uses bare `anthropic.claude-<family>` model IDs (no region prefix, no version suffix); the shared engine now recognizes these via `isMantleModelId()`.
+
 ## [0.6.0] — 2026-07-08
 
 ### Changed
