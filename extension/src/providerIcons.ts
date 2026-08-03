@@ -61,7 +61,7 @@ const CHIPS: Record<string, ChipSpec> = {
     bg: 'linear-gradient(135deg, #56C0A7 0%, #055F4E 100%)',
     fg: '#ffffff',
   },
-  openrouter: { flavor: 'openrouter', icon: 'openrouter.svg', label: 'OR', bg: '#101828', fg: '#ffffff' },
+  openrouter: { flavor: 'openrouter', icon: 'openrouter.svg', label: 'OR', bg: '#101828', fg: '#C8FF00' },
   ollama: { flavor: 'ollama', icon: 'ollama.svg', label: 'OL', bg: '#F4F4F5', fg: '#18181B' },
   lmstudio: { flavor: 'lmstudio', icon: 'lmstudio.svg', label: 'LM', bg: '#4F46E5', fg: '#ffffff' },
   omlx: { flavor: 'omlx', label: 'MX', bg: '#0EA5E9', fg: '#ffffff' },
