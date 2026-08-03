@@ -4,6 +4,14 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-08-03
+
+### Fixed
+- **Standalone mode could not be turned off** — `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is a *presence flag*: Claude Code treats any non-empty value, **including the string `"0"`**, as ON, and only unset/empty as OFF. The resolver wrote `"0"` when the toggle was off, which silently enabled the very behaviour the user had disabled. It now writes an empty string, so "off" means off. This also repairs inheritance: a workspace Preset with the toggle off that sits under a Global Bedrock Preset now genuinely overrides it instead of re-enabling standalone mode.
+
+### Added
+- **`CLAUDE_CODE_ATTRIBUTION_HEADER=0` for Bedrock and 3rd-party providers** — Claude Code ≥ 2.1.36 injects an attribution block (client version + per-request prompt fingerprint) as the first text block of the system prompt. It is wrong for every non-Anthropic endpoint: Amazon Bedrock rejects it outright with `400 x-anthropic-billing-header is a reserved keyword and may not be used in the system prompt`, and on any proxy or gateway the block changes on every request, so the prompt cache misses every single turn. It is now disabled automatically for Bedrock and for all known 3rd-party presets (OpenRouter, Ollama, LM Studio, oMLX, vLLM, LiteLLM), and for Custom proxies that keep Standalone mode on — the same audience as the standalone-mode rule, and like it, with no GUI toggle. Native Anthropic providers are untouched.
+
 ## [0.8.0] — 2026-07-11
 
 ### Added
