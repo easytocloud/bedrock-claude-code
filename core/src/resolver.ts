@@ -178,7 +178,25 @@ export function resolvePreset(
       provider.type === 'bedrock' ||
       isKnownProxy ||
       (provider.type === 'proxy' && provider.disableLoginPrompt !== false);
-    env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = shouldDisableLoginPrompt ? '1' : '0';
+    // Presence flag, NOT a 0/1 boolean: Claude Code treats ANY non-empty value —
+    // including the string "0" — as ON, and only unset/empty as OFF. Writing "0"
+    // here would enable standalone mode when the user turned it off. Empty string
+    // is the only correct "off", and it also overrides an inherited global "1"
+    // (see filterForProject: '' is kept when global holds a meaningful value).
+    env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = shouldDisableLoginPrompt ? '1' : '';
+
+    // Attribution block: Claude Code >= 2.1.36 injects a per-request fingerprint
+    // (client version + prompt hash) as the first text block of the system prompt.
+    // It must be off for every non-Anthropic endpoint:
+    //  - Bedrock rejects it outright ("x-anthropic-billing-header is a reserved
+    //    keyword and may not be used in the system prompt" -> HTTP 400)
+    //  - Any proxy/gateway sees a first block that changes every request, which
+    //    guarantees a prompt-cache miss on each turn.
+    // Same audience as the standalone-mode rule above, so it follows the same
+    // condition and likewise gets no GUI toggle. "0" is a real documented value
+    // here (this one is a 0/1 variable, unlike the presence flag above); '' means
+    // "leave Claude Code's default alone" for native Anthropic.
+    env['CLAUDE_CODE_ATTRIBUTION_HEADER'] = shouldDisableLoginPrompt ? '0' : '';
 
   }
 
@@ -222,12 +240,16 @@ export function resolvePreset(
  * Returns true when key=value carries no information and need not be written.
  * - Empty string is always a no-op at global level (no parent to override).
  * - CLAUDE_CODE_USE_BEDROCK=0 is the default; writing it at global level is noise.
+ *
+ * Note there is deliberately NO entry for CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=0
+ * any more: that variable is a presence flag where "0" means ON, so it is never
+ * emitted with that value. The resolver writes '' for off, which the first rule
+ * already covers.
  */
 function isNoOp(key: string, value: string): boolean {
   if (value === '') { return true; }
   if (key === 'CLAUDE_CODE_USE_BEDROCK' && value === '0') { return true; }
   if (key === 'CLAUDE_CODE_USE_MANTLE' && value === '0') { return true; }
-  if (key === 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC' && value === '0') { return true; }
   return false;
 }
 
