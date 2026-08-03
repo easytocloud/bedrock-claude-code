@@ -4,6 +4,11 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-08-03
+
+### Changed
+- **Updated the OpenRouter brand tile to their new logo** — OpenRouter rebranded on 2026-07-13, replacing the two-arrow "routing" glyph with a geometric `OR` monogram. The tile now uses the official mark from OpenRouter's own brand assets, rendered as the lime glyph (`#C8FF00`) on a near-black tile — the pairing OpenRouter themselves use on dark backgrounds. The icon aggregators still ship the retired arrow mark, so the asset was taken from the vendor directly.
+
 ## [0.9.0] — 2026-08-03
 
 ### Fixed

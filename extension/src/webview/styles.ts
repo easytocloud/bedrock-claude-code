@@ -511,7 +511,7 @@ export function buildStyles(): string {
     .provider-tile img { width: 14px; height: 14px; display: block; }
     .flavor-anthropic { background: #D97757; }
     .flavor-bedrock { background: linear-gradient(135deg, #56C0A7 0%, #055F4E 100%); }
-    .flavor-openrouter { background: #101828; }
+    .flavor-openrouter { background: #101828; color: #C8FF00; }
     .flavor-ollama { background: #F4F4F5; color: #18181B; }
     .flavor-lmstudio { background: #4F46E5; }
     .flavor-omlx { background: #0EA5E9; }
