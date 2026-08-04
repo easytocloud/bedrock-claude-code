@@ -79,6 +79,70 @@ jobs:
           echo "extension=$ext" >> "$GITHUB_OUTPUT"
           echo "cli=$cli" >> "$GITHUB_OUTPUT"
 
+      # Credential preflight. This job has no `environment:`, so it runs on any
+      # ref -- which lets a workflow_dispatch from main verify that the org
+      # secret reaches this repo and that the service account can read the
+      # cicd vault, without publishing anything. The publish job cannot serve
+      # this purpose: its `environment: release` restricts it to release tags.
+      #
+      # Only lengths are reported, never values.
+      - name: Load credentials
+        id: creds
+        uses: 1password/load-secrets-action@v2
+        continue-on-error: true
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          VSCE_PAT: op://cicd/vsce/credential
+          NPM_TOKEN: op://cicd/npm/credential
+
+      - name: Report credential status
+        shell: bash
+        env:
+          OP_TOKEN_SET: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN != '' }}
+          LOAD_OUTCOME: ${{ steps.creds.outcome }}
+          VSCE_PAT: ${{ steps.creds.outputs.VSCE_PAT }}
+          NPM_TOKEN: ${{ steps.creds.outputs.NPM_TOKEN }}
+        run: |
+          fail=0
+          if [ "$OP_TOKEN_SET" != "true" ]; then
+            echo "::error::OP_SERVICE_ACCOUNT_TOKEN is empty. The org secret is not reaching this repo."
+            fail=1
+          else
+            echo "OP_SERVICE_ACCOUNT_TOKEN: present"
+          fi
+
+          # Distinguish "the action itself failed" (network, 1Password outage,
+          # bad token) from "the action ran but a reference did not resolve"
+          # (vault access, wrong item/field name). Without this, an outage
+          # produces empty outputs and the per-secret branch below would
+          # wrongly blame vault permissions.
+          if [ "$LOAD_OUTCOME" != "success" ]; then
+            echo "::error::load-secrets-action did not succeed (outcome: $LOAD_OUTCOME). \
+          This is an action-level failure -- check the service account token and 1Password availability \
+          before suspecting vault permissions."
+            fail=1
+          fi
+
+          # Indirect expansion, not eval: eval would re-interpret the secret
+          # value as shell code.
+          for name in VSCE_PAT NPM_TOKEN; do
+            value="${!name}"
+            if [ -z "$value" ]; then
+              if [ "$LOAD_OUTCOME" = "success" ]; then
+                echo "::error::$name did not resolve although the action succeeded. \
+          Check the service account's access to the cicd vault and the item/field names."
+              else
+                echo "$name: unavailable (load step failed above)"
+              fi
+              fail=1
+            else
+              echo "$name: resolved (${#value} chars)"
+            fi
+          done
+          [ "$fail" -eq 0 ] && echo "All credentials resolved." || exit 1
+
   publish:
     needs: plan
     runs-on: ubuntu-latest
