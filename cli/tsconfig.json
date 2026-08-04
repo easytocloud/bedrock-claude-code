@@ -6,12 +6,21 @@
     "strict": true,
     "moduleResolution": "Node16",
     "skipLibCheck": true,
-    "noEmit": true,
+    // This project type-checks only -- esbuild produces the actual bundle
+    // (dist/cli.js). `composite` is required for the root solution config to
+    // treat it as a referenced project, but composite forbids `noEmit`, so
+    // emit declarations to a throwaway directory instead: no JS is written,
+    // and `tsc -b` gains the build info it needs to skip unchanged rebuilds.
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "types",
+    "rootDir": "src",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true
   },
   "references": [{ "path": "../core" }],
   "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "types"]
 }

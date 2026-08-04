@@ -1,5 +1,9 @@
 out/
 dist/
+# Type-check-only declaration output from cli/tsconfig.json (composite needs
+# an emit target; esbuild produces the real bundle). Never shipped: cli's
+# package.json "files" lists only dist + README.
+cli/types/
 *.tsbuildinfo
 node_modules/
 .vscode-test/

@@ -1,0 +1,17 @@
+{
+  // Solution-style config: builds nothing itself ("files": []), but gives
+  // editors and language servers a single entry point spanning all three
+  // workspace packages. Without it, a TS language server rooted at the repo
+  // has no project covering core + extension + cli together, so cross-package
+  // navigation (find-references from core into its consumers) silently falls
+  // back to text search.
+  //
+  // `tsc -b` at the root now builds every package in dependency order; the
+  // per-package `npm run build` scripts are unaffected.
+  "files": [],
+  "references": [
+    { "path": "./core" },
+    { "path": "./extension" },
+    { "path": "./cli" }
+  ]
+}
