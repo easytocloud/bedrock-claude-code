@@ -39,11 +39,11 @@ jobs:
       cli: ${{ steps.decide.outputs.cli }}
       dry_run: ${{ steps.decide.outputs.dry_run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Pinned rather than relying on the runner's default Node: the version
       # checks below use `node -p`, and the dry-run build must match CI.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -176,9 +176,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
