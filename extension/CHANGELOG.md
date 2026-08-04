@@ -4,6 +4,9 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **Importing presets without their provider now warns instead of failing silently.** A preset can outlive the things it points at — importing a shared preset whose provider wasn't included, or replacing the store from a hand-edited file, would write references to items that don't exist. Nothing surfaced it: the resolver skips a missing provider rather than erroring, so the preset applied with **no backend at all** and Claude Code quietly ran against whatever was configured before. Import now shows a dialog naming each unresolved reference, for both merge and replace.
+
 ## [0.9.1] — 2026-08-03
 
 ### Changed

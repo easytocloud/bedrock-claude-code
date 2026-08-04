@@ -12,7 +12,7 @@ devcontainer, or from a script.
 
 > **Authoring stays in the GUI.** Create and edit providers, presets, MCP groups and
 > directory groups in the VS Code extension. This CLI is for the *operate* verbs:
-> switch, apply, sync, list, current, export, import.
+> switch, apply, sync, list, current, export, import, validate.
 
 ## Install
 
@@ -37,6 +37,25 @@ ccp <command> [options]
 | `ccp sync` | Re-apply **every** known workspace assignment — propagate a changed preset everywhere. `--dry-run` previews without writing. |
 | `ccp export` | Print the store as JSON with **credentials scrubbed** (`-o <file>` to write). |
 | `ccp import <file\|->` | Import a store (`--mode merge` \| `replace`). `-` reads stdin. |
+| `ccp validate` | Check every preset's references resolve. Exits non-zero when any are broken — for CI. `--json` for machine-readable output. |
+
+### Validating
+
+A preset can outlive the things it points at — most often after importing
+presets without their provider, or hand-editing the store. A broken preset
+doesn't fail loudly: it resolves to a config with **no backend**, so Claude
+Code quietly runs against something other than what you expected.
+
+`import` now warns when it leaves unresolved references, and `ccp validate`
+checks the whole store on demand:
+
+```console
+$ ccp validate
+1 unresolved reference(s):
+  - preset "Shared Prod" references a provider that no longer exists (prov-a1b2)
+$ echo $?
+1
+```
 
 ### Import modes
 

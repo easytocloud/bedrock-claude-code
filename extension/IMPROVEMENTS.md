@@ -1,6 +1,9 @@
 # Improvement Backlog — bedrock-claude-code
 
-Last reviewed: 2026-04-03
+Last reviewed: 2026-08-04
+
+> Paths below predate the monorepo restructure in places: engine code that was
+> `src/*.ts` now lives in `core/src/`, and VS Code-only code in `extension/src/`.
 
 ---
 
@@ -19,20 +22,16 @@ export type ScopeAssignment =
 ```
 **Effort**: Small — type change + update call sites.
 
-### IMPORT-1: Import merge does not validate referential integrity
-**File**: `src/importExport.ts:188-199`
-After merging, orphaned `providerId` / `mcpGroupIds` / `directoryGroupIds` references are silently written to the store.
+### IMPORT-3 (partial): Contextual scrub placeholders
+**File**: `core/src/transfer.ts`
+All scrubbed values use a generic `<REPLACE_ME>` — contextual placeholders
+(`<REPLACE_ME: anthropicApiKey>`) would tell recipients which credential goes where.
 
-**Fix**: After the merge loop, validate all preset references point to existing items. Warn before writing.
+**Fix**: Make `scrubValue()` placeholder context-aware.
 **Effort**: Small.
 
-### IMPORT-3: Credential scrubbing incomplete
-**File**: `src/importExport.ts:46-54`
-1. All scrubbed values use generic `<REPLACE_ME>` — contextual placeholders (`<REPLACE_ME: anthropicApiKey>`) would help recipients.
-2. **Bug**: `proxyCredential` field is not scrubbed — only the deprecated `proxyApiKey`/`proxyAuthToken` fields are. This leaks credentials on export.
-
-**Fix**: Add `proxyCredential` to `scrubProvider()`. Optionally make placeholders context-aware.
-**Effort**: Small.
+> The credential-leak half of IMPORT-3 (`proxyCredential` not scrubbed) is **fixed** —
+> see `scrubProvider()` in `core/src/transfer.ts`.
 
 ### UX-2: Empty state in scope cards
 **File**: `src/webview/layout.ts:49-56`
@@ -65,6 +64,8 @@ When no presets exist, the scope card preset dropdown is empty with no guidance.
 | UX-8 | Confirmation dialogs (via VS Code modal) | v0.3.14 |
 | UX-9 | Fetch button loading spinners | v0.3.14 |
 | UX-10 | Combobox Tab key handling | v0.3.14 |
+| IMPORT-3 (leak) | `proxyCredential` scrubbed on export | — |
+| IMPORT-1 | Import validates referential integrity; `ccp validate` added | Unreleased |
 | UX-* | Full UX/UI design system pass (labels, ARIA, spacing, cards, colors, toggles, empty states, error styles) | v0.3.3–v0.3.14 |
 
 ## Dropped

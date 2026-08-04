@@ -17,6 +17,8 @@ import {
   parseIncomingStore,
   mergeIncomingStore,
   providersNeedingCredentials,
+  findBrokenReferences,
+  describeBrokenReference,
   ProfileStore,
   ScopeAssignment,
   Preset,
@@ -46,6 +48,8 @@ COMMANDS
                                     migrated out (other servers left alone)
   export                            Print the store as JSON (credentials scrubbed)
   import <file|->                   Import a store from a file or stdin
+  validate                          Check every preset's references resolve.
+                                    Exits non-zero when any are broken — for CI
 
 SCOPE (for \`switch\`)
   --global, -g            Set the global preset (use with care — affects all workspaces)
@@ -55,7 +59,7 @@ SCOPE (for \`switch\`)
   --manual                Workspace is managed manually (CLI leaves files alone)
 
 OPTIONS
-  --json                  Machine-readable JSON output (list, current)
+  --json                  Machine-readable JSON output (list, current, validate)
   --out, -o <file>        Write export to a file instead of stdout
   --no-scrub              Export without scrubbing credentials (dangerous)
   --mode <merge|replace>  Import mode (default: merge). merge upserts by ID:
@@ -353,6 +357,7 @@ function cmdImport(src: string | undefined, values: Values): void {
     const store = ensureDefaults(incoming);
     writeProfileStore(store);
     process.stdout.write('presets replaced from import.\n');
+    warnBrokenReferences(store);
     return;
   }
 
@@ -368,6 +373,59 @@ function cmdImport(src: string | undefined, values: Values): void {
   if (placeholders.length > 0) {
     process.stderr.write(`note: these providers have placeholder credentials to replace: ${placeholders.join(', ')}\n`);
   }
+  warnBrokenReferences(store);
+}
+
+/**
+ * Report presets left pointing at things the store doesn't contain — most
+ * often an import that brought presets without their provider. The store is
+ * still written (the import is not rolled back); this tells the user what to
+ * fix, since a broken preset otherwise applies silently with no backend.
+ */
+function warnBrokenReferences(store: ProfileStore): void {
+  const broken = findBrokenReferences(store);
+  if (broken.length === 0) { return; }
+  process.stderr.write(
+    `\nwarning: ${broken.length} unresolved reference(s) after import:\n` +
+    broken.map(b => `  - ${describeBrokenReference(b)}\n`).join('') +
+    `run 'ccp validate' after fixing, or re-import including the missing items.\n`
+  );
+}
+
+/** `ccp validate` — check every preset resolves. Exits non-zero on failure. */
+function cmdValidate(store: ProfileStore, values: Values): void {
+  const broken = findBrokenReferences(store);
+  const placeholders = providersNeedingCredentials(store);
+
+  if (values.json) {
+    process.stdout.write(JSON.stringify({
+      ok: broken.length === 0,
+      presets: store.presets.length,
+      brokenReferences: broken,
+      providersNeedingCredentials: placeholders,
+    }, null, 2) + '\n');
+    if (broken.length > 0) { process.exit(1); }
+    return;
+  }
+
+  if (broken.length === 0) {
+    process.stdout.write(`ok: ${store.presets.length} preset(s), all references resolve.\n`);
+  } else {
+    process.stderr.write(`${broken.length} unresolved reference(s):\n`);
+    for (const b of broken) {
+      process.stderr.write(`  - ${describeBrokenReference(b)}\n`);
+    }
+  }
+
+  // Placeholder credentials are worth surfacing but are not a structural
+  // failure — a freshly imported store legitimately has them until filled in.
+  if (placeholders.length > 0) {
+    process.stdout.write(
+      `note: providers with placeholder credentials: ${placeholders.join(', ')}\n`
+    );
+  }
+
+  if (broken.length > 0) { process.exit(1); }
 }
 
 // ---------------------------------------------------------------------------
@@ -396,6 +454,7 @@ function main(): void {
     case 'sync':     cmdSync(store, values); break;
     case 'export':   cmdExport(store, values); break;
     case 'import':   cmdImport(positionals[1], values); break;
+    case 'validate': cmdValidate(store, values); break;
     case 'help':     process.stdout.write(HELP); break;
     default:         fail(`unknown command "${command}". Run \`ccp --help\`.`);
   }

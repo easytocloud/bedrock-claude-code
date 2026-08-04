@@ -9,6 +9,8 @@ import {
   parseIncomingStore,
   mergeIncomingStore,
   providersNeedingCredentials,
+  findBrokenReferences,
+  describeBrokenReference,
 } from '@easytocloud/claude-personae-core';
 import { refreshStatusBar } from './statusBar';
 
@@ -108,6 +110,7 @@ export async function importPresets(): Promise<void> {
     writeProfileStore(store);
     refreshStatusBar();
     vscode.window.showInformationMessage('Presets replaced from import.');
+    warnBrokenReferences(store);
     return;
   }
 
@@ -129,4 +132,22 @@ export async function importPresets(): Promise<void> {
       `Merged: ${result.added} item(s) added, ${result.updated} updated.`
     );
   }
+  warnBrokenReferences(store);
+}
+
+/**
+ * Surface presets left pointing at things the store doesn't contain — usually
+ * an import that brought presets without their provider. The import is not
+ * rolled back; this tells the user what to fix, because `resolvePreset`
+ * silently produces a config with no backend for a broken preset rather than
+ * failing loudly.
+ */
+function warnBrokenReferences(store: ProfileStore): void {
+  const broken = findBrokenReferences(store);
+  if (broken.length === 0) { return; }
+  const detail = broken.map(describeBrokenReference).join('\n');
+  vscode.window.showWarningMessage(
+    `${broken.length} imported preset reference(s) could not be resolved.`,
+    { modal: true, detail: `${detail}\n\nRe-import including the missing items, or edit the affected presets.` }
+  );
 }
