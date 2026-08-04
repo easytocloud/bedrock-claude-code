@@ -23,5 +23,8 @@
     "package:extension": "npm run package -w bedrock-claude-code",
     "publish:extension": "npm run publish -w bedrock-claude-code",
     "publish:cli": "npm publish -w @easytocloud/claude-personae --access public"
+  },
+  "overrides": {
+    "@hono/node-server": "^2.0.5"
   }
 }
