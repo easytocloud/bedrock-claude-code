@@ -79,6 +79,48 @@ jobs:
           echo "extension=$ext" >> "$GITHUB_OUTPUT"
           echo "cli=$cli" >> "$GITHUB_OUTPUT"
 
+      # Credential preflight. This job has no `environment:`, so it runs on any
+      # ref -- which lets a workflow_dispatch from main verify that the org
+      # secret reaches this repo and that the service account can read the
+      # cicd vault, without publishing anything. The publish job cannot serve
+      # this purpose: its `environment: release` restricts it to release tags.
+      #
+      # Only lengths are reported, never values.
+      - name: Load credentials
+        id: creds
+        uses: 1password/load-secrets-action@v2
+        continue-on-error: true
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          VSCE_PAT: op://cicd/vsce/credential
+          NPM_TOKEN: op://cicd/npm/credential
+
+      - name: Report credential status
+        env:
+          OP_TOKEN_SET: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN != '' }}
+          VSCE_PAT: ${{ steps.creds.outputs.VSCE_PAT }}
+          NPM_TOKEN: ${{ steps.creds.outputs.NPM_TOKEN }}
+        run: |
+          fail=0
+          if [ "$OP_TOKEN_SET" != "true" ]; then
+            echo "::error::OP_SERVICE_ACCOUNT_TOKEN is empty. The org secret is not reaching this repo."
+            fail=1
+          else
+            echo "OP_SERVICE_ACCOUNT_TOKEN: present"
+          fi
+          for name in VSCE_PAT NPM_TOKEN; do
+            eval "value=\${$name}"
+            if [ -z "$value" ]; then
+              echo "::error::$name did not resolve. Check the service account's access to the cicd vault."
+              fail=1
+            else
+              echo "$name: resolved (${#value} chars)"
+            fi
+          done
+          [ "$fail" -eq 0 ] && echo "All credentials resolved." || exit 1
+
   publish:
     needs: plan
     runs-on: ubuntu-latest
