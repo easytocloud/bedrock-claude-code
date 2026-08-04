@@ -1,0 +1,17 @@
+{
+  // Separate project for tests: the main tsconfig deliberately includes only
+  // `src` (tests must not land in dist/ or the published type surface).
+  // Compiling them rather than relying on `--experimental-strip-types` keeps
+  // `npm test` working on Node 20, which CI pins and which lacks that flag.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": false,
+    "outDir": "test-dist",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": ["test", "src"]
+}

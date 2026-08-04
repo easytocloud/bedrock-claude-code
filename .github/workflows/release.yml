@@ -39,13 +39,13 @@ jobs:
       cli: ${{ steps.decide.outputs.cli }}
       dry_run: ${{ steps.decide.outputs.dry_run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Pinned rather than relying on the runner's default Node: the version
       # checks below use `node -p`, and the dry-run build must match CI.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - id: decide
@@ -159,6 +159,7 @@ jobs:
           npm ci
           npm run build
           npm run lint
+          npm test
           cd extension
           npx vsce package --no-dependencies --out /tmp/dry-run.vsix
           echo "Packaged $(ls -lh /tmp/dry-run.vsix | awk '{print $5}')"
@@ -175,17 +176,20 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
 
       - run: npm ci
       - run: npm run build
       - run: npm run lint
+      # Last gate before anything reaches a registry: npm forbids republishing
+      # a version, so a failing test must stop the release, not follow it.
+      - run: npm test
 
       # Pull publishing credentials from 1Password. Only the service-account
       # token lives in GitHub secrets; the PAT and npm token stay in the vault.

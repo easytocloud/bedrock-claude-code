@@ -12,14 +12,25 @@ concurrency:
 
 jobs:
   build:
-    name: Build & lint
+    name: Build & lint (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test the range actually supported, not one arbitrary version:
+        #   20 — floor. VS Code 1.98 (our `engines.vscode`) runs the extension
+        #        on Electron's Node 20, so the engine must work there. The CLI
+        #        declares >=18 and esbuild targets node18, but 18 is EOL and
+        #        setup-node no longer offers it, so 20 is the practical floor.
+        #   22 — current LTS; what most contributors run locally.
+        #   24 — next; catches deprecations before they become failures.
+        node: [20, 22, 24]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: npm
 
       # `npm ci` installs from the lockfile exactly, so a PR that edits
@@ -32,10 +43,16 @@ jobs:
 
       - run: npm run lint
 
+      # Unit tests for the engine's config-writing logic — the functions that
+      # decide what survives in a user's ~/.claude.json and settings.json.
+      - run: npm test
+
       # Packaging is what actually ships, and it has repo-specific gotchas
       # (--no-dependencies is required under npm workspaces), so exercise it
-      # on every PR rather than discovering breakage at release time.
+      # on every PR rather than discovering breakage at release time. The VSIX
+      # is identical across Node versions, so once is enough.
       - name: Package extension (dry run)
+        if: matrix.node == 22
         working-directory: extension
         run: npx vsce package --no-dependencies --out /tmp/ci-check.vsix
 
@@ -43,11 +60,11 @@ jobs:
     name: Dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci

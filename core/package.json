@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc -b",
     "watch": "tsc -b --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "tsc -p tsconfig.test.json && node --test test-dist/test/*.test.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

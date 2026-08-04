@@ -253,8 +253,12 @@ function isNoOp(key: string, value: string): boolean {
   return false;
 }
 
-/** Strip no-op values before writing to global settings — global has no parent. */
-function filterForGlobal(env: Record<string, string>): Record<string, string> {
+/**
+ * Strip no-op values before writing to global settings — global has no parent.
+ *
+ * @internal Exported for tests. Not part of the engine's public API.
+ */
+export function filterForGlobal(env: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(env).filter(([k, v]) => !isNoOp(k, v)));
 }
 
@@ -262,8 +266,10 @@ function filterForGlobal(env: Record<string, string>): Record<string, string> {
  * At project level, a no-op value is worth writing only when the global env has
  * that key set to a meaningful value (i.e. we need to explicitly override it).
  * Otherwise it's noise.
+ *
+ * @internal Exported for tests. Not part of the engine's public API.
  */
-function filterForProject(
+export function filterForProject(
   env: Record<string, string>,
   globalEnv: Record<string, string>
 ): Record<string, string> {
@@ -277,8 +283,10 @@ function filterForProject(
 /**
  * Return a copy of `existing` with all MANAGED_ENV_KEYS removed,
  * so user-defined env vars are preserved when we overwrite managed ones.
+ *
+ * @internal Exported for tests. Not part of the engine's public API.
  */
-function preserveUnmanagedEnv(existing: Record<string, string>): Record<string, string> {
+export function preserveUnmanagedEnv(existing: Record<string, string>): Record<string, string> {
   const preserved: Record<string, string> = {};
   for (const [key, value] of Object.entries(existing)) {
     if (!MANAGED_ENV_KEYS.has(key)) {
