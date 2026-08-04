@@ -88,6 +88,16 @@ export function parseIncomingStore(raw: string): ProfileStore {
   if (!incoming.version || !incoming.providers || !incoming.presets) {
     throw new Error('Not a valid profile store');
   }
+  // Older exports and hand-written stores can omit the group arrays entirely.
+  // Default them so consumers can iterate without guarding every access —
+  // previously `mergeIncomingStore` threw a raw TypeError on such a file.
+  incoming.mcpGroups ??= [];
+  incoming.directoryGroups ??= [];
+  incoming.presets = incoming.presets.map(preset => ({
+    ...preset,
+    mcpGroupIds: preset.mcpGroupIds ?? [],
+    directoryGroupIds: preset.directoryGroupIds ?? [],
+  }));
   return incoming;
 }
 
@@ -142,12 +152,15 @@ export interface BrokenReference {
  * otherwise invisible until Claude Code quietly uses the wrong backend.
  */
 export function findBrokenReferences(store: ProfileStore): BrokenReference[] {
-  const providerIds = new Set(store.providers.map(p => p.id));
-  const mcpGroupIds = new Set(store.mcpGroups.map(g => g.id));
-  const dirGroupIds = new Set(store.directoryGroups.map(g => g.id));
+  // Tolerate stores missing these arrays: `validate` reads from disk, where a
+  // hand-edited or older file may legitimately omit them. Reporting broken
+  // references matters more than insisting on a complete shape.
+  const providerIds = new Set((store.providers ?? []).map(p => p.id));
+  const mcpGroupIds = new Set((store.mcpGroups ?? []).map(g => g.id));
+  const dirGroupIds = new Set((store.directoryGroups ?? []).map(g => g.id));
   const broken: BrokenReference[] = [];
 
-  for (const preset of store.presets) {
+  for (const preset of store.presets ?? []) {
     const at = { presetId: preset.id, presetName: preset.name };
     if (preset.providerId && !providerIds.has(preset.providerId)) {
       broken.push({ ...at, kind: 'provider', missingId: preset.providerId });

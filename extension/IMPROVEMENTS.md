@@ -65,7 +65,7 @@ When no presets exist, the scope card preset dropdown is empty with no guidance.
 | UX-9 | Fetch button loading spinners | v0.3.14 |
 | UX-10 | Combobox Tab key handling | v0.3.14 |
 | IMPORT-3 (leak) | `proxyCredential` scrubbed on export | — |
-| IMPORT-1 | Import validates referential integrity; `ccp validate` added | v0.10.0 |
+| IMPORT-1 | Import validates referential integrity; `ccp validate` added | Unreleased |
 | UX-* | Full UX/UI design system pass (labels, ARIA, spacing, cards, colors, toggles, empty states, error styles) | v0.3.3–v0.3.14 |
 
 ## Dropped
