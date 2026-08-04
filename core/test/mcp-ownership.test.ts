@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mergeOwned } from '../dist/claudeJson.js';
-import type { McpServerConfig } from '../dist/types.js';
+import { mergeOwned } from '../src/claudeJson';
+import type { McpServerConfig } from '../src/types';
 
 const srv = (command: string): McpServerConfig => ({ type: 'stdio', command });
 

@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { preserveUnmanagedEnv, filterForGlobal, filterForProject } from '../dist/resolver.js';
+import { preserveUnmanagedEnv, filterForGlobal, filterForProject } from '../src/resolver';
 
 /**
  * `preserveUnmanagedEnv` decides what survives a preset apply. Everything in

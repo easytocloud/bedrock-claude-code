@@ -6,8 +6,8 @@ import {
   parseIncomingStore,
   findBrokenReferences,
   PLACEHOLDER,
-} from '../dist/transfer.js';
-import type { ProfileStore } from '../dist/types.js';
+} from '../src/transfer';
+import type { ProfileStore } from '../src/types';
 
 const store = (over: Partial<ProfileStore> = {}): ProfileStore => ({
   version: 1,
