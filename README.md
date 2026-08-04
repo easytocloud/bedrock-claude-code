@@ -55,6 +55,74 @@ npm run package:extension   # build the .vsix (vsce package --no-dependencies)
 See [`extension/README.md`](extension/README.md) for the full feature guide and
 [`cli/README.md`](cli/README.md) for the command reference.
 
+## CI
+
+Every pull request and every push to `main` runs
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+| Step | Why |
+|---|---|
+| `npm ci` | Fails if `package.json` was edited without regenerating `package-lock.json`. |
+| `npm run build` | Builds core → extension → cli; `tsc -b` surfaces type errors. |
+| `npm run lint` | |
+| `vsce package --no-dependencies` | Packaging has monorepo-specific gotchas; catch them on the PR, not at release time. |
+
+A separate `audit` job reports `npm audit` findings but does **not** fail the
+run, so a newly-published advisory in a dev dependency can't block an unrelated PR.
+
+## Releasing
+
+Releases are **tag-triggered**. Merging a PR — including dependency updates —
+never publishes anything; publishing is a deliberate act of pushing a tag.
+
+The tag prefix selects what ships, which keeps the versioning policy
+("same minor = same engine") enforceable:
+
+| Tag | Publishes |
+|---|---|
+| `ext-v0.9.2` | Extension only → VS Code Marketplace |
+| `cli-v0.9.1` | CLI only → npm |
+| `v0.10.0` | Both — use for any release that changes `core/` |
+
+To release:
+
+```bash
+# 1. bump the version in the manifest(s) you're releasing, update CHANGELOG.md
+# 2. commit and push to main
+git tag ext-v0.9.2
+git push origin ext-v0.9.2
+```
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) then builds,
+lints, and publishes. The `plan` job **fails the run if the tag doesn't match
+the version in the manifest it would publish**, so a mistyped tag stops before
+reaching a registry.
+
+### Dry runs
+
+Run the **Release** workflow manually from the Actions tab with
+**"Build and verify without publishing"** checked. It verifies credentials,
+build, lint, and packaging without publishing, and should finish **green** —
+the publish job is skipped. Use this after changing release credentials.
+
+### Credentials
+
+Publishing credentials live in **1Password**, not in GitHub. Only the service
+account token is a GitHub secret:
+
+| Where | What |
+|---|---|
+| GitHub org secret `OP_SERVICE_ACCOUNT_TOKEN` | 1Password service account, read access to the `cicd` vault. Must be scoped to include public repositories. |
+| `op://cicd/vsce/credential` | Azure DevOps PAT for `vsce publish`. PATs expire — max one year. |
+| `op://cicd/npm/credential` | npm automation token for `npm publish`. |
+
+Rotating either credential needs no workflow change: update the item in
+1Password and the next run picks it up.
+
+The `release` [environment](https://github.com/easytocloud/bedrock-claude-code/settings/environments)
+restricts deployments to `v*`, `ext-v*`, and `cli-v*` tags, so publishing
+cannot be triggered from a branch.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
