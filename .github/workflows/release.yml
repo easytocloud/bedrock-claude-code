@@ -104,8 +104,8 @@ jobs:
           export-env: true
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          VSCE_PAT: op://ci/vsce/credential
-          NPM_TOKEN: op://ci/npm/credential
+          VSCE_PAT: op://cicd/vsce/credential
+          NPM_TOKEN: op://cicd/npm/credential
 
       - name: Publish extension
         if: needs.plan.outputs.extension == 'true' && needs.plan.outputs.dry_run != 'true'
@@ -115,11 +115,14 @@ jobs:
         # All runtime deps are esbuild-bundled, so the VSIX needs none of it.
         run: npx vsce publish --no-dependencies --pat "$VSCE_PAT"
 
+      # NODE_AUTH_TOKEN is assigned from the shell, not a ${{ env.* }}
+      # expression: workflow expressions are evaluated before the 1Password
+      # step runs, so an expression here would resolve to an empty string.
       - name: Publish CLI
         if: needs.plan.outputs.cli == 'true' && needs.plan.outputs.dry_run != 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
-        run: npm publish -w @easytocloud/claude-personae --access public
+        run: |
+          export NODE_AUTH_TOKEN="$NPM_TOKEN"
+          npm publish -w @easytocloud/claude-personae --access public
 
       # On a dry run, still produce the artifacts so the output can be checked.
       - name: Package only (dry run)
