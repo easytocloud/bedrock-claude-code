@@ -4,8 +4,13 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-08-04
+
+Version jumps 0.9.1 → 0.10.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
+
 ### Fixed
 - **Importing presets without their provider now warns instead of failing silently.** A preset can outlive the things it points at — importing a shared preset whose provider wasn't included, or replacing the store from a hand-edited file, would write references to items that don't exist. Nothing surfaced it: the resolver skips a missing provider rather than erroring, so the preset applied with **no backend at all** and Claude Code quietly ran against whatever was configured before. Import now shows a dialog naming each unresolved reference, for both merge and replace.
+- **Importing an older export no longer fails with an unhelpful error.** Stores written before MCP server groups and directory groups existed — or edited by hand — can omit those arrays entirely. Import crashed on them with a raw `TypeError` instead of reporting anything useful. Missing arrays are now treated as empty.
 
 ## [0.9.1] — 2026-08-03
 

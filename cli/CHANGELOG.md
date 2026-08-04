@@ -4,11 +4,16 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-08-04
+
+Version jumps 0.9.0 → 0.10.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
+
 ### Added
 - **`ccp validate`** — checks that every preset's `providerId`, `mcpGroupIds`, and `directoryGroupIds` still resolve against the store, and exits non-zero when any don't, so it can gate a CI job. `--json` emits the findings as structured output.
 
 ### Fixed
 - **Imports no longer leave broken presets unreported.** A preset can outlive the things it points at — importing presets without their provider, or a `--mode replace` from a hand-edited file, would write references to items that don't exist. Nothing complained: `resolvePreset` skips a missing provider rather than failing, so the preset applied with **no backend at all** and Claude Code quietly ran against something other than the intended one. `import` now names every unresolved reference after writing (both merge and replace).
+- **Importing an older export no longer crashes.** Stores written before MCP server groups and directory groups existed — or edited by hand — can omit those arrays entirely. `import` died with a raw `TypeError` instead of reporting anything useful. Missing arrays are now treated as empty.
 
 ## [0.8.0] — 2026-07-11
 
