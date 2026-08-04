@@ -223,14 +223,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ github.ref_name }}" --generate-notes
 
+      # `if` blocks rather than `[ ... ] && echo`: Actions runs this with
+      # `bash -eo pipefail`, so a false test as the last command in the group
+      # would exit non-zero and fail the step -- after a successful publish.
+      # That triggers on any single-artifact release (ext-v* or cli-v*).
       - name: Summary
+        env:
+          PUBLISH_EXT: ${{ needs.plan.outputs.extension }}
+          PUBLISH_CLI: ${{ needs.plan.outputs.cli }}
+          TAG: ${{ github.ref_name }}
         run: |
           {
             echo "### Published"
-            [ "${{ needs.plan.outputs.extension }}" = "true" ] && \
+            if [ "$PUBLISH_EXT" = "true" ]; then
               echo "- Extension \`$(node -p "require('./extension/package.json').version")\`"
-            [ "${{ needs.plan.outputs.cli }}" = "true" ] && \
+            fi
+            if [ "$PUBLISH_CLI" = "true" ]; then
               echo "- CLI \`$(node -p "require('./cli/package.json').version")\`"
+            fi
             echo ""
-            echo "Tag: \`${{ github.ref_name }}\`"
+            echo "Tag: \`$TAG\`"
           } >> "$GITHUB_STEP_SUMMARY"
