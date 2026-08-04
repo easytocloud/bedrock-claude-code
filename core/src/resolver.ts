@@ -266,6 +266,8 @@ export function filterForGlobal(env: Record<string, string>): Record<string, str
  * At project level, a no-op value is worth writing only when the global env has
  * that key set to a meaningful value (i.e. we need to explicitly override it).
  * Otherwise it's noise.
+ *
+ * @internal Exported for tests. Not part of the engine's public API.
  */
 export function filterForProject(
   env: Record<string, string>,

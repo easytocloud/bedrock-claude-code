@@ -61,6 +61,8 @@ function writeClaudeJson(updated: ClaudeJson): void {
  * Ownership-aware merge: removes `previouslyOwned` names from the given
  * mcpServers map, then adds the preset's servers. Hand-added servers survive.
  * Returns the merged map (or undefined when the result is empty).
+ *
+ * @internal Exported for tests. Not part of the engine's public API.
  */
 export function mergeOwned(
   existing: Record<string, McpServerConfig> | undefined,
