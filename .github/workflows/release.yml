@@ -45,7 +45,7 @@ jobs:
       # checks below use `node -p`, and the dry-run build must match CI.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - id: decide
@@ -180,7 +180,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
 
