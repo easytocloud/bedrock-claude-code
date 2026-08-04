@@ -41,6 +41,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned rather than relying on the runner's default Node: the version
+      # checks below use `node -p`, and the dry-run build must match CI.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
       - id: decide
         env:
           REF: ${{ github.ref_name }}
@@ -143,8 +150,28 @@ jobs:
           done
           [ "$fail" -eq 0 ] && echo "All credentials resolved." || exit 1
 
+      # A dry run skips the publish job entirely, so build and package here to
+      # prove the release would actually produce an artifact. On a real tag
+      # this is redundant with the publish job and is skipped.
+      - name: Build and package (dry run only)
+        if: steps.decide.outputs.dry_run == 'true'
+        run: |
+          npm ci
+          npm run build
+          npm run lint
+          cd extension
+          npx vsce package --no-dependencies --out /tmp/dry-run.vsix
+          echo "Packaged $(ls -lh /tmp/dry-run.vsix | awk '{print $5}')"
+
+  # Skipped entirely on a dry run. The `release` environment only permits
+  # v*/ext-v*/cli-v* tags, so a workflow_dispatch from main would otherwise be
+  # rejected by the protection rules and mark the whole run as failed -- even
+  # though the dry run did exactly what it should. Guarding here keeps a
+  # successful dry run green, so a red Release run always means real trouble.
+  # The credential verification a dry run exists for happens in `plan`.
   publish:
     needs: plan
+    if: needs.plan.outputs.dry_run != 'true'
     runs-on: ubuntu-latest
     environment: release
     steps:
@@ -171,8 +198,10 @@ jobs:
           VSCE_PAT: op://cicd/vsce/credential
           NPM_TOKEN: op://cicd/npm/credential
 
+      # The job-level `if` already excludes dry runs, so these steps only need
+      # to select the artifact.
       - name: Publish extension
-        if: needs.plan.outputs.extension == 'true' && needs.plan.outputs.dry_run != 'true'
+        if: needs.plan.outputs.extension == 'true'
         working-directory: extension
         # --no-dependencies is required: npm workspaces hoist node_modules to
         # the repo root, which makes vsce walk out of the package directory.
@@ -183,19 +212,25 @@ jobs:
       # expression: workflow expressions are evaluated before the 1Password
       # step runs, so an expression here would resolve to an empty string.
       - name: Publish CLI
-        if: needs.plan.outputs.cli == 'true' && needs.plan.outputs.dry_run != 'true'
+        if: needs.plan.outputs.cli == 'true'
         run: |
           export NODE_AUTH_TOKEN="$NPM_TOKEN"
           npm publish -w @easytocloud/claude-personae --access public
 
-      # On a dry run, still produce the artifacts so the output can be checked.
-      - name: Package only (dry run)
-        if: needs.plan.outputs.dry_run == 'true'
-        working-directory: extension
-        run: npx vsce package --no-dependencies --out /tmp/dry-run.vsix
-
       - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/') && needs.plan.outputs.dry_run != 'true'
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ github.ref_name }}" --generate-notes
+
+      - name: Summary
+        run: |
+          {
+            echo "### Published"
+            [ "${{ needs.plan.outputs.extension }}" = "true" ] && \
+              echo "- Extension \`$(node -p "require('./extension/package.json').version")\`"
+            [ "${{ needs.plan.outputs.cli }}" = "true" ] && \
+              echo "- CLI \`$(node -p "require('./cli/package.json').version")\`"
+            echo ""
+            echo "Tag: \`${{ github.ref_name }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
