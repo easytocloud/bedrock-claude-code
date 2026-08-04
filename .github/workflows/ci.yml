@@ -32,6 +32,10 @@ jobs:
 
       - run: npm run lint
 
+      # Unit tests for the engine's config-writing logic — the functions that
+      # decide what survives in a user's ~/.claude.json and settings.json.
+      - run: npm test
+
       # Packaging is what actually ships, and it has repo-specific gotchas
       # (--no-dependencies is required under npm workspaces), so exercise it
       # on every PR rather than discovering breakage at release time.

@@ -159,6 +159,7 @@ jobs:
           npm ci
           npm run build
           npm run lint
+          npm test
           cd extension
           npx vsce package --no-dependencies --out /tmp/dry-run.vsix
           echo "Packaged $(ls -lh /tmp/dry-run.vsix | awk '{print $5}')"
@@ -186,6 +187,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run lint
+      # Last gate before anything reaches a registry: npm forbids republishing
+      # a version, so a failing test must stop the release, not follow it.
+      - run: npm test
 
       # Pull publishing credentials from 1Password. Only the service-account
       # token lives in GitHub secrets; the PAT and npm token stay in the vault.

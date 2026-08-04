@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc -b",
     "watch": "tsc -b --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "tsc -b && node --experimental-strip-types --test test/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

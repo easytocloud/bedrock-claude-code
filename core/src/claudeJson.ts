@@ -62,7 +62,7 @@ function writeClaudeJson(updated: ClaudeJson): void {
  * mcpServers map, then adds the preset's servers. Hand-added servers survive.
  * Returns the merged map (or undefined when the result is empty).
  */
-function mergeOwned(
+export function mergeOwned(
   existing: Record<string, McpServerConfig> | undefined,
   servers: Record<string, McpServerConfig>,
   previouslyOwned: string[]
