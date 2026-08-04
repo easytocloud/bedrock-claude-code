@@ -120,6 +120,62 @@ export interface MergeResult {
   updated: number;
 }
 
+// ---------------------------------------------------------------------------
+// Referential integrity
+// ---------------------------------------------------------------------------
+
+/** A preset reference that points at something the store doesn't contain. */
+export interface BrokenReference {
+  presetId: string;
+  presetName: string;
+  kind: 'provider' | 'mcpGroup' | 'directoryGroup';
+  missingId: string;
+}
+
+/**
+ * Find preset references that don't resolve against the store.
+ *
+ * A preset can outlive the things it points at: an import may bring presets
+ * without their provider, or a `--mode replace` may write a store that was
+ * hand-edited. `resolvePreset` guards with `if (provider)` and produces a
+ * config with no backend rather than throwing, so a broken reference is
+ * otherwise invisible until Claude Code quietly uses the wrong backend.
+ */
+export function findBrokenReferences(store: ProfileStore): BrokenReference[] {
+  const providerIds = new Set(store.providers.map(p => p.id));
+  const mcpGroupIds = new Set(store.mcpGroups.map(g => g.id));
+  const dirGroupIds = new Set(store.directoryGroups.map(g => g.id));
+  const broken: BrokenReference[] = [];
+
+  for (const preset of store.presets) {
+    const at = { presetId: preset.id, presetName: preset.name };
+    if (preset.providerId && !providerIds.has(preset.providerId)) {
+      broken.push({ ...at, kind: 'provider', missingId: preset.providerId });
+    }
+    for (const id of preset.mcpGroupIds ?? []) {
+      if (!mcpGroupIds.has(id)) {
+        broken.push({ ...at, kind: 'mcpGroup', missingId: id });
+      }
+    }
+    for (const id of preset.directoryGroupIds ?? []) {
+      if (!dirGroupIds.has(id)) {
+        broken.push({ ...at, kind: 'directoryGroup', missingId: id });
+      }
+    }
+  }
+  return broken;
+}
+
+/** Human-readable one-liner per broken reference, for CLI output and dialogs. */
+export function describeBrokenReference(ref: BrokenReference): string {
+  const label = {
+    provider: 'provider',
+    mcpGroup: 'MCP server group',
+    directoryGroup: 'directory group',
+  }[ref.kind];
+  return `preset "${ref.presetName}" references a ${label} that no longer exists (${ref.missingId})`;
+}
+
 /**
  * Merge an incoming store into a base store with upsert semantics: entries
  * whose UUID already exists locally are overwritten in place (same lineage —

@@ -57,7 +57,6 @@ Long-running process watches `~/.claude/coder-profiles.json` for changes and re-
 ### Headless setup
 
 - **`ccp init`** — interactive wizard: pick provider type, fill in credentials, name the preset, assign to current directory. Covers the "new machine" case without opening VS Code.
-- **`ccp validate`** — verify all presets in the store resolve correctly (provider exists, MCP groups and dir groups exist, no broken references). Exits non-zero — designed for CI.
 - **`ccp diagnose`** — health check: reach each provider's endpoint, verify MCP server commands exist on PATH, check AWS profile is valid.
 
 ### Output formats
@@ -90,7 +89,6 @@ Long-running process watches `~/.claude/coder-profiles.json` for changes and re-
 
 ## MCP depth
 
-- **MCP server health check** — "Test" button per MCP server: spawn the process, send a `tools/list` JSON-RPC call, report discovered tools. Same UX as the existing model test pills.
 - **MCP server discovery** — scan npm global packages for `@modelcontextprotocol/server-*` and `mcp-server-*` naming conventions; offer to add found servers automatically.
 
 ---
