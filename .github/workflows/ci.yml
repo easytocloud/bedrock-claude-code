@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` installs from the lockfile exactly, so a PR that edits
+      # package.json without regenerating package-lock.json fails here.
+      - run: npm ci
+
+      # Builds core -> extension -> cli in workspace order. The extension
+      # step runs `tsc -b` before esbuild, so type errors surface here.
+      - run: npm run build
+
+      - run: npm run lint
+
+      # Packaging is what actually ships, and it has repo-specific gotchas
+      # (--no-dependencies is required under npm workspaces), so exercise it
+      # on every PR rather than discovering breakage at release time.
+      - name: Package extension (dry run)
+        working-directory: extension
+        run: npx vsce package --no-dependencies --out /tmp/ci-check.vsix
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Advisories are worth surfacing but shouldn't block an unrelated PR,
+      # so this job reports without failing the run.
+      - name: npm audit
+        run: npm audit --audit-level=moderate || true

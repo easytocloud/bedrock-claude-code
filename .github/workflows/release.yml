@@ -1,0 +1,134 @@
+name: Release
+
+# Publishing is tag-triggered, never merge-triggered. Merging dependency
+# updates or ordinary PRs must not ship anything; a release is a deliberate
+# act of tagging. Tag prefix selects the artifact, so the extension and the
+# CLI can release independently on PATCH while staying in lock-step on MINOR:
+#
+#   ext-v0.9.2   -> publishes the VS Code extension only
+#   cli-v0.9.1   -> publishes the npm CLI only
+#   v0.10.0      -> publishes both (shared-engine release)
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'ext-v*'
+      - 'cli-v*'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which artifact to publish
+        type: choice
+        options: [both, extension, cli]
+        default: both
+      dry_run:
+        description: Build and verify without publishing
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  # Decide what to publish and verify the tag matches the manifest, so a
+  # mistyped tag fails before anything reaches a registry.
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      extension: ${{ steps.decide.outputs.extension }}
+      cli: ${{ steps.decide.outputs.cli }}
+      dry_run: ${{ steps.decide.outputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: decide
+        env:
+          REF: ${{ github.ref_name }}
+          TARGET: ${{ inputs.target }}
+          DRY: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "$TARGET" in
+              extension) ext=true;  cli=false ;;
+              cli)       ext=false; cli=true  ;;
+              *)         ext=true;  cli=true  ;;
+            esac
+            echo "dry_run=$DRY" >> "$GITHUB_OUTPUT"
+          else
+            case "$REF" in
+              ext-v*) ext=true;  cli=false ;;
+              cli-v*) ext=false; cli=true  ;;
+              v*)     ext=true;  cli=true  ;;
+            esac
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+
+            # Tag must match the version in the manifest it publishes.
+            version="${REF#*v}"
+            if [ "$ext" = true ]; then
+              manifest=$(node -p "require('./extension/package.json').version")
+              [ "$manifest" = "$version" ] || {
+                echo "::error::Tag $REF does not match extension version $manifest"; exit 1; }
+            fi
+            if [ "$cli" = true ]; then
+              manifest=$(node -p "require('./cli/package.json').version")
+              [ "$manifest" = "$version" ] || {
+                echo "::error::Tag $REF does not match CLI version $manifest"; exit 1; }
+            fi
+          fi
+          echo "extension=$ext" >> "$GITHUB_OUTPUT"
+          echo "cli=$cli" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+
+      # Pull publishing credentials from 1Password. Only the service-account
+      # token lives in GitHub secrets; the PAT and npm token stay in the vault.
+      - uses: 1password/load-secrets-action@v2
+        id: op
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          VSCE_PAT: op://ci/vsce/credential
+          NPM_TOKEN: op://ci/npm/credential
+
+      - name: Publish extension
+        if: needs.plan.outputs.extension == 'true' && needs.plan.outputs.dry_run != 'true'
+        working-directory: extension
+        # --no-dependencies is required: npm workspaces hoist node_modules to
+        # the repo root, which makes vsce walk out of the package directory.
+        # All runtime deps are esbuild-bundled, so the VSIX needs none of it.
+        run: npx vsce publish --no-dependencies --pat "$VSCE_PAT"
+
+      - name: Publish CLI
+        if: needs.plan.outputs.cli == 'true' && needs.plan.outputs.dry_run != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
+        run: npm publish -w @easytocloud/claude-personae --access public
+
+      # On a dry run, still produce the artifacts so the output can be checked.
+      - name: Package only (dry run)
+        if: needs.plan.outputs.dry_run == 'true'
+        working-directory: extension
+        run: npx vsce package --no-dependencies --out /tmp/dry-run.vsix
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/') && needs.plan.outputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" --generate-notes
