@@ -98,8 +98,10 @@ jobs:
           NPM_TOKEN: op://cicd/npm/credential
 
       - name: Report credential status
+        shell: bash
         env:
           OP_TOKEN_SET: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN != '' }}
+          LOAD_OUTCOME: ${{ steps.creds.outcome }}
           VSCE_PAT: ${{ steps.creds.outputs.VSCE_PAT }}
           NPM_TOKEN: ${{ steps.creds.outputs.NPM_TOKEN }}
         run: |
@@ -110,10 +112,30 @@ jobs:
           else
             echo "OP_SERVICE_ACCOUNT_TOKEN: present"
           fi
+
+          # Distinguish "the action itself failed" (network, 1Password outage,
+          # bad token) from "the action ran but a reference did not resolve"
+          # (vault access, wrong item/field name). Without this, an outage
+          # produces empty outputs and the per-secret branch below would
+          # wrongly blame vault permissions.
+          if [ "$LOAD_OUTCOME" != "success" ]; then
+            echo "::error::load-secrets-action did not succeed (outcome: $LOAD_OUTCOME). \
+          This is an action-level failure -- check the service account token and 1Password availability \
+          before suspecting vault permissions."
+            fail=1
+          fi
+
+          # Indirect expansion, not eval: eval would re-interpret the secret
+          # value as shell code.
           for name in VSCE_PAT NPM_TOKEN; do
-            eval "value=\${$name}"
+            value="${!name}"
             if [ -z "$value" ]; then
-              echo "::error::$name did not resolve. Check the service account's access to the cicd vault."
+              if [ "$LOAD_OUTCOME" = "success" ]; then
+                echo "::error::$name did not resolve although the action succeeded. \
+          Check the service account's access to the cicd vault and the item/field names."
+              else
+                echo "$name: unavailable (load step failed above)"
+              fi
               fail=1
             else
               echo "$name: resolved (${#value} chars)"
