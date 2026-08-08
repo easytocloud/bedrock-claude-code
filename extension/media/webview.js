@@ -777,6 +777,12 @@ console.log('[WEBVIEW] Script loaded');
       cachingToggle.classList.toggle('on', !!(provider && provider.disablePromptCaching));
     }
 
+    // Max context tokens
+    const maxContextInput = document.getElementById('provider-max-context-tokens');
+    if (maxContextInput) {
+      maxContextInput.value = (provider && provider.maxContextTokens) ? String(provider.maxContextTokens) : '';
+    }
+
     // Standalone mode toggle — only visible for proxy providers.
     // Proxy defaults to on (disableLoginPrompt !== false); explicit false = user opted out.
     const nonessentialToggle = document.querySelector('[data-toggle="provider-disable-nonessential"]');
@@ -1682,6 +1688,11 @@ console.log('[WEBVIEW] Script loaded');
       opusModel: getModelValue('provider-model-opus'),
       modelTestState: Object.keys(modelTestState).length > 0 ? modelTestState : undefined,
       disablePromptCaching: document.querySelector('[data-toggle="provider-disable-caching"]')?.classList.contains('on') || false,
+      maxContextTokens: (function() {
+        let raw = document.getElementById('provider-max-context-tokens')?.value || '';
+        let n = parseInt(raw, 10);
+        return (raw && Number.isFinite(n) && n > 0) ? n : undefined;
+      })(),
       disableLoginPrompt: document.querySelector('[data-toggle="provider-disable-nonessential"]')?.classList.contains('on') || false,
     };
 

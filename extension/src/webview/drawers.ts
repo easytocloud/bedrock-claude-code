@@ -272,6 +272,12 @@ export function renderProviderDrawer(): string {
         <select id="provider-model-opus"></select>
       </div>
 
+      <div class="form-group">
+        <label class="form-label" for="provider-max-context-tokens"
+               title="Caps the context window Claude Code will use for this provider. Leave blank to use the model's full window. Useful when a Bedrock inference profile serves a smaller effective window than the model's nominal one. Writes CLAUDE_CODE_MAX_CONTEXT_TOKENS.">Max context tokens</label>
+        <input type="number" id="provider-max-context-tokens" min="1" step="1" placeholder="Model default" />
+      </div>
+
       <div class="toggle-row">
         <span class="toggle-label">Disable prompt caching</span>
         <div class="toggle-track" data-toggle="provider-disable-caching">

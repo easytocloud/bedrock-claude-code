@@ -49,6 +49,7 @@ function migrateExistingSettings(workspaceRoot: string | undefined): ProfileStor
       smallFastModel: env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] || env['ANTHROPIC_SMALL_FAST_MODEL'] || 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
       opusModel: env['ANTHROPIC_DEFAULT_OPUS_MODEL'] || 'us.anthropic.claude-opus-4-6-v1',
       disablePromptCaching: env['DISABLE_PROMPT_CACHING'] === '1',
+      maxContextTokens: env['CLAUDE_CODE_MAX_CONTEXT_TOKENS'] ? Number(env['CLAUDE_CODE_MAX_CONTEXT_TOKENS']) || undefined : undefined,
     });
   } else if (hasProxy) {
     store.providers.push({

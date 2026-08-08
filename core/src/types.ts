@@ -47,6 +47,10 @@ export interface ProviderProfile {
   smallFastModel: string;
   opusModel: string;
   disablePromptCaching?: boolean;
+  /** Caps the context window Claude Code will use for this provider, in tokens.
+   *  Writes CLAUDE_CODE_MAX_CONTEXT_TOKENS. Useful when a Bedrock inference
+   *  profile serves a smaller effective window than the model's nominal one. */
+  maxContextTokens?: number;
 
   // Model test state (persisted per-model: 'ok' | 'fail')
   modelTestState?: Record<string, 'ok' | 'fail'>;
