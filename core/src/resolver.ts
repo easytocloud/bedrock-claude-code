@@ -163,6 +163,7 @@ export function resolvePreset(
       env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = provider.opusModel || '';
     }
     env['DISABLE_PROMPT_CACHING'] = provider.disablePromptCaching ? '1' : '';
+    env['CLAUDE_CODE_MAX_CONTEXT_TOKENS'] = provider.maxContextTokens ? String(provider.maxContextTokens) : '';
     // Bedrock always disables nonessential traffic (AWS auth, never needs Anthropic login).
     // Known 3rd-party presets (OpenRouter, Ollama, LM Studio, oMLX, vLLM, LiteLLM) are
     // also force-on — none of them route to Anthropic, so telemetry/login traffic is
