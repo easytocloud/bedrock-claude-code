@@ -4,6 +4,13 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-08-08
+
+Version jumps 0.10.0 → 0.11.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
+
+### Added
+- **Per-provider "Max context tokens"** — caps the context window Claude Code will use for a provider, writing `CLAUDE_CODE_MAX_CONTEXT_TOKENS`. Useful when a Bedrock inference profile serves a smaller effective window than the model's nominal one. Leave unset to use the model's full window.
+
 ## [0.10.0] — 2026-08-04
 
 Version jumps 0.9.0 → 0.10.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
