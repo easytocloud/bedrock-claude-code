@@ -31,12 +31,12 @@ export interface ProviderProfile {
   // Proxy-specific
   proxyBaseUrl?: string;
   proxyCredential?: string;          // The key or token value
-  proxyAuthMode?: 'apikey' | 'authtoken'; // How to send it: x-api-key or Bearer
+  proxyAuthMode?: 'apikey' | 'authtoken' | 'none'; // How to send it: x-api-key, Bearer, or nothing
   /** Which entry from the known-providers catalogue was selected in the UI.
    *  Drives URL/auth field labelling and resolver-side coercion. Undefined on
    *  legacy proxy records is treated as 'custom'. Resolver still keys
    *  behavioural switches off `type`, not this field. */
-  proxyPreset?: 'bedrock' | 'openrouter' | 'ollama' | 'lmstudio' | 'omlx' | 'vllm' | 'litellm' | 'custom';
+  proxyPreset?: 'bedrock' | 'openrouter' | 'ollama' | 'lmstudio' | 'omlx' | 'vllm' | 'sglang' | 'litellm' | 'custom';
   /** @deprecated use proxyCredential + proxyAuthMode */
   proxyApiKey?: string;
   /** @deprecated use proxyCredential + proxyAuthMode */
@@ -139,6 +139,10 @@ export interface PanelState {
   workspaceName?: string;
   dismissTestReminder?: boolean;
   introCollapsed?: boolean;
+  /** Whether the 1Password CLI (`op`) is on PATH — checked once per panel
+   *  session and cached. Gates whether the "1Password reference" credential
+   *  card is offered in the provider drawer's Authentication section. */
+  opCliAvailable?: boolean;
 }
 
 // ─── Claude Code's own file format (kept for I/O) ───────────────────

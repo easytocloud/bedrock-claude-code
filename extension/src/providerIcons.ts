@@ -35,11 +35,13 @@ export function inferProxyFlavor(provider: ProviderProfile, presetName?: string)
   if (url.includes('bedrock') || url.includes('amazonaws.com')) { return 'bedrock'; }
   if (/:11434(?:\/|$)/.test(url)) { return 'ollama'; }   // Ollama default port
   if (/:1234(?:\/|$)/.test(url)) { return 'lmstudio'; }  // LM Studio default port
-  if (/:8000(?:\/|$)/.test(url)) { return 'vllm'; }      // vLLM default port
+  if (/:8000(?:\/|$)/.test(url)) { return 'vllm'; }      // vLLM default port (also oMLX's — ambiguous, vLLM wins)
+  if (/:30000(?:\/|$)/.test(url)) { return 'sglang'; }   // SGLang default port
   if (/:4000(?:\/|$)/.test(url)) { return 'litellm'; }   // LiteLLM default port
 
   const names = `${provider.name} ${presetName ?? ''}`.toLowerCase();
   if (names.includes('openrouter')) { return 'openrouter'; }
+  if (names.includes('sglang')) { return 'sglang'; }
   if (names.includes('vllm')) { return 'vllm'; }
   if (names.includes('ollama')) { return 'ollama'; }
   if (names.includes('lm studio') || names.includes('lmstudio')) { return 'lmstudio'; }
@@ -64,9 +66,18 @@ const CHIPS: Record<string, ChipSpec> = {
   openrouter: { flavor: 'openrouter', icon: 'openrouter.svg', label: 'OR', bg: '#101828', fg: '#C8FF00' },
   ollama: { flavor: 'ollama', icon: 'ollama.svg', label: 'OL', bg: '#F4F4F5', fg: '#18181B' },
   lmstudio: { flavor: 'lmstudio', icon: 'lmstudio.svg', label: 'LM', bg: '#4F46E5', fg: '#ffffff' },
-  omlx: { flavor: 'omlx', label: 'MX', bg: '#0EA5E9', fg: '#ffffff' },
+  omlx: { flavor: 'omlx', icon: 'omlx.svg', label: 'MX', bg: '#0EA5E9', fg: '#ffffff' },
   vllm: { flavor: 'vllm', icon: 'vllm.svg', label: 'VL', bg: '#334155', fg: '#ffffff' },
-  litellm: { flavor: 'litellm', label: 'LL', bg: '#10B981', fg: '#ffffff' },
+  // SGLang's icon (raster — their source SVG is a flattened design-tool
+  // export with duplicate/off-canvas copies and an embedded raster glyph,
+  // too fragile to hand-edit reliably) is already colored brand red-orange
+  // on a light fill — a dark neutral backdrop, not another color, so the
+  // mark reads cleanly.
+  sglang: { flavor: 'sglang', icon: 'sglang.png', label: 'SG', bg: '#1E1B1A', fg: '#ffffff' },
+  // LiteLLM's mark is their bullet-train icon (raster — no vector source
+  // available) in white/blue/orange; a dark neutral backdrop lets it read
+  // clearly without fighting a colored chip.
+  litellm: { flavor: 'litellm', icon: 'litellm.png', label: 'LL', bg: '#1E293B', fg: '#ffffff' },
   // Custom — our own layered-squares logo on the extension's banner color
   custom: { flavor: 'custom', icon: 'custom.svg', label: 'C', bg: '#1a1a2e', fg: '#ffffff' },
 };

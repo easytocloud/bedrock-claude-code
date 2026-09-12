@@ -4,7 +4,23 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
-## [0.11.0] — 2026-08-08
+## [0.12.0] — 2026-09-12
+
+Version jumps 0.11.0 → 0.12.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
+
+### Added
+- **Redesigned Provider drawer**: a single unified "Provider" dropdown (Anthropic, then every known 3rd-party preset, Bedrock included) replaces the old "Anthropic / 3rd party" segmented control plus secondary dropdown. The panel body now adapts into clearly labeled **Connection**, **Authentication**, **Models**, and **Options** sections depending on the selected provider.
+- **Authentication card chooser** — credentials are now selected via labeled cards (None / API Key / Bearer Token / 1Password reference), each showing exactly which env var or `apiKeyHelper` it writes. Only the modes a provider's server actually validates are offered — e.g. Ollama has no credential UI at all (its local API has no auth mechanism), LM Studio/vLLM/LiteLLM/SGLang offer Bearer Token only, oMLX offers both API Key and Bearer Token, and Custom offers all four.
+- **1Password detection** — the "1Password reference" card is only offered when the `op` CLI is actually available on PATH, checked once per panel session.
+- **SGLang** added as a supported 3rd-party provider (port 30000, optional Bearer-token auth).
+- Real brand icons for oMLX, SGLang, and LiteLLM, replacing plain text-label tiles.
+
+### Fixed
+- **Editing an existing 3rd-party provider no longer always shows "Other / Custom…"** when it wasn't saved with an explicit preset (e.g. providers created before v0.3.21, or previously saved while pointed at a URL that matches a known provider like `openrouter.ai`). The provider type is now guessed from the URL/name on open, the same heuristic already used for the provider list's brand tiles — and typing a matching URL while "Custom" is selected now switches the dropdown live.
+- **"Max context tokens" input** now matches the styling of every other field in the panel — it previously fell back to raw, unstyled browser chrome (including the native spinner arrows) because the shared input CSS didn't cover `input[type="number"]`.
+
+### Changed
+- **Bedrock, oMLX, vLLM, and LiteLLM default ports/auth verified against each project's current documentation** and corrected where the existing catalog had drifted — vLLM/LM Studio/LiteLLM/SGLang all validate credentials as `Authorization: Bearer`, not `x-api-key`, despite some using an `--api-key`-style flag name.
 
 Version jumps 0.10.0 → 0.11.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
 

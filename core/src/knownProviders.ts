@@ -1,8 +1,8 @@
-// Curated catalogue of well-known providers selectable from the "3rd party"
-// dropdown in the provider drawer. The catalogue is the single source of truth
-// for default URL, locked scheme/path, auth handling, and UI labelling — both
-// the webview and the resolver read from it so a hand-edited profile store
-// still resolves to the right env vars.
+// Curated catalogue of well-known providers selectable from the unified
+// provider dropdown in the provider drawer. The catalogue is the single
+// source of truth for default URL, locked scheme/path, auth handling, and
+// UI labelling — both the webview and the resolver read from it so a
+// hand-edited profile store still resolves to the right env vars.
 
 export type KnownProviderId =
   | 'bedrock'
@@ -11,8 +11,15 @@ export type KnownProviderId =
   | 'lmstudio'
   | 'omlx'
   | 'vllm'
+  | 'sglang'
   | 'litellm'
   | 'custom';
+
+/** Credential modes the Authentication card chooser can offer. 'op' (1Password
+ *  reference) is never listed in a catalog entry's `credentialModes` — it's
+ *  appended by the UI for every non-empty `credentialModes` list, but only
+ *  when the `op` CLI is actually available. */
+export type CredentialMode = 'none' | 'apikey' | 'authtoken';
 
 export interface KnownProvider {
   id: KnownProviderId;
@@ -24,16 +31,26 @@ export interface KnownProvider {
   // snap back on blur via normalizeKnownUrl().
   scheme?: 'http' | 'https';
   path?: string;
-  // Auth mode written to settings.json. 'none' means no credential field is
-  // shown in the UI; resolver writes a placeholder ANTHROPIC_AUTH_TOKEN so
-  // Claude Code does not fall back to its OAuth flow.
-  authMode?: 'apikey' | 'authtoken' | 'none';
-  // UI label for the credential field. Deliberately user-facing terminology
-  // (e.g. "OpenRouter API key") — never references AUTH_TOKEN or Bearer.
-  credentialLabel?: string;
-  // Whether the credential is mandatory for a working setup.
-  credentialRequired?: boolean;
+  /** Credential modes this provider's server actually validates, in display
+   *  order — drives which Authentication cards are shown. Undefined means no
+   *  Authentication section at all (Bedrock is AWS-native; Ollama's local
+   *  server has no credential mechanism to configure). */
+  credentialModes?: CredentialMode[];
+  /** Which mode is pre-selected when this preset is first chosen. */
+  defaultCredentialMode?: CredentialMode;
+  /** Optional info-box copy shown above the Authentication cards, e.g.
+   *  OpenRouter's "uses a Bearer token generated at openrouter.ai/keys". */
+  credentialInfo?: string;
 }
+
+/** Anthropic direct API isn't a KNOWN_PROVIDERS catalog entry (it's the
+ *  dropdown's first/default option, not a 3rd-party preset) but needs the
+ *  same credential-mode shape so the webview can build its Authentication
+ *  cards with one code path for every provider. */
+export const ANTHROPIC_CREDENTIAL: Pick<KnownProvider, 'credentialModes' | 'defaultCredentialMode'> = {
+  credentialModes: ['apikey'],
+  defaultCredentialMode: 'apikey',
+};
 
 export const KNOWN_PROVIDERS: KnownProvider[] = [
   {
@@ -48,9 +65,9 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     defaultUrl: 'https://openrouter.ai/api',
     scheme: 'https',
     path: '/api',
-    authMode: 'authtoken',
-    credentialLabel: 'OpenRouter API key',
-    credentialRequired: true,
+    credentialModes: ['authtoken'],
+    defaultCredentialMode: 'authtoken',
+    credentialInfo: 'OpenRouter uses a Bearer token generated at openrouter.ai/keys.',
   },
   {
     id: 'ollama',
@@ -59,7 +76,8 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     defaultUrl: 'http://localhost:11434',
     scheme: 'http',
     path: '',
-    authMode: 'none',
+    // Local Ollama has no credential mechanism at all — not even a "none"
+    // card is shown; the Authentication section is hidden entirely.
   },
   {
     id: 'lmstudio',
@@ -68,7 +86,10 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     defaultUrl: 'http://localhost:1234',
     scheme: 'http',
     path: '',
-    authMode: 'none',
+    // Optional "Require Authentication" toggle (LM Studio >= 0.4.0) validates
+    // Authorization: Bearer <token> only — no x-api-key support.
+    credentialModes: ['none', 'authtoken'],
+    defaultCredentialMode: 'none',
   },
   {
     id: 'omlx',
@@ -77,9 +98,11 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     defaultUrl: 'http://localhost:8000',
     scheme: 'http',
     path: '',
-    authMode: 'authtoken',
-    credentialLabel: 'oMLX API key (optional)',
-    credentialRequired: false,
+    // jundot/omlx natively accepts both x-api-key and Authorization: Bearer
+    // (the latter added for Anthropic SDK compatibility) — the only local
+    // proxy where both credential styles are genuinely valid.
+    credentialModes: ['none', 'apikey', 'authtoken'],
+    defaultCredentialMode: 'none',
   },
   {
     id: 'vllm',
@@ -88,9 +111,21 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     defaultUrl: 'http://localhost:8000',
     scheme: 'http',
     path: '',
-    authMode: 'authtoken',
-    credentialLabel: 'API key (optional)',
-    credentialRequired: false,
+    // --api-key is validated as Authorization: Bearer <key> despite the flag name.
+    credentialModes: ['none', 'authtoken'],
+    defaultCredentialMode: 'none',
+  },
+  {
+    id: 'sglang',
+    label: 'SGLang',
+    type: 'proxy',
+    defaultUrl: 'http://localhost:30000',
+    scheme: 'http',
+    path: '',
+    // --api-key is opt-in (off by default) and validated as
+    // Authorization: Bearer <key> — same shape as vLLM.
+    credentialModes: ['none', 'authtoken'],
+    defaultCredentialMode: 'none',
   },
   {
     id: 'litellm',
@@ -99,14 +134,17 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     defaultUrl: 'http://localhost:4000',
     scheme: 'http',
     path: '',
-    authMode: 'authtoken',
-    credentialLabel: 'API key (optional)',
-    credentialRequired: false,
+    // LITELLM_MASTER_KEY is validated as Authorization: Bearer <master-key>.
+    credentialModes: ['none', 'authtoken'],
+    defaultCredentialMode: 'none',
   },
   {
     id: 'custom',
     label: 'Other / Custom…',
     type: 'proxy',
+    // Unknown target — offer every mode.
+    credentialModes: ['none', 'apikey', 'authtoken'],
+    defaultCredentialMode: 'none',
   },
 ];
 

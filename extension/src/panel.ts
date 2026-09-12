@@ -266,7 +266,28 @@ export class ClaudeCodeSettingsPanel {
       workspaceName,
       dismissTestReminder: this._context.globalState.get<boolean>('dismissTestReminder') || false,
       introCollapsed: this._context.globalState.get<boolean>('introCollapsed') || false,
+      opCliAvailable: this._checkOpCli(),
     };
+  }
+
+  private _opCliAvailable: boolean | undefined;
+
+  /**
+   * Whether the 1Password CLI (`op`) is on PATH — gates the "1Password
+   * reference" Authentication card in the provider drawer. Checked once per
+   * panel lifetime and cached, since `_buildState()` can be called multiple
+   * times per session (initial render, every `ready`/save round trip).
+   */
+  private _checkOpCli(): boolean {
+    if (this._opCliAvailable !== undefined) { return this._opCliAvailable; }
+    try {
+      const { execSync } = require('child_process') as typeof import('child_process');
+      execSync('op --version', { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'ignore', 'ignore'] });
+      this._opCliAvailable = true;
+    } catch {
+      this._opCliAvailable = false;
+    }
+    return this._opCliAvailable;
   }
 
   private _sendState(): void {

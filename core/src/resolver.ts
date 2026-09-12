@@ -121,11 +121,15 @@ export function resolvePreset(
         const cred = provider.proxyCredential
           ?? provider.proxyAuthToken   // eslint-disable-line deprecation/deprecation
           ?? provider.proxyApiKey;     // eslint-disable-line deprecation/deprecation
-        // Mode source of truth: the catalogue for known presets, the user's
-        // selection for 'custom', or migration fallback for legacy stores.
+        // Mode source of truth: when a known preset only ever validates one
+        // credential mode (e.g. OpenRouter → authtoken only), the catalogue
+        // decides regardless of what's stored. Presets offering multiple
+        // modes (oMLX, LM Studio, vLLM, LiteLLM, Custom) — or providers with
+        // no credentialModes at all (Ollama) — defer to the user's stored
+        // selection, with migration fallback for legacy stores.
         let mode: 'apikey' | 'authtoken' | 'none';
-        if (isKnown && known?.authMode) {
-          mode = known.authMode;
+        if (isKnown && known?.credentialModes?.length === 1) {
+          mode = known.credentialModes[0];
         } else {
           mode = provider.proxyAuthMode
             ?? (provider.proxyAuthToken ? 'authtoken' : 'apikey'); // eslint-disable-line deprecation/deprecation

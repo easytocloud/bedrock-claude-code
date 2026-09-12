@@ -4,7 +4,15 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
-## [0.11.0] — 2026-08-08
+## [0.12.0] — 2026-09-12
+
+Version jumps 0.11.0 → 0.12.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
+
+### Added
+- **SGLang** added as a supported 3rd-party provider (port 30000, optional Bearer-token auth).
+
+### Changed
+- **Credential resolution for known 3rd-party providers is more accurate**: the shared engine's provider catalog now declares which credential modes each provider's server actually validates (None / API Key / Bearer Token), corrected against current documentation. vLLM, LM Studio, LiteLLM, and SGLang all validate credentials as `Authorization: Bearer`, not `x-api-key`, despite some using an `--api-key`-style flag name; Ollama's local server has no credential mechanism at all. A store with `proxyAuthMode: 'none'` for a custom proxy now resolves to no credential being written, rather than always falling back to API-key mode.
 
 Version jumps 0.10.0 → 0.11.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
 

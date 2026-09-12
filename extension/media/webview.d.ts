@@ -29,6 +29,9 @@ interface WebviewModelEntry {
   pds?: boolean;
 }
 
+/** Mirrors `CredentialMode` in core/src/knownProviders.ts. */
+type WebviewCredentialMode = 'none' | 'apikey' | 'authtoken';
+
 /** Mirrors `KnownProvider` in core/src/knownProviders.ts. */
 interface WebviewKnownProvider {
   id: string;
@@ -37,9 +40,10 @@ interface WebviewKnownProvider {
   defaultUrl?: string;
   scheme?: 'http' | 'https';
   path?: string;
-  authMode?: 'apikey' | 'authtoken' | 'none';
-  credentialLabel?: string;
-  credentialRequired?: boolean;
+  /** Undefined means no Authentication section at all (e.g. Ollama). */
+  credentialModes?: WebviewCredentialMode[];
+  defaultCredentialMode?: WebviewCredentialMode;
+  credentialInfo?: string;
 }
 
 /**
@@ -62,6 +66,13 @@ interface Window {
   /** Base URI for provider icon assets, resolved via `asWebviewUri`. */
   __ICON_BASE__: string;
 }
+
+/**
+ * `state.opCliAvailable` (read from the `init` message's `PanelState` payload,
+ * not `window.__DATA__` — it's computed once per panel session in panel.ts's
+ * `_checkOpCli()`, not static catalog data) gates whether the "1Password
+ * reference" Authentication card is offered. See core/src/types.ts PanelState.
+ */
 
 /** Provided by the VS Code webview host. */
 declare function acquireVsCodeApi(): {

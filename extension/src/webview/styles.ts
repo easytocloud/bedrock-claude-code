@@ -516,7 +516,8 @@ export function buildStyles(): string {
     .flavor-lmstudio { background: #4F46E5; }
     .flavor-omlx { background: #0EA5E9; }
     .flavor-vllm { background: #334155; }
-    .flavor-litellm { background: #10B981; }
+    .flavor-sglang { background: #1E1B1A; }
+    .flavor-litellm { background: #1E293B; }
     .flavor-custom { background: #1a1a2e; }
     .flavor-unknown { background: #6B7280; }
     .preset-card-name {
@@ -643,6 +644,7 @@ export function buildStyles(): string {
 
     input[type="text"],
     input[type="password"],
+    input[type="number"],
     textarea {
       width: 100%;
       padding: 8px 12px;
@@ -655,6 +657,14 @@ export function buildStyles(): string {
       outline: none;
       transition: border-color var(--transition);
     }
+    /* Hide the native spinner arrows for a cleaner look — matches the plain
+       bordered style of every other input in the panel. */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] { -moz-appearance: textfield; }
     input:focus, textarea:focus {
       border-color: var(--input-focus);
     }
@@ -909,6 +919,53 @@ export function buildStyles(): string {
     .form-hint-flex { flex: 1; margin: 0 12px; }
     .env-key-input  { width: 40%; display: inline-block; margin-right: 4px; }
     .env-val-input  { width: 55%; display: inline-block; }
+
+    /* ─── Credential-type cards (Authentication section) ────────────── */
+    .cred-card-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .cred-card {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .cred-card:hover { border-color: var(--input-border); }
+    .cred-card.sel {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+    }
+    .cred-card-radio { display: none; }
+    .cred-card-body {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .cred-card-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--fg-dim);
+    }
+    .cred-card.sel .cred-card-icon { color: var(--blue); }
+    .cred-card-text { flex: 1; min-width: 0; }
+    .cred-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--fg);
+    }
+    .cred-card-hint {
+      font-size: 11px;
+      color: var(--fg-dim);
+      margin-top: 1px;
+    }
+    .cred-card-input {
+      margin-top: 10px;
+      margin-left: 32px;
+    }
 
     /* ─── Server / Directory List ───────────────────────────────────── */
     .item-list { margin-bottom: 12px; }

@@ -9,6 +9,88 @@ import { esc } from './components';
 import { AWS_REGIONS, KNOWN_PROVIDERS } from '@easytocloud/claude-personae-core';
 
 // ---------------------------------------------------------------------------
+// Credential-type cards (Authentication section) — shared markup for every
+// provider type except Bedrock (AWS-native, no cards at all). Each card owns
+// its own inline input; only the selected card's input is interactable. The
+// webview decides at runtime which cards to show/hide/pre-select per the
+// KNOWN_PROVIDERS catalog's `credentialModes`.
+// ---------------------------------------------------------------------------
+
+interface CredCardSpec {
+  mode: 'none' | 'apikey' | 'authtoken' | 'op';
+  title: string;
+  hint: string;
+  icon: string;
+  inputId?: string;
+  inputType?: 'password' | 'text';
+  placeholder?: string;
+}
+
+const CRED_CARDS: CredCardSpec[] = [
+  {
+    mode: 'none',
+    title: 'None',
+    hint: 'No credential sent',
+    icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 4.5l7 7" stroke="currentColor" stroke-width="1.3"/></svg>`,
+  },
+  {
+    mode: 'apikey',
+    title: 'API Key',
+    hint: 'Will be stored as env.ANTHROPIC_API_KEY',
+    // Classic key silhouette: round bow (head) + shaft + teeth.
+    icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4.5" cy="4.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M6.6 6.6L13.5 13.5M11 11l1.5-1.5M12.5 12.5L14 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    inputId: 'cred-input-apikey',
+    inputType: 'password',
+    placeholder: 'sk-ant-…',
+  },
+  {
+    mode: 'authtoken',
+    title: 'Bearer Token',
+    hint: 'Will be stored as env.ANTHROPIC_AUTH_TOKEN',
+    icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l5 2v4c0 3.5-2.2 5.8-5 6.5-2.8-.7-5-3-5-6.5v-4l5-2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
+    inputId: 'cred-input-authtoken',
+    inputType: 'password',
+    placeholder: 'eyJhbGciOi…',
+  },
+  {
+    mode: 'op',
+    title: '1Password reference',
+    hint: 'Will be stored as apiKeyHelper',
+    // Shield with a keyhole notch — 1Password's visual language.
+    icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l5.5 2v3.8c0 3.7-2.3 6.2-5.5 7.2-3.2-1-5.5-3.5-5.5-7.2V3.5l5.5-2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="8" cy="7.3" r="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 8.8v2.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    inputId: 'cred-input-op',
+    inputType: 'text',
+    placeholder: 'op://vault/item/field',
+  },
+];
+
+function renderCredCard(spec: CredCardSpec): string {
+  const inputHtml = spec.inputId ? `
+      <div class="cred-card-input${spec.inputType === 'password' ? ' input-reveal' : ''}" id="cred-card-input-${esc(spec.mode)}" style="display:none">
+        <input type="${spec.inputType}" id="${esc(spec.inputId)}" placeholder="${esc(spec.placeholder || '')}" />
+        ${spec.inputType === 'password' ? `<button type="button" class="btn-eye" data-reveal="${esc(spec.inputId)}" title="Show / hide">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
+        </button>` : ''}
+      </div>` : '';
+
+  return `
+    <label class="cred-card" data-cred-mode="${esc(spec.mode)}" style="display:none">
+      <input type="radio" class="cred-card-radio" name="cred-mode" value="${esc(spec.mode)}" />
+      <div class="cred-card-body">
+        <span class="cred-card-icon">${spec.icon}</span>
+        <div class="cred-card-text">
+          <div class="cred-card-title">${esc(spec.title)}</div>
+          <div class="cred-card-hint">${esc(spec.hint)}</div>
+        </div>
+      </div>${inputHtml}
+    </label>`;
+}
+
+function renderCredCardList(): string {
+  return `<div class="cred-card-list" id="cred-card-list">${CRED_CARDS.map(renderCredCard).join('')}</div>`;
+}
+
+// ---------------------------------------------------------------------------
 // Drawer shell
 // ---------------------------------------------------------------------------
 
@@ -111,43 +193,18 @@ export function renderProviderDrawer(): string {
       <input type="text" id="provider-name" placeholder="e.g. Bedrock US, Company API, Local vLLM" />
     </div>
 
+    <!-- Unified provider dropdown — Anthropic, then every known 3rd-party -->
     <div class="form-group">
-      <label class="form-label" for="provider-type-control">Provider type</label>
-      <div class="seg-control seg-control-2col" id="provider-type-control">
-        <button type="button" class="seg-btn" data-seg="provider-type" data-val="anthropic">Anthropic</button>
-        <button type="button" class="seg-btn" data-seg="provider-type" data-val="thirdparty">3rd party</button>
-      </div>
-      <div class="info-box info-box-mt" id="provider-type-info">
-        <strong>Anthropic</strong> — direct API or Claude Max/Pro login.<br>
-        <strong>3rd party</strong> — ${KNOWN_PROVIDERS.filter(p => p.id !== 'custom').map(p => esc(p.label)).join(', ')}, or a custom Anthropic-compatible endpoint.
-      </div>
-    </div>
-
-    <!-- 3rd-party provider dropdown — shown only when "3rd party" is selected -->
-    <div class="form-group" id="provider-thirdparty-row" style="display:none">
-      <label class="form-label" for="provider-thirdparty-preset">Provider</label>
-      <select id="provider-thirdparty-preset">
+      <label class="form-label" for="provider-select">Provider</label>
+      <select id="provider-select">
+        <option value="anthropic">Anthropic</option>
         ${KNOWN_PROVIDERS.map(p => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('')}
       </select>
     </div>
 
     <!-- Anthropic section -->
     <div id="provider-section-anthropic" style="display:none">
-      <div class="section-heading">
-        <span class="section-dot section-dot-orange"></span>
-        ANTHROPIC API
-      </div>
-      <div class="info-box">Uses Anthropic's API directly. Enter an API key from <strong>console.anthropic.com</strong>, or use a 1Password <code>op://</code> reference. Without a key, you'll need to <code>/login</code> with an Anthropic Max or Pro plan.</div>
-      <div class="form-group">
-        <label class="form-label" for="provider-anthropic-key">API Key <span style="opacity:0.5">(optional)</span></label>
-        <div class="input-reveal">
-          <input type="password" id="provider-anthropic-key" placeholder="sk-ant-… or op://Vault/Item/field" />
-          <button type="button" class="btn-eye" data-reveal="provider-anthropic-key" title="Show / hide">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
-          </button>
-        </div>
-        <div class="form-hint form-hint-sm" id="anthropic-credential-hint"></div>
-      </div>
+      <div class="info-box">Uses Anthropic's API directly. Without a credential, you'll need to <code>/login</code> with an Anthropic Max or Pro plan.</div>
     </div>
 
     <!-- Bedrock section -->
@@ -182,32 +239,27 @@ export function renderProviderDrawer(): string {
       </div>
     </div>
 
-    <!-- Local / Other section -->
-    <div id="provider-section-proxy" style="display:none">
-      <div class="section-heading" id="provider-proxy-heading">
+    <!-- Connection section (proxy providers only — URL) -->
+    <div id="provider-section-connection" style="display:none">
+      <div class="section-heading">
         <span class="section-dot section-dot-orange"></span>
-        <span id="provider-proxy-heading-text">3RD PARTY</span>
+        CONNECTION
       </div>
       <div class="form-group">
         <label class="form-label" for="provider-proxy-url">Base URL</label>
         <input type="text" id="provider-proxy-url" placeholder="http://localhost:11434" />
       </div>
-      <div class="form-group" id="provider-proxy-credential-row">
-        <div class="label-row">
-          <label class="form-label" for="provider-proxy-credential" id="provider-proxy-credential-label">Credential</label>
-          <div class="pill-toggle" id="proxy-auth-pills">
-            <button type="button" class="pill-btn sel" data-pill="proxy-auth" data-val="apikey">API Key</button>
-            <button type="button" class="pill-btn" data-pill="proxy-auth" data-val="authtoken">Token</button>
-          </div>
-        </div>
-        <div class="input-reveal">
-          <input type="password" id="provider-proxy-credential" placeholder="sk-… or op://Vault/Item/field" />
-          <button type="button" class="btn-eye" data-reveal="provider-proxy-credential" title="Show / hide">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
-          </button>
-        </div>
-        <div class="form-hint form-hint-sm" id="proxy-credential-hint"></div>
+    </div>
+
+    <!-- Authentication section (all providers except Bedrock; hidden entirely
+         for providers with no credentialModes, e.g. Ollama) -->
+    <div id="provider-section-auth" style="display:none">
+      <div class="section-heading">
+        <span class="section-dot section-dot-orange"></span>
+        AUTHENTICATION
       </div>
+      <div class="info-box" id="auth-provider-info" style="display:none"></div>
+      ${renderCredCardList()}
     </div>
 
     <!-- Models section (all providers) -->
@@ -271,7 +323,15 @@ export function renderProviderDrawer(): string {
         </div>
         <select id="provider-model-opus"></select>
       </div>
+    </div>
 
+    <!-- Options section (all non-Anthropic providers) -->
+    <div id="provider-section-options" style="display:none">
+      <div class="divider"></div>
+      <div class="section-heading">
+        <span class="section-dot section-dot-orange"></span>
+        OPTIONS
+      </div>
       <div class="form-group">
         <label class="form-label" for="provider-max-context-tokens"
                title="Caps the context window Claude Code will use for this provider. Leave blank to use the model's full window. Useful when a Bedrock inference profile serves a smaller effective window than the model's nominal one. Writes CLAUDE_CODE_MAX_CONTEXT_TOKENS.">Max context tokens</label>
