@@ -394,6 +394,27 @@ console.log('[WEBVIEW] Script loaded');
     custom: { icon: 'custom.svg', label: 'C' },
   };
 
+  // Full human name per flavor — mirrors FLAVOR_NAMES/inferencerLabel() in
+  // src/providerIcons.ts. Unlike PROVIDER_TILES.label (a brand-tile monogram),
+  // this is the name shown in the preset pill and provider dropdown.
+  const FLAVOR_NAMES = {
+    anthropic: 'Anthropic',
+    bedrock: 'Amazon Bedrock',
+    openrouter: 'OpenRouter',
+    ollama: 'Ollama',
+    lmstudio: 'LM Studio',
+    omlx: 'oMLX',
+    vllm: 'vLLM',
+    sglang: 'SGLang',
+    litellm: 'LiteLLM',
+    custom: 'Custom',
+  };
+
+  function inferencerLabel(provider, presetName) {
+    if (!provider) return 'Unknown';
+    return FLAVOR_NAMES[providerFlavor(provider, presetName)] || FLAVOR_NAMES.custom;
+  }
+
   function providerFlavor(provider, presetName) {
     if (!provider) return 'unknown';
     if (provider.type === 'anthropic') return 'anthropic';
@@ -537,7 +558,7 @@ console.log('[WEBVIEW] Script loaded');
     for (const p of store.providers) {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = p.name;
+      opt.textContent = p.name + ' — ' + inferencerLabel(p);
       if (preset && preset.providerId === p.id) opt.selected = true;
       provSel.appendChild(opt);
     }
@@ -2181,7 +2202,7 @@ console.log('[WEBVIEW] Script loaded');
 
     for (const preset of store.presets) {
       const provider = store.providers.find(p => p.id === preset.providerId);
-      const providerLabel = provider ? provider.type + ' · ' + provider.name : 'No provider';
+      const providerLabel = provider ? provider.name + ' · ' + inferencerLabel(provider, preset.name) : 'No provider';
       const isDefault = preset.id === DEFAULT_PRESET_ID;
 
       const mcpNames = preset.mcpGroupIds

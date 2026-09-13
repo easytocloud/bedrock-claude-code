@@ -4,6 +4,12 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-09-13
+
+### Changed
+- **Preset overview pill** now shows the provider's name and inference server (e.g. "My Local Box · vLLM", "Prod · Amazon Bedrock", "Home · Anthropic") instead of the raw provider type string (`anthropic`/`bedrock`/`proxy`).
+- **Provider dropdown** (when selecting a provider for a preset) now shows the provider's name alongside its inference server (e.g. "My Local Box — vLLM") instead of the name alone, so presets pointing at different proxy flavors are distinguishable at a glance.
+
 ## [0.12.0] — 2026-09-12
 
 Version jumps 0.11.0 → 0.12.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.

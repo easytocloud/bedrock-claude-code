@@ -88,3 +88,28 @@ export function chipForProvider(provider: ProviderProfile | undefined, presetNam
   if (provider.type === 'bedrock') { return CHIPS.bedrock; }
   return CHIPS[inferProxyFlavor(provider, presetName)] ?? CHIPS.custom;
 }
+
+/** Full human name per flavor — unlike CHIPS.label (a monogram for the brand
+ *  tile), this is the name shown in the preset pill and provider dropdown. */
+const FLAVOR_NAMES: Record<string, string> = {
+  anthropic: 'Anthropic',
+  bedrock: 'Amazon Bedrock',
+  openrouter: 'OpenRouter',
+  ollama: 'Ollama',
+  lmstudio: 'LM Studio',
+  omlx: 'oMLX',
+  vllm: 'vLLM',
+  sglang: 'SGLang',
+  litellm: 'LiteLLM',
+  custom: 'Custom',
+};
+
+/** Human-readable inferencer name for a provider: 'Anthropic', 'Amazon
+ *  Bedrock', or the specific proxy flavor ('vLLM', 'SGLang', ...), falling
+ *  back to 'Custom' for unrecognized proxies. */
+export function inferencerLabel(provider: ProviderProfile | undefined, presetName?: string): string {
+  if (!provider) { return 'Unknown'; }
+  if (provider.type === 'anthropic') { return FLAVOR_NAMES.anthropic; }
+  if (provider.type === 'bedrock') { return FLAVOR_NAMES.bedrock; }
+  return FLAVOR_NAMES[inferProxyFlavor(provider, presetName)] ?? FLAVOR_NAMES.custom;
+}

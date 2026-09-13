@@ -5,7 +5,7 @@
 import { PanelState, Preset, ProviderProfile, McpServerGroup, DirectoryGroup, KNOWN_PROVIDERS } from '@easytocloud/claude-personae-core';
 import { DEFAULT_PRESET_ID } from '@easytocloud/claude-personae-core';
 import { esc } from './components';
-import { chipForProvider, ChipSpec } from '../providerIcons';
+import { chipForProvider, ChipSpec, inferencerLabel } from '../providerIcons';
 
 // Brand tile for a provider — mirrors providerTileHtml() in media/webview.js.
 // Colors come from flavor-* classes in styles.ts (inline style attributes are
@@ -89,7 +89,7 @@ function renderPresetCard(
   iconBase: string,
 ): string {
   const provider = providers.find(p => p.id === preset.providerId);
-  const providerLabel = provider ? `${provider.type} · ${provider.name}` : 'No provider';
+  const providerLabel = provider ? `${provider.name} · ${inferencerLabel(provider, preset.name)}` : 'No provider';
 
   const mcpNames = preset.mcpGroupIds
     .map(id => mcpGroups.find(g => g.id === id)?.name)
