@@ -4,6 +4,11 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.12.2] — 2026-09-14
+
+### Fixed
+- **"Custom" provider no longer auto-switches to a known provider while you type the base URL.** v0.12.0 added live re-detection so typing a matching URL while "Custom" was selected would jump the dropdown to that known preset — but many different local servers (vLLM, oMLX, LiteLLM, etc.) share the same conventional port, just never at the same time, so this misclassified providers that were deliberately Custom. That live re-detection is removed; reopening a provider you explicitly saved as Custom also no longer re-guesses it from the URL (legacy providers that predate the redesign, and were never saved through this drawer, still get the one-time URL-based guess on open).
+
 ## [0.12.1] — 2026-09-13
 
 ### Changed

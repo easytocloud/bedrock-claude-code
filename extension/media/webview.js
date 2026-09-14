@@ -419,6 +419,10 @@ console.log('[WEBVIEW] Script loaded');
     if (!provider) return 'unknown';
     if (provider.type === 'anthropic') return 'anthropic';
     if (provider.type === 'bedrock') return 'bedrock';
+    // A confirmed 'custom' (saved explicitly through the redesigned drawer) is
+    // trusted as-is — never re-guess a known preset from the URL/port, since
+    // many different tools share the same conventional port.
+    if (provider.proxyPreset === 'custom' && provider.proxyPresetConfirmed) return 'custom';
     if (provider.proxyPreset && provider.proxyPreset !== 'custom') return provider.proxyPreset;
 
     const url = (provider.proxyBaseUrl || '').toLowerCase();
@@ -713,28 +717,28 @@ console.log('[WEBVIEW] Script loaded');
 
     // Resolve internal type → unified provider-select value: 'anthropic',
     // 'bedrock', or the proxy's known preset id. Proxy providers with no
-    // *non-custom* stored proxyPreset (pre-v0.3.21 stores that never set
-    // it, hand-edited stores, or providers previously saved while a "custom"
-    // default was in effect) fall back to providerFlavor()'s URL/name-based
-    // guess rather than sticking on Custom — same heuristic already used for
-    // the provider list's brand tiles. A stored 'custom' is deliberately NOT
+    // *non-custom* stored proxyPreset (pre-v0.3.21 stores that never set it,
+    // hand-edited stores, or providers saved while a "custom" default was in
+    // effect) fall back to providerFlavor()'s URL/name-based guess rather
+    // than sticking on Custom — same heuristic already used for the provider
+    // list's brand tiles. An unconfirmed stored 'custom' is deliberately NOT
     // treated as authoritative here (unlike other preset ids) because every
     // provider defaulted to 'custom' under earlier UI versions regardless of
     // its actual URL, so trusting it verbatim would permanently misclassify
-    // providers that plainly match a known host (e.g. openrouter.ai). The
-    // guess isn't persisted until the user hits Save, at which point it
-    // becomes the stored proxyPreset like any explicit selection — so a
-    // provider only "locks in" once actually saved, and until then a later
-    // hostname edit can still legitimately change the detected flavor rather
-    // than being stuck on a wrong first guess.
+    // providers that plainly match a known host (e.g. openrouter.ai). Once a
+    // 'custom' selection has been *confirmed* (saved at least once through
+    // this drawer — see proxyPresetConfirmed below), it's trusted instead:
+    // the user deliberately chose Custom, and re-guessing from a host:port
+    // that happens to match a known default is wrong — many different tools
+    // can share the same conventional port, just not at the same time.
     const typeVal = provider ? provider.type : '';
     let selectVal;
     if (typeVal === 'anthropic') selectVal = 'anthropic';
     else if (typeVal === 'bedrock') selectVal = 'bedrock';
     else if (typeVal === 'proxy') {
-      selectVal = (provider.proxyPreset && provider.proxyPreset !== 'custom')
-        ? provider.proxyPreset
-        : providerFlavor(provider);
+      const trustStored = provider.proxyPreset
+        && (provider.proxyPreset !== 'custom' || provider.proxyPresetConfirmed);
+      selectVal = trustStored ? provider.proxyPreset : providerFlavor(provider);
     }
     else selectVal = 'anthropic'; // new provider defaults to Anthropic
 
@@ -1782,6 +1786,9 @@ console.log('[WEBVIEW] Script loaded');
       })(),
       proxyPreset: type === 'bedrock' ? 'bedrock'
         : (type === 'proxy' ? (proxyPresetId || 'custom') : undefined),
+      // Every save through this drawer is an explicit choice — once set, a
+      // 'custom' selection stops being re-guessed against the URL on reopen.
+      proxyPresetConfirmed: type === 'proxy' ? true : undefined,
       proxyCredential: type === 'proxy' ? (credValue || undefined) : undefined,
       // credMode is 'op' when the 1Password card is selected — the resolver
       // detects that via the op:// prefix on the value itself, so the stored
@@ -2717,22 +2724,6 @@ console.log('[WEBVIEW] Script loaded');
   // credential fields to the new preset's defaults.
   document.getElementById('provider-select')?.addEventListener('change', function() {
     applyProviderSelectChange(this.value, true);
-  });
-
-  // Live detection: while "Other / Custom…" is selected and the user types a
-  // URL matching a known provider's host/port, jump the dropdown there
-  // automatically — same heuristic used to guess the preset on drawer open
-  // for legacy providers (providerFlavor()). Only fires from Custom, never
-  // overriding an explicit known-preset selection the user already made.
-  document.getElementById('provider-proxy-url')?.addEventListener('input', function() {
-    const providerSelect = document.getElementById('provider-select');
-    if (!providerSelect || providerSelect.value !== 'custom') return;
-    const guess = providerFlavor({ type: 'proxy', proxyBaseUrl: this.value, name: '' });
-    if (guess === 'custom' || guess === 'anthropic' || guess === 'bedrock') return;
-    providerSelect.value = guess;
-    // Don't reset the URL the user is actively typing — only swap sections/
-    // cards/labels to match the newly-detected preset.
-    applyProviderSelectChange(guess, false);
   });
 
   // Set or clear reveal state on a password input

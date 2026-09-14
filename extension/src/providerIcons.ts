@@ -23,9 +23,15 @@ export type ProxyFlavor = NonNullable<ProviderProfile['proxyPreset']>;
  * Work out which known provider a proxy really is. `proxyPreset` is only set
  * on records created since v0.3.21 and stays 'custom' when the user picked
  * Custom despite pointing at a known service — so fall back to recognizable
- * URLs, default ports, and finally the provider/preset names.
+ * URLs, default ports, and finally the provider/preset names. A *confirmed*
+ * 'custom' (saved explicitly through the redesigned drawer) is trusted as-is
+ * instead — the user deliberately chose Custom, and many different tools
+ * share the same conventional port, so guessing again would misclassify it.
  */
 export function inferProxyFlavor(provider: ProviderProfile, presetName?: string): ProxyFlavor {
+  if (provider.proxyPreset === 'custom' && provider.proxyPresetConfirmed) {
+    return 'custom';
+  }
   if (provider.proxyPreset && provider.proxyPreset !== 'custom') {
     return provider.proxyPreset;
   }

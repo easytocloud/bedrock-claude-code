@@ -37,6 +37,14 @@ export interface ProviderProfile {
    *  legacy proxy records is treated as 'custom'. Resolver still keys
    *  behavioural switches off `type`, not this field. */
   proxyPreset?: 'bedrock' | 'openrouter' | 'ollama' | 'lmstudio' | 'omlx' | 'vllm' | 'sglang' | 'litellm' | 'custom';
+  /** True once this provider has been saved through the provider drawer with
+   *  'custom' explicitly selected. Distinguishes a deliberate Custom choice
+   *  (never re-guess a known preset from the URL, even on a matching port —
+   *  many different tools share the same conventional port) from a legacy/
+   *  migrated record that happened to land on 'custom' and should still be
+   *  retro-guessed on open (pre-v0.12 stores that only ever had 'custom' to
+   *  fall back to, regardless of the provider's actual URL). */
+  proxyPresetConfirmed?: boolean;
   /** @deprecated use proxyCredential + proxyAuthMode */
   proxyApiKey?: string;
   /** @deprecated use proxyCredential + proxyAuthMode */
