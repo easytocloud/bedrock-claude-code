@@ -69,6 +69,7 @@ export function resolvePreset(
       case 'bedrock': {
         env['CLAUDE_CODE_USE_BEDROCK'] = '1';
         env['CLAUDE_CODE_USE_MANTLE'] = provider.useMantle ? '1' : '0';
+        env['ENABLE_PROMPT_CACHING_1H'] = provider.extendedPromptCacheTtl ? '1' : '0';
         if (provider.awsProfile) { env['AWS_PROFILE'] = provider.awsProfile; }
         if (provider.awsRegion) {
           if (!AWS_REGIONS.includes(provider.awsRegion)) {
@@ -151,6 +152,11 @@ export function resolvePreset(
           // servers that ignore the header anyway (Ollama, LM Studio).
           env['ANTHROPIC_AUTH_TOKEN'] = 'none';
         }
+        // Auto mode's safety classifier normally asks the endpoint for a
+        // server-side review. Self-hosted/local gateways can't provide that,
+        // so this makes Claude Code fall back to its own classifier requests
+        // instead of surfacing a "gateway can't review" notice.
+        env['CLAUDE_CODE_AUTO_MODE_SERVER'] = provider.localAutoMode ? '0' : '';
         break;
       }
     }
@@ -255,6 +261,7 @@ function isNoOp(key: string, value: string): boolean {
   if (value === '') { return true; }
   if (key === 'CLAUDE_CODE_USE_BEDROCK' && value === '0') { return true; }
   if (key === 'CLAUDE_CODE_USE_MANTLE' && value === '0') { return true; }
+  if (key === 'ENABLE_PROMPT_CACHING_1H' && value === '0') { return true; }
   return false;
 }
 

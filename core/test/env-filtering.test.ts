@@ -66,22 +66,34 @@ describe('filterForGlobal', () => {
     assert.deepEqual(filterForGlobal({ ANTHROPIC_BASE_URL: '', REAL: 'v' }), { REAL: 'v' });
   });
 
-  test('drops the off-by-default bedrock and mantle flags', () => {
+  test('drops the off-by-default bedrock, mantle, and extended-cache flags', () => {
     assert.deepEqual(
-      filterForGlobal({ CLAUDE_CODE_USE_BEDROCK: '0', CLAUDE_CODE_USE_MANTLE: '0' }),
+      filterForGlobal({
+        CLAUDE_CODE_USE_BEDROCK: '0',
+        CLAUDE_CODE_USE_MANTLE: '0',
+        ENABLE_PROMPT_CACHING_1H: '0',
+      }),
       {}
     );
   });
 
   test('keeps those flags when actually enabled', () => {
     assert.deepEqual(
-      filterForGlobal({ CLAUDE_CODE_USE_BEDROCK: '1', CLAUDE_CODE_USE_MANTLE: '1' }),
-      { CLAUDE_CODE_USE_BEDROCK: '1', CLAUDE_CODE_USE_MANTLE: '1' }
+      filterForGlobal({
+        CLAUDE_CODE_USE_BEDROCK: '1',
+        CLAUDE_CODE_USE_MANTLE: '1',
+        ENABLE_PROMPT_CACHING_1H: '1',
+      }),
+      {
+        CLAUDE_CODE_USE_BEDROCK: '1',
+        CLAUDE_CODE_USE_MANTLE: '1',
+        ENABLE_PROMPT_CACHING_1H: '1',
+      }
     );
   });
 
   test('keeps "0" for keys where it is a meaningful value', () => {
-    // Only USE_BEDROCK and USE_MANTLE treat "0" as a no-op.
+    // Only USE_BEDROCK, USE_MANTLE, and ENABLE_PROMPT_CACHING_1H treat "0" as a no-op.
     assert.deepEqual(
       filterForGlobal({ CLAUDE_CODE_ATTRIBUTION_HEADER: '0' }),
       { CLAUDE_CODE_ATTRIBUTION_HEADER: '0' }

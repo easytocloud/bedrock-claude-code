@@ -108,6 +108,8 @@ export function isMantleModelId(modelId: string): boolean {
 export const MANAGED_ENV_KEYS = new Set([
   'CLAUDE_CODE_USE_BEDROCK',
   'CLAUDE_CODE_USE_MANTLE',
+  'ENABLE_PROMPT_CACHING_1H',
+  'CLAUDE_CODE_AUTO_MODE_SERVER',
   'AWS_PROFILE',
   'AWS_REGION',
   'AWS_CONFIG_FILE',

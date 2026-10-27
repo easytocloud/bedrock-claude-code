@@ -344,6 +344,20 @@ export function renderProviderDrawer(): string {
           <div class="toggle-thumb"></div>
         </div>
       </div>
+      <div class="toggle-row" id="provider-bedrock-cache-row">
+        <span class="toggle-label">Extended cache TTL (1 hour)</span>
+        <div class="form-hint form-hint-flex">Bedrock defaults to a 5-minute prompt cache. Enable to request a 1-hour TTL instead — cache writes are billed at a higher rate. Writes ENABLE_PROMPT_CACHING_1H.</div>
+        <div class="toggle-track" data-toggle="provider-extended-cache-ttl">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
+      <div class="toggle-row" id="provider-local-auto-mode-row">
+        <span class="toggle-label">Allow local auto-mode</span>
+        <div class="form-hint form-hint-flex">Needed when this gateway can't provide auto mode's server-side safety review — falls back to Claude Code's own classifier requests. Writes CLAUDE_CODE_AUTO_MODE_SERVER=0.</div>
+        <div class="toggle-track" data-toggle="provider-local-auto-mode">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
       <div class="toggle-row" id="provider-standalone-row">
         <span class="toggle-label">Standalone mode</span>
         <div class="form-hint form-hint-flex">Blocks all traffic to Anthropic (telemetry, updates, login). Default on — disable only if this proxy forwards to Anthropic directly.</div>

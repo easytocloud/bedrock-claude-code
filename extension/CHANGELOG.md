@@ -4,6 +4,14 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-10-27
+
+Version jumps 0.12.2 → 0.13.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
+
+### Added
+- **Bedrock: "Extended cache TTL (1 hour)" toggle** — requests a 1-hour prompt cache TTL instead of Bedrock's 5-minute default by writing `ENABLE_PROMPT_CACHING_1H`. Cache writes at the 1-hour TTL are billed at a higher rate, so this stays off by default.
+- **Proxy providers: "Allow local auto-mode" toggle** — for self-hosted/local gateways (Ollama, LM Studio, oMLX, vLLM, SGLang, LiteLLM, Custom) that can't provide auto mode's server-side safety review, this writes `CLAUDE_CODE_AUTO_MODE_SERVER=0` so Claude Code falls back to its own classifier requests instead of surfacing a "gateway can't review" notice. Not shown for Anthropic or Bedrock, where the server-side check already works.
+
 ## [0.12.2] — 2026-09-14
 
 ### Fixed

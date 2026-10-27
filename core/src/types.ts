@@ -24,6 +24,10 @@ export interface ProviderProfile {
    *  CLAUDE_CODE_USE_MANTLE=1. Requires Mantle-format model IDs
    *  (e.g. `anthropic.claude-sonnet-5`) in the model slots. */
   useMantle?: boolean;
+  /** Request a 1-hour prompt cache TTL from Bedrock instead of the 5-minute
+   *  default. Writes ENABLE_PROMPT_CACHING_1H=1. 1-hour cache writes are
+   *  billed at a higher rate. */
+  extendedPromptCacheTtl?: boolean;
 
   // Anthropic-specific
   anthropicApiKey?: string;
@@ -45,6 +49,12 @@ export interface ProviderProfile {
    *  retro-guessed on open (pre-v0.12 stores that only ever had 'custom' to
    *  fall back to, regardless of the provider's actual URL). */
   proxyPresetConfirmed?: boolean;
+  /** Allow Claude Code's auto mode to run its safety classifier locally
+   *  instead of asking this gateway for server-side review — needed because
+   *  self-hosted/local gateways (Ollama, LM Studio, oMLX, vLLM, SGLang,
+   *  LiteLLM, custom) can't provide that server-side check. Writes
+   *  CLAUDE_CODE_AUTO_MODE_SERVER=0. */
+  localAutoMode?: boolean;
   /** @deprecated use proxyCredential + proxyAuthMode */
   proxyApiKey?: string;
   /** @deprecated use proxyCredential + proxyAuthMode */

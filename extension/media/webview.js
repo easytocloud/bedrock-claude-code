@@ -828,6 +828,18 @@ console.log('[WEBVIEW] Script loaded');
       cachingToggle.classList.toggle('on', !!(provider && provider.disablePromptCaching));
     }
 
+    // Extended (1-hour) prompt cache TTL toggle — Bedrock only
+    const extendedCacheToggle = document.querySelector('[data-toggle="provider-extended-cache-ttl"]');
+    if (extendedCacheToggle) {
+      extendedCacheToggle.classList.toggle('on', !!(provider && provider.extendedPromptCacheTtl));
+    }
+
+    // Local auto-mode toggle — proxy providers only
+    const localAutoModeToggle = document.querySelector('[data-toggle="provider-local-auto-mode"]');
+    if (localAutoModeToggle) {
+      localAutoModeToggle.classList.toggle('on', !!(provider && provider.localAutoMode));
+    }
+
     // Max context tokens
     const maxContextInput = document.getElementById('provider-max-context-tokens');
     if (maxContextInput) {
@@ -1066,6 +1078,12 @@ console.log('[WEBVIEW] Script loaded');
     // for Custom specifically.
     let standaloneRow = document.getElementById('provider-standalone-row');
     if (standaloneRow) standaloneRow.style.display = 'none';
+    // Extended cache TTL only applies to Bedrock (ENABLE_PROMPT_CACHING_1H).
+    let bedrockCacheRow = document.getElementById('provider-bedrock-cache-row');
+    if (bedrockCacheRow) bedrockCacheRow.style.display = type === 'bedrock' ? '' : 'none';
+    // Local auto-mode toggle only applies to proxy providers.
+    let localAutoModeRow = document.getElementById('provider-local-auto-mode-row');
+    if (localAutoModeRow) localAutoModeRow.style.display = type === 'proxy' ? '' : 'none';
   }
 
   // Selected Global/US/EU pill for the Bedrock model list (view filter, not persisted)
@@ -1774,6 +1792,9 @@ console.log('[WEBVIEW] Script loaded');
       useMantle: type === 'bedrock'
         ? (document.querySelector('[data-pill="bedrock-mantle"].sel') || {}).dataset?.val === 'yes'
         : undefined,
+      extendedPromptCacheTtl: type === 'bedrock'
+        ? (document.querySelector('[data-toggle="provider-extended-cache-ttl"]')?.classList.contains('on') || false)
+        : undefined,
       proxyBaseUrl: (function() {
         let raw = document.getElementById('provider-proxy-url').value || '';
         // Defence in depth: re-impose catalog scheme + path on save in case the user
@@ -1794,6 +1815,9 @@ console.log('[WEBVIEW] Script loaded');
       // detects that via the op:// prefix on the value itself, so the stored
       // mode should reflect what the value actually is (apikey/authtoken/none).
       proxyAuthMode: type === 'proxy' ? (credMode === 'op' ? 'apikey' : credMode) : undefined,
+      localAutoMode: type === 'proxy'
+        ? (document.querySelector('[data-toggle="provider-local-auto-mode"]')?.classList.contains('on') || false)
+        : undefined,
       primaryModel: getModelValue('provider-model-sonnet'),
       smallFastModel: getModelValue('provider-model-haiku'),
       opusModel: getModelValue('provider-model-opus'),

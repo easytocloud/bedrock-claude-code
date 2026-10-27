@@ -79,7 +79,7 @@ The **Provider** dropdown lists Anthropic first, then every supported 3rd-party 
 - **Connection** — the Base URL (3rd-party proxies only; Bedrock uses AWS config instead)
 - **Authentication** — a card for each credential type the selected provider's server actually accepts (see below)
 - **Models** — pick, fetch, or test models for the provider
-- **Options** — max context tokens, prompt caching, and standalone mode, where applicable
+- **Options** — max context tokens, prompt caching, extended cache TTL (Bedrock), local auto-mode (3rd-party gateways), and standalone mode, where applicable
 
 ### Authentication cards
 
@@ -111,6 +111,7 @@ The **1Password reference** card only appears when the [1Password CLI](https://d
 - Pick models from the smart presets, or the picker auto-fetches your account's real models once an AWS profile is set (also available on demand via **Fetch models from AWS**) — newest versions first. A **Region scope** pill limits the list to your region's geography (US/EU/APAC/JP/AU — most restrictive selected by default), and models that share inference data with the model provider (Claude Fable/Mythos) stay hidden unless you flip **Allow provider data share** to Yes
 - **Use Mantle** — flip this pill to Yes to route requests through the [Bedrock Mantle endpoint](https://code.claude.com/docs/en/amazon-bedrock#use-the-mantle-endpoint) (native Anthropic API shape instead of the Bedrock Invoke API). Restricts the model pickers to Mantle-format IDs (e.g. `anthropic.claude-sonnet-5`), clears any non-Mantle selections, and auto-selects a model per slot so the picker is never left empty
 - **Test models** — each model slot has a **Test** pill that verifies profile and model access: `aws bedrock-runtime converse` for regular Bedrock models, or a signed request to the Mantle endpoint for Mantle-format models. Results (OK / Fail) are persisted on the provider
+- **Extended cache TTL (1 hour)** — flip this toggle in Options to request a 1-hour prompt cache TTL instead of Bedrock's 5-minute default (writes `ENABLE_PROMPT_CACHING_1H`). Cache writes at the 1-hour TTL are billed at a higher rate, so it's off by default
 - Optionally set an auth-refresh command (e.g. `aws sso login --profile my-profile`)
 - Claude Code's login/logout commands are automatically disabled when using Bedrock
 - If `$AWS_CONFIG_FILE` is set or `~/.aws/config` is a symlink, the resolved config path is shown as **AWS Config** (read-only). If you use [easytocloud aws-envs](https://github.com/easytocloud/aws-envs), an **AWS Env** dropdown appears instead — each provider stores its own env selection in `coder-profiles.json`, so different providers can point to different AWS environments independently
@@ -124,6 +125,7 @@ For when you want everything on-device. Pick the matching entry from the Provide
 - Ollama has no Authentication section at all. LM Studio, vLLM, and SGLang default to **None** with an optional **Bearer Token** card. oMLX additionally offers **API Key**
 - Click **Fetch available models** to discover models from `/v1/models`. **Test models** verifies the slot speaks Anthropic's `/v1/messages` API
 - Standalone mode is forced on — local models never need an Anthropic login
+- **Allow local auto-mode** — flip this toggle in Options if you use Claude Code's auto mode against one of these servers; it writes `CLAUDE_CODE_AUTO_MODE_SERVER=0` so Claude Code falls back to its own safety classifier instead of expecting the gateway to provide server-side review
 
 ### Proxies and gateways — OpenRouter, LiteLLM
 
@@ -133,6 +135,7 @@ For accessing many model families through a single API.
 - OpenRouter's Authentication card is **Bearer Token** (required) — paste the key from [openrouter.ai/keys](https://openrouter.ai/keys). LiteLLM defaults to **None** with an optional **Bearer Token** card for its master key
 - The URL is locked to the correct scheme + path so common mistakes (missing `/api`, stray `/v1`) can't break the setup
 - Standalone mode is forced on — these gateways never need an Anthropic login
+- **Allow local auto-mode** — same toggle as above, for gateways that can't provide auto mode's server-side safety review
 
 ### Other / Custom
 
@@ -140,6 +143,7 @@ For accessing many model families through a single API.
 - The Base URL is fully free-form. Typing a URL that matches a known provider's host/port (e.g. `openrouter.ai`) automatically switches the dropdown to that provider
 - All four Authentication cards are offered — **None**, **API Key** (`x-api-key`), **Bearer Token** (`Authorization: Bearer`), and **1Password**
 - **Standalone mode** is shown as an explicit toggle and on by default — disable it only if your proxy forwards requests to Anthropic directly and you need the Anthropic login flow
+- **Allow local auto-mode** is available in Options for the same reason as the local-model and gateway providers above
 
 ### "Asked to log in" even with a 3rd-party preset?
 
