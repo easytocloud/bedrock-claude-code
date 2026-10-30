@@ -1357,9 +1357,20 @@ console.log('[WEBVIEW] Script loaded');
     });
   }
 
+  // The pill of an empty ("choose at runtime") slot checks the fetched list and
+  // the toggle, so it must be re-armed whenever either changes.
+  function resetEmptySlotPills() {
+    [['sonnet', 'provider-model-sonnet'], ['haiku', 'provider-model-haiku'], ['opus', 'provider-model-opus']].forEach(function(pair) {
+      if (getModelValue(pair[1])) return;
+      const b = document.querySelector('.btn-test[data-slot="' + pair[0] + '"]');
+      if (b) { b.className = 'btn-test'; b.textContent = 'Test'; b.title = ''; }
+    });
+  }
+
   function applyFetchedProxyModels(ids) {
     fetched.proxyModels = ids;
     updateRuntimeModelsBox();
+    resetEmptySlotPills();
     const statusEl = document.getElementById('proxy-fetch-status');
     if (!statusEl) return;
 
@@ -2907,10 +2918,30 @@ console.log('[WEBVIEW] Script loaded');
     let selectId = btn.dataset.testModel;
     let slot = btn.dataset.slot;
     let modelId = getModelValue(selectId);
-    if (!modelId) { showToast('Select a model first', true); return; }
 
     let providerSel = document.getElementById('provider-select');
     let providerType = effectiveProviderType(providerSel ? providerSel.value : '');
+
+    // "Choose at runtime" slot: we can't test a model the user hasn't picked yet,
+    // but Claude Code can only offer one if the server lists at least one
+    // anthropic/-named model — so that is what the pill checks.
+    if (!modelId && providerType === 'proxy' && runtimeModelsOn()) {
+      const found = discoverableModelIds();
+      if (found.length > 0) {
+        btn.className = 'btn-test ok';
+        btn.textContent = 'OK';
+        btn.title = found.length + ' model' + (found.length === 1 ? '' : 's') + ' selectable at runtime: ' + found.join(', ');
+      } else {
+        btn.className = 'btn-test fail';
+        btn.textContent = 'Fail';
+        btn.title = (fetched.proxyModels || []).length > 0
+          ? 'None of the ' + fetched.proxyModels.length + ' models the server lists start with "anthropic/", so /model will have nothing to offer. Load a model with an anthropic/<name> identifier.'
+          : 'Click "Fetch available models" first, then test again.';
+        showToast(btn.title, true);
+      }
+      return;
+    }
+    if (!modelId) { showToast('Select a model first', true); return; }
 
     if (providerType === 'bedrock') {
       let awsProfile = getModelValue('provider-aws-profile');
@@ -2985,7 +3016,7 @@ console.log('[WEBVIEW] Script loaded');
     let toggle = e.target.closest('.toggle-track');
     if (!toggle) { return; }
     toggle.classList.toggle('on');
-    if (toggle.dataset.toggle === 'provider-runtime-models') { updateRuntimeModelsBox(); refreshProxySlots(); }
+    if (toggle.dataset.toggle === 'provider-runtime-models') { updateRuntimeModelsBox(); refreshProxySlots(); resetEmptySlotPills(); }
   });
 
   // Help-banner concept links — jump to the matching section
