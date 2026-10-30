@@ -104,12 +104,22 @@ export function isMantleModelId(modelId: string): boolean {
   return true;
 }
 
+/** Claude Code's gateway model discovery (GET /v1/models at startup) only
+ *  keeps models whose ID starts with `anthropic/`; everything else the
+ *  gateway lists is dropped. Verified against Claude Code 2.1.314. */
+export const GATEWAY_DISCOVERY_PREFIX = 'anthropic/';
+
+export function isGatewayDiscoverableId(id: string): boolean {
+  return id.startsWith(GATEWAY_DISCOVERY_PREFIX);
+}
+
 /** Environment variable keys managed by this extension. */
 export const MANAGED_ENV_KEYS = new Set([
   'CLAUDE_CODE_USE_BEDROCK',
   'CLAUDE_CODE_USE_MANTLE',
   'ENABLE_PROMPT_CACHING_1H',
   'CLAUDE_CODE_AUTO_MODE_SERVER',
+  'CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY',
   'AWS_PROFILE',
   'AWS_REGION',
   'AWS_CONFIG_FILE',

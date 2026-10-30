@@ -157,6 +157,9 @@ export function resolvePreset(
         // so this makes Claude Code fall back to its own classifier requests
         // instead of surfacing a "gateway can't review" notice.
         env['CLAUDE_CODE_AUTO_MODE_SERVER'] = provider.localAutoMode ? '0' : '';
+        // Runtime model list: Claude Code asks the gateway for its models at
+        // session start and shows them in /model.
+        env['CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY'] = provider.runtimeModelDiscovery ? '1' : '';
         break;
       }
     }

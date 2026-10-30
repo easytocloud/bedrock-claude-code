@@ -55,6 +55,12 @@ export interface ProviderProfile {
    *  LiteLLM, custom) can't provide that server-side check. Writes
    *  CLAUDE_CODE_AUTO_MODE_SERVER=0. */
   localAutoMode?: boolean;
+  /** Let Claude Code list the models the gateway serves in /model at session
+   *  start instead of pinning them here. Writes
+   *  CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1. Claude Code only lists
+   *  gateway models whose ID starts with `anthropic/` (see
+   *  isGatewayDiscoverableId); the model slots become optional. */
+  runtimeModelDiscovery?: boolean;
   /** @deprecated use proxyCredential + proxyAuthMode */
   proxyApiKey?: string;
   /** @deprecated use proxyCredential + proxyAuthMode */

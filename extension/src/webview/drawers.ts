@@ -301,6 +301,15 @@ export function renderProviderDrawer(): string {
         <button type="button" class="btn btn-primary" data-action="fetch-proxy-models">Fetch available models</button>
         <div id="proxy-fetch-status" class="form-hint form-hint-mt"></div>
       </div>
+      <div id="runtime-models-box" class="info-box" style="display:none">
+        <div class="toggle-row" id="runtime-models-toggle-row">
+          <span class="toggle-label">Choose models at runtime</span>
+          <div class="toggle-track" data-toggle="provider-runtime-models">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+        <div id="runtime-models-text"></div>
+      </div>
 
       <div class="form-group">
         <div class="label-row">

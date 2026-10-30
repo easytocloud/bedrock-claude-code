@@ -126,6 +126,7 @@ For when you want everything on-device. Pick the matching entry from the Provide
 - Click **Fetch available models** to discover models from `/v1/models`. **Test models** verifies the slot speaks Anthropic's `/v1/messages` API
 - Standalone mode is forced on — local models never need an Anthropic login
 - **Allow local auto-mode** — flip this toggle in Options if you use Claude Code's auto mode against one of these servers; it writes `CLAUDE_CODE_AUTO_MODE_SERVER=0` so Claude Code falls back to its own safety classifier instead of expecting the gateway to provide server-side review
+- **Choose models at runtime** — instead of pinning Sonnet/Haiku/Opus, let Claude Code list the server's models in `/model`. Claude Code only shows gateway models whose ID starts with `anthropic/`, so give your models such an identifier when you load them (LM Studio: `lms load <model> --identifier anthropic/<name>`). After **Fetch available models** the card lists which models qualify; if none do, it explains the naming rule and at least one model must be pinned. Choose **Choose at runtime (/model)** in a slot to leave that alias unpinned. Claude's own rows (Fable, unpinned aliases) still appear in `/model`
 
 ### Proxies and gateways — OpenRouter, LiteLLM
 

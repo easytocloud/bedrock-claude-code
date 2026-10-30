@@ -840,6 +840,14 @@ console.log('[WEBVIEW] Script loaded');
       localAutoModeToggle.classList.toggle('on', !!(provider && provider.localAutoMode));
     }
 
+    // Runtime model discovery toggle — proxy providers only
+    const runtimeModelsToggle = document.querySelector('[data-toggle="provider-runtime-models"]');
+    if (runtimeModelsToggle) {
+      runtimeModelsToggle.classList.toggle('on', !!(provider && provider.runtimeModelDiscovery));
+    }
+    updateRuntimeModelsBox();
+    refreshProxySlots();
+
     // Max context tokens
     const maxContextInput = document.getElementById('provider-max-context-tokens');
     if (maxContextInput) {
@@ -1084,6 +1092,7 @@ console.log('[WEBVIEW] Script loaded');
     // Local auto-mode toggle only applies to proxy providers.
     let localAutoModeRow = document.getElementById('provider-local-auto-mode-row');
     if (localAutoModeRow) localAutoModeRow.style.display = type === 'proxy' ? '' : 'none';
+    updateRuntimeModelsBox();
   }
 
   // Selected Global/US/EU pill for the Bedrock model list (view filter, not persisted)
@@ -1231,8 +1240,11 @@ console.log('[WEBVIEW] Script loaded');
       populateModelSelect('provider-model-haiku', [], provider?.smallFastModel || ANTHROPIC_DEFAULTS.haiku, false);
       populateModelSelect('provider-model-opus', [], provider?.opusModel || ANTHROPIC_DEFAULTS.opus, false);
     } else if (type === 'proxy') {
-      if (fetched.proxyModels.length > 1) {
-        const modelList = sortModelsByVersion(fetched.proxyModels.map(id => ({ id, label: id })));
+      const runtime = runtimeModelsOn();
+      if (fetched.proxyModels.length > 1 || (runtime && fetched.proxyModels.length > 0)) {
+        let modelList = sortModelsByVersion(fetched.proxyModels.map(id => ({ id, label: id })));
+        // Runtime mode: leave the alias unpinned; Claude Code's /model decides.
+        if (runtime) { modelList = [{ id: '', label: RUNTIME_MODEL_LABEL }].concat(modelList); }
         populateModelSelect('provider-model-sonnet', modelList, provider?.primaryModel || '', true);
         populateModelSelect('provider-model-haiku', modelList, provider?.smallFastModel || '', true);
         populateModelSelect('provider-model-opus', modelList, provider?.opusModel || '', true);
@@ -1240,6 +1252,12 @@ console.log('[WEBVIEW] Script loaded');
         populateModelSelect('provider-model-sonnet', [], provider?.primaryModel || '', false);
         populateModelSelect('provider-model-haiku', [], provider?.smallFastModel || '', false);
         populateModelSelect('provider-model-opus', [], provider?.opusModel || '', false);
+        if (runtime) {
+          ['provider-model-sonnet', 'provider-model-haiku', 'provider-model-opus'].forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el) el.placeholder = 'Optional — empty = choose at runtime';
+          });
+        }
       }
     }
   }
@@ -1255,12 +1273,96 @@ console.log('[WEBVIEW] Script loaded');
     vscode.postMessage({ type: 'fetchLocalModels', baseUrl: url, apiKey: key });
   }
 
+  const RUNTIME_MODEL_LABEL = 'Choose at runtime (/model)';
+
+  // Rebuild the proxy slot dropdowns from the values currently in the form,
+  // so toggling runtime mode adds/removes the "choose at runtime" entry
+  // without discarding unsaved selections.
+  function refreshProxySlots() {
+    const providerSel = document.getElementById('provider-select');
+    if (effectiveProviderType(providerSel ? providerSel.value : '') !== 'proxy') return;
+    rebuildModelSelects('proxy', {
+      primaryModel: getModelValue('provider-model-sonnet'),
+      smallFastModel: getModelValue('provider-model-haiku'),
+      opusModel: getModelValue('provider-model-opus'),
+    });
+  }
+
+  // Claude Code's gateway model discovery only keeps IDs starting with
+  // "anthropic/" (mirrors isGatewayDiscoverableId in core/models.ts).
+  function discoverableModelIds() {
+    return (fetched.proxyModels || []).filter(function(id) { return id.indexOf('anthropic/') === 0; });
+  }
+
+  function runtimeModelsOn() {
+    const t = document.querySelector('[data-toggle="provider-runtime-models"]');
+    return !!(t && t.classList.contains('on'));
+  }
+
+  // Explains the runtime-vs-pinned choice and what it takes to get there.
+  // Three states: not fetched yet, fetched with usable models, fetched without.
+  function updateRuntimeModelsBox() {
+    const box = document.getElementById('runtime-models-box');
+    if (!box) return;
+    const providerSel = document.getElementById('provider-select');
+    const type = effectiveProviderType(providerSel ? providerSel.value : '');
+    box.style.display = type === 'proxy' ? '' : 'none';
+    if (type !== 'proxy') return;
+
+    const toggleRow = document.getElementById('runtime-models-toggle-row');
+    const textEl = document.getElementById('runtime-models-text');
+    const track = document.querySelector('[data-toggle="provider-runtime-models"]');
+    const found = discoverableModelIds();
+    const fetchedAny = (fetched.proxyModels || []).length > 0;
+    const saved = !!(track && track.classList.contains('on'));
+
+    const how = 'Claude Code only lists gateway models whose ID starts with <code>anthropic/</code> '
+      + '(for example <code>anthropic/qwen3.5-9b</code>). In LM Studio, set that as the model identifier: '
+      + '<code>lms load &lt;model&gt; --identifier anthropic/&lt;name&gt;</code>.';
+    let html;
+    let canToggle = true;
+    if (found.length > 0) {
+      html = '<strong>' + found.length + ' model' + (found.length === 1 ? '' : 's') + ' can be chosen at runtime:</strong> '
+        + found.map(function(id) { return '<code>' + escHtml(id) + '</code>'; }).join(', ')
+        + '<br>Turn this on to pick the model with <code>/model</code> in Claude Code instead of fixing it here. '
+        + 'Writes CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1. The slots below become optional pins '
+        + '(used for the Sonnet/Haiku/Opus aliases and background tasks).'
+        + '<br>Claude\'s own models (Fable, and any alias left on <em>Choose at runtime</em>) still appear in <code>/model</code>; '
+        + 'Claude Code has no switch to hide them. Pinned slots show as “Custom … model”, and <em>Default</em> follows the Opus pin.';
+    } else if (fetchedAny) {
+      canToggle = saved; // let a previously-on toggle be switched off
+      html = '<strong>Runtime selection is not available</strong> — none of the ' + fetched.proxyModels.length
+        + ' fetched models start with <code>anthropic/</code>.<br>' + how
+        + '<br>Until then, choose at least one model below.';
+    } else {
+      canToggle = saved;
+      html = '<strong>Choose models at runtime</strong> lets you pick the model with <code>/model</code> in Claude Code '
+        + 'instead of fixing it here. Click <em>Fetch available models</em> to check whether this server qualifies.<br>' + how;
+    }
+    if (textEl) textEl.innerHTML = html;
+    if (toggleRow) toggleRow.style.display = canToggle ? '' : 'none';
+    if (!canToggle && track) track.classList.remove('on');
+    markSlotsRequired();
+  }
+
+  // The three slots are optional only in runtime mode; otherwise at least one is needed.
+  function markSlotsRequired() {
+    const optional = runtimeModelsOn();
+    ['provider-model-sonnet', 'provider-model-haiku', 'provider-model-opus'].forEach(function(id) {
+      const lbl = document.querySelector('label[for="' + id + '"]');
+      if (!lbl) return;
+      lbl.dataset.base = lbl.dataset.base || lbl.textContent;
+      lbl.textContent = lbl.dataset.base + (optional ? ' (optional)' : '');
+    });
+  }
+
   function applyFetchedProxyModels(ids) {
     fetched.proxyModels = ids;
+    updateRuntimeModelsBox();
     const statusEl = document.getElementById('proxy-fetch-status');
     if (!statusEl) return;
 
-    if (ids.length === 1) {
+    if (ids.length === 1 && !runtimeModelsOn()) {
       statusEl.textContent = 'Found 1 model: ' + ids[0];
       ['provider-model-sonnet', 'provider-model-haiku', 'provider-model-opus'].forEach(elId => {
         const el = document.getElementById(elId);
@@ -1368,6 +1470,13 @@ console.log('[WEBVIEW] Script loaded');
         rest = filtered;
       }
 
+      // The "choose at runtime" entry (empty value) always leads the list.
+      const runtimeItems = top.concat(rest).filter(function(i) { return i.value === ''; });
+      if (runtimeItems.length > 0) {
+        top = top.filter(function(i) { return i.value !== ''; });
+        rest = rest.filter(function(i) { return i.value !== ''; });
+      }
+
       let count = 0;
       function appendOption(item) {
         if (count >= 50) { return false; }
@@ -1392,6 +1501,12 @@ console.log('[WEBVIEW] Script loaded');
         return true;
       }
 
+      for (let u = 0; u < runtimeItems.length; u++) { appendOption(runtimeItems[u]); }
+      if (runtimeItems.length > 0 && (top.length > 0 || rest.length > 0)) {
+        let rsep = document.createElement('hr');
+        rsep.className = 'combobox-separator';
+        list.appendChild(rsep);
+      }
       for (let t = 0; t < top.length; t++) { if (!appendOption(top[t])) break; }
       if (top.length > 0 && rest.length > 0) {
         let sep = document.createElement('hr');
@@ -1426,7 +1541,7 @@ console.log('[WEBVIEW] Script loaded');
     });
     list.addEventListener('click', function(e) {
       let opt = e.target.closest('.combobox-option');
-      if (!opt || !opt.dataset.value) return;
+      if (!opt || opt.dataset.value === undefined) return;
       input.dataset.selectedValue = opt.dataset.value;
       let match = items.find(function(i) { return i.value === opt.dataset.value; });
       input.value = match ? match.label : opt.dataset.value;
@@ -1456,7 +1571,7 @@ console.log('[WEBVIEW] Script loaded');
         if (arr[next]) { arr[next].classList.add('active'); arr[next].scrollIntoView({ block: 'nearest' }); }
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        if (active && active.dataset.value) {
+        if (active && active.dataset.value !== undefined) {
           input.dataset.selectedValue = active.dataset.value;
           let match = items.find(function(i) { return i.value === active.dataset.value; });
           input.value = match ? match.label : active.dataset.value;
@@ -1468,7 +1583,7 @@ console.log('[WEBVIEW] Script loaded');
       } else if (e.key === 'Tab') {
         // Close dropdown and commit active selection on Tab (natural focus flow)
         if (wrapper.classList.contains('open')) {
-          if (active && active.dataset.value) {
+          if (active && active.dataset.value !== undefined) {
             input.dataset.selectedValue = active.dataset.value;
             let tabMatch = items.find(function(i) { return i.value === active.dataset.value; });
             input.value = tabMatch ? tabMatch.label : active.dataset.value;
@@ -1746,6 +1861,14 @@ console.log('[WEBVIEW] Script loaded');
       return;
     }
     const proxyPresetId = selectVal !== 'anthropic' ? selectVal : '';
+    // Proxy providers must pin at least one model unless Claude Code will list
+    // the gateway's models itself (runtime mode).
+    if (effectiveProviderType(selectVal) === 'proxy' && !runtimeModelsOn()
+        && !getModelValue('provider-model-sonnet') && !getModelValue('provider-model-haiku')
+        && !getModelValue('provider-model-opus')) {
+      showToast('Select at least one model, or enable "Choose models at runtime"', true);
+      return;
+    }
     // Resolve internal type from the unified provider-select value.
     const type = effectiveProviderType(selectVal);
     const knownForSave = knownProviderById(proxyPresetId);
@@ -1818,6 +1941,7 @@ console.log('[WEBVIEW] Script loaded');
       localAutoMode: type === 'proxy'
         ? (document.querySelector('[data-toggle="provider-local-auto-mode"]')?.classList.contains('on') || false)
         : undefined,
+      runtimeModelDiscovery: type === 'proxy' ? (runtimeModelsOn() || undefined) : undefined,
       primaryModel: getModelValue('provider-model-sonnet'),
       smallFastModel: getModelValue('provider-model-haiku'),
       opusModel: getModelValue('provider-model-opus'),
@@ -2860,6 +2984,7 @@ console.log('[WEBVIEW] Script loaded');
     let toggle = e.target.closest('.toggle-track');
     if (!toggle) { return; }
     toggle.classList.toggle('on');
+    if (toggle.dataset.toggle === 'provider-runtime-models') { updateRuntimeModelsBox(); refreshProxySlots(); }
   });
 
   // Help-banner concept links — jump to the matching section
