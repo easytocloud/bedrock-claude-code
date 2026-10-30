@@ -1307,7 +1307,7 @@ console.log('[WEBVIEW] Script loaded');
     const providerSel = document.getElementById('provider-select');
     const type = effectiveProviderType(providerSel ? providerSel.value : '');
     box.style.display = type === 'proxy' ? '' : 'none';
-    if (type !== 'proxy') return;
+    if (type !== 'proxy') { markSlotsRequired(); return; }
 
     const toggleRow = document.getElementById('runtime-models-toggle-row');
     const textEl = document.getElementById('runtime-models-text');
@@ -1347,7 +1347,8 @@ console.log('[WEBVIEW] Script loaded');
 
   // The three slots are optional only in runtime mode; otherwise at least one is needed.
   function markSlotsRequired() {
-    const optional = runtimeModelsOn();
+    const providerSel = document.getElementById('provider-select');
+    const optional = runtimeModelsOn() && effectiveProviderType(providerSel ? providerSel.value : '') === 'proxy';
     ['provider-model-sonnet', 'provider-model-haiku', 'provider-model-opus'].forEach(function(id) {
       const lbl = document.querySelector('label[for="' + id + '"]');
       if (!lbl) return;
