@@ -87,6 +87,24 @@ export function createEmptyStore(): ProfileStore {
   });
 }
 
+/**
+ * Remove the deprecated `proxyApiKey` / `proxyAuthToken` fields from proxy
+ * providers that no longer need them. They were superseded by
+ * `proxyCredential` + `proxyAuthMode`, but the provider drawer merged saves
+ * into the existing record, so an old value survived (even after the user
+ * chose "No authentication") and kept being shown and used as a fallback.
+ * Legacy-only records (no `proxyCredential`, mode not `none`) are untouched.
+ */
+export function dropStaleLegacyCredentials(store: ProfileStore): void {
+  for (const p of store.providers ?? []) {
+    if (p.type !== 'proxy') { continue; }
+    if (p.proxyAuthMode === 'none' || p.proxyCredential !== undefined) {
+      delete p.proxyApiKey;    // eslint-disable-line deprecation/deprecation
+      delete p.proxyAuthToken; // eslint-disable-line deprecation/deprecation
+    }
+  }
+}
+
 /** Reads and parses ~/.claude/coder-profiles.json. Returns empty store if missing or unreadable. */
 export function readProfileStore(): ProfileStore {
   const filePath = getProfileStorePath();
@@ -109,6 +127,7 @@ export function readProfileStore(): ProfileStore {
       if (!store.workspaceScopes) {
         store.workspaceScopes = {};
       }
+      dropStaleLegacyCredentials(store);
       if (store.version === 1) {
         return ensureDefaults(store);
       }
