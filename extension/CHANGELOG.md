@@ -4,6 +4,21 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-10-30
+
+Version jumps 0.13.0 → 0.14.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle.
+
+### Added
+- **Proxy providers: "Choose models at runtime"** — for servers whose `/v1/models` lists `anthropic/`-prefixed model IDs (for example LM Studio models loaded with `lms load <model> --identifier anthropic/<name>`), Claude Code can list those models in `/model` at session start instead of you pinning them in the provider. Writes `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`. Claude Code only keeps gateway models whose ID starts with `anthropic/`; the new card in the provider drawer lists which fetched models qualify, and explains the naming rule when none do.
+- **"Choose at runtime (/model)" entry in the Sonnet/Haiku/Opus dropdowns** — selecting it leaves that alias unpinned (no `ANTHROPIC_DEFAULT_*_MODEL` is written), so the model comes from `/model`.
+
+### Changed
+- Proxy providers now need at least one pinned model, or "Choose models at runtime" turned on, before they can be saved.
+
+### Notes
+- Claude's own rows (Fable, and any alias left unpinned) still appear in `/model`; Claude Code has no setting to hide them.
+- Not available for Bedrock or Anthropic providers.
+
 ## [0.13.0] — 2026-10-27
 
 Version jumps 0.12.2 → 0.13.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.

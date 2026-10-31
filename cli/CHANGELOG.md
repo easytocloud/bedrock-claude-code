@@ -4,6 +4,13 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-10-30
+
+Version jumps 0.13.0 → 0.14.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle.
+
+### Added
+- `ccp apply` / `ccp sync` now write `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1` for proxy providers that have runtime model discovery enabled (`runtimeModelDiscovery` in the provider profile), so Claude Code lists the gateway's `anthropic/`-prefixed models in `/model`. The setting is created in the VS Code extension; the CLI has no command to toggle it yet.
+
 ## [0.13.0] — 2026-10-27
 
 Version jumps 0.12.0 → 0.13.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle, and policy keeps core-affecting releases on the same minor across extension + CLI.
