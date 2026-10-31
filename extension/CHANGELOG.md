@@ -6,6 +6,7 @@ All notable changes to this extension will be documented here.
 
 ### Fixed
 - **Stale credentials resurfacing on proxy providers** — a provider saved with "No authentication" could still show (and use) an old credential, e.g. an LM Studio provider that kept showing a 1Password OpenRouter reference on Edit. The deprecated `proxyApiKey`/`proxyAuthToken` fields survived saves and were still read as a fallback, so the resolver could even write `apiKeyHelper: op read '<other provider's reference>'` for a server configured without authentication. "No authentication" now wins over any stored credential, saving clears the deprecated fields, and existing stores are cleaned up on load. Re-apply your presets (Save All / `ccp sync`) to rewrite the affected `settings.json` files.
+- **"Fetch available models" with a 1Password credential** — when the Authentication card holds an `op://` reference, the extension now resolves it with `op read` before calling `/v1/models`, instead of sending the reference text as the Bearer token (which authenticated servers rejected). `op` failures (not installed, not signed in, bad reference) are reported in the fetch status. The same resolver now backs the model Test pill, and runs `op` without a shell.
 
 ## [0.14.0] — 2026-10-30
 

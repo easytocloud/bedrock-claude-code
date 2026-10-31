@@ -21,6 +21,23 @@ import { readUserMcpServers, ensureOnboardingComplete } from '@easytocloud/claud
 import { readProjectMcpServers } from '@easytocloud/claude-personae-core';
 import { MANAGED_ENV_KEYS } from '@easytocloud/claude-personae-core';
 
+/**
+ * Resolve a 1Password `op://` secret reference to its value via the `op` CLI —
+ * the same lookup Claude Code's apiKeyHelper performs at runtime. Plain values
+ * pass through unchanged. Uses execFile (no shell) so a reference containing
+ * quotes or metacharacters can't inject commands.
+ */
+function resolveOpReference(val: string): string {
+  if (!val || !val.startsWith('op://')) { return val; }
+  const { execFileSync } = require('child_process') as typeof import('child_process');
+  try {
+    return execFileSync('op', ['read', val], { encoding: 'utf8', timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  } catch (err) {
+    const stderr = (err as { stderr?: Buffer | string }).stderr?.toString().trim();
+    throw new Error('Could not read 1Password reference' + (stderr ? ': ' + stderr.split('\n').pop() : ' (is the op CLI installed and signed in?)'));
+  }
+}
+
 function migrateExistingSettings(workspaceRoot: string | undefined): ProfileStore {
   const store = createEmptyStore();
   const settings = readClaudeSettings();
@@ -502,7 +519,9 @@ export class ClaudeCodeSettingsPanel {
       const base = baseUrl.replace(/\/v1\/?$/, '').replace(/\/$/, '');
       const url = base + '/v1/models';
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (apiKey) { headers['Authorization'] = `Bearer ${apiKey}`; }
+      // The credential may be a 1Password reference; the server needs the real value.
+      const resolvedKey = resolveOpReference(apiKey);
+      if (resolvedKey) { headers['Authorization'] = `Bearer ${resolvedKey}`; }
       const res = await (globalThis as any).fetch(url, { headers });
       if (!res.ok) { throw new Error(`HTTP ${res.status}: ${res.statusText}`); }
       const json = await res.json() as { data?: { id: string }[]; models?: { name?: string; id?: string }[] };
@@ -525,13 +544,8 @@ export class ClaudeCodeSettingsPanel {
       if (!modelId) { throw new Error('No model selected'); }
 
       // Resolve op:// references via `op read` — same as Claude Code's apiKeyHelper would
-      const resolveOp = (val: string): string => {
-        if (!val.startsWith('op://')) { return val; }
-        const { execSync } = require('child_process') as typeof import('child_process');
-        return execSync(`op read '${val}'`, { encoding: 'utf8' }).trim();
-      };
-      const resolvedKey = resolveOp(apiKey);
-      const resolvedToken = resolveOp(authToken);
+      const resolvedKey = resolveOpReference(apiKey);
+      const resolvedToken = resolveOpReference(authToken);
 
       const base = baseUrl.replace(/\/v1\/?$/, '').replace(/\/$/, '');
       const url = base + '/v1/messages';
