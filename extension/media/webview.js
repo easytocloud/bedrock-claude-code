@@ -759,7 +759,8 @@ console.log('[WEBVIEW] Script loaded');
     // active for this provider (op:// prefix wins regardless of stored mode).
     const rawCred = typeVal === 'anthropic'
       ? (provider ? provider.anthropicApiKey || '' : '')
-      : (provider ? (provider.proxyCredential ?? provider.proxyAuthToken ?? provider.proxyApiKey ?? '') : '');
+      : (provider && provider.proxyAuthMode !== 'none'
+          ? (provider.proxyCredential ?? provider.proxyAuthToken ?? provider.proxyApiKey ?? '') : '');
     let currentMode = 'none';
     if (rawCred.startsWith('op://')) {
       currentMode = 'op';
@@ -1946,6 +1947,10 @@ console.log('[WEBVIEW] Script loaded');
       // 'custom' selection stops being re-guessed against the URL on reopen.
       proxyPresetConfirmed: type === 'proxy' ? true : undefined,
       proxyCredential: type === 'proxy' ? (credValue || undefined) : undefined,
+      // Saves are merged into the existing record (Object.assign), so the
+      // deprecated fields must be cleared explicitly or an old value survives.
+      proxyApiKey: undefined,
+      proxyAuthToken: undefined,
       // credMode is 'op' when the 1Password card is selected — the resolver
       // detects that via the op:// prefix on the value itself, so the stored
       // mode should reflect what the value actually is (apikey/authtoken/none).

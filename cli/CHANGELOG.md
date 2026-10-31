@@ -4,6 +4,9 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+### Fixed
+- `ccp apply` / `ccp sync` no longer write a credential (`apiKeyHelper` or `ANTHROPIC_AUTH_TOKEN`/`ANTHROPIC_API_KEY`) for a proxy provider whose authentication is set to "none", even if a deprecated `proxyApiKey`/`proxyAuthToken` value is still stored. Run `ccp sync` after upgrading to rewrite affected `settings.json` files.
+
 ## [0.14.0] — 2026-10-30
 
 Version jumps 0.13.0 → 0.14.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle.

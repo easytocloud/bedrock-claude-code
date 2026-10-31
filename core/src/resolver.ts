@@ -119,9 +119,14 @@ export function resolvePreset(
 
         // Resolve credential: new single-field model (proxyCredential + proxyAuthMode),
         // with fallback migration for stored data that uses the old separate fields.
-        const cred = provider.proxyCredential
-          ?? provider.proxyAuthToken   // eslint-disable-line deprecation/deprecation
-          ?? provider.proxyApiKey;     // eslint-disable-line deprecation/deprecation
+        // An explicit "No authentication" choice wins over everything stored: a
+        // leftover legacy field must never be sent to (or run for) a server the
+        // user said needs no credential.
+        const cred = provider.proxyAuthMode === 'none'
+          ? undefined
+          : provider.proxyCredential
+            ?? provider.proxyAuthToken   // eslint-disable-line deprecation/deprecation
+            ?? provider.proxyApiKey;     // eslint-disable-line deprecation/deprecation
         // Mode source of truth: when a known preset only ever validates one
         // credential mode (e.g. OpenRouter → authtoken only), the catalogue
         // decides regardless of what's stored. Presets offering multiple
