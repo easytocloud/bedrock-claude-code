@@ -4,8 +4,12 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.14.1] — 2026-10-31
+
+Bug-fix release, shipped in lock-step with the CLI (the credential fix changes the shared core engine). No new features.
+
 ### Fixed
-- **Stale credentials resurfacing on proxy providers** — a provider saved with "No authentication" could still show (and use) an old credential, e.g. an LM Studio provider that kept showing a 1Password OpenRouter reference on Edit. The deprecated `proxyApiKey`/`proxyAuthToken` fields survived saves and were still read as a fallback, so the resolver could even write `apiKeyHelper: op read '<other provider's reference>'` for a server configured without authentication. "No authentication" now wins over any stored credential, saving clears the deprecated fields, and existing stores are cleaned up on load. Re-apply your presets (Save All / `ccp sync`) to rewrite the affected `settings.json` files.
+- **Stale credentials resurfacing on proxy providers** — a provider saved with "No authentication" could still show (and use) an old credential, e.g. an LM Studio provider that kept showing a 1Password OpenRouter reference on Edit. The deprecated `proxyApiKey`/`proxyAuthToken` fields survived saves and were still read as a fallback, so the resolver could even write `apiKeyHelper: op read '<other provider's reference>'` for a server configured without authentication. "No authentication" now wins over any stored credential, saving clears the deprecated fields, and existing stores are cleaned up on load. Re-apply your presets (Save All / `ccp sync`) to rewrite the affected `settings.json` files. If a proxy provider with no authentication ever carried another provider's 1Password reference, that reference may have been used for it — rotate that credential if it matters.
 - **"Fetch available models" with a 1Password credential** — when the Authentication card holds an `op://` reference, the extension now resolves it with `op read` before calling `/v1/models`, instead of sending the reference text as the Bearer token (which authenticated servers rejected). `op` failures (not installed, not signed in, bad reference) are reported in the fetch status. The same resolver now backs the model Test pill, and runs `op` without a shell.
 
 ## [0.14.0] — 2026-10-30
@@ -14,7 +18,7 @@ Version jumps 0.13.0 → 0.14.0 to stay in lock-step with the CLI: this release 
 
 ### Added
 - **Proxy providers: "Choose models at runtime"** — for servers whose `/v1/models` lists `anthropic/`-prefixed model IDs (for example LM Studio models loaded with `lms load <model> --identifier anthropic/<name>`), Claude Code can list those models in `/model` at session start instead of you pinning them in the provider. Writes `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`. Claude Code only keeps gateway models whose ID starts with `anthropic/`; the new card in the provider drawer lists which fetched models qualify, and explains the naming rule when none do.
-- **"Choose at runtime (/model)" entry in the Sonnet/Haiku/Opus dropdowns** — selecting it leaves that alias unpinned (no `ANTHROPIC_DEFAULT_*_MODEL` is written), so the model comes from `/model`.
+- **"Choose at runtime (/model)" entry in the Sonnet/Haiku/Opus dropdowns** — selecting it leaves that alias unpinned (no `ANTHROPIC_DEFAULT_*_MODEL` is written), so the model comes from `/model`. Its Test pill checks that the last fetch found at least one `anthropic/`-named model.
 
 ### Changed
 - Proxy providers now need at least one pinned model, or "Choose models at runtime" turned on, before they can be saved.
