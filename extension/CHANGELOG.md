@@ -4,6 +4,9 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **"Fetch available models" with a 1Password credential** — when the Authentication card holds an `op://` reference, the extension now resolves it with `op read` before calling `/v1/models`, instead of sending the reference text as the Bearer token (which authenticated servers rejected). `op` failures (not installed, not signed in, bad reference) are reported in the fetch status. The same resolver now backs the model Test pill, and runs `op` without a shell.
+
 ## [0.14.0] — 2026-10-30
 
 Version jumps 0.13.0 → 0.14.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle.
