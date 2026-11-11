@@ -175,6 +175,15 @@ export function resolvePreset(
       env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = '';
       env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = '';
       env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = '';
+    } else if (provider.type === 'proxy' && provider.runtimeModelDiscovery) {
+      // Runtime selection and pinned models are mutually exclusive: with gateway
+      // discovery on, Claude Code's /model picker decides. '' (not a stale pin)
+      // is the established "unset" in this resolver — filterForGlobal drops it,
+      // filterForProject keeps it only to override an inherited global pin.
+      // Stored pins stay in the profile so switching discovery off restores them.
+      env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = '';
+      env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = '';
+      env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = '';
     } else {
       env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = provider.primaryModel || '';
       env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = provider.smallFastModel || '';

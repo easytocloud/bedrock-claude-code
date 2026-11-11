@@ -39,6 +39,17 @@ describe('runtime model discovery', () => {
     assert.equal(r?.env['ANTHROPIC_DEFAULT_SONNET_MODEL'], '');
   });
 
+  test('runtime mode wins over stored pins (mutually exclusive)', () => {
+    const r = resolvePreset(storeWith({
+      runtimeModelDiscovery: true, primaryModel: 'a', smallFastModel: 'b', opusModel: 'c',
+    }), 'x');
+    assert.equal(r?.env['ANTHROPIC_DEFAULT_SONNET_MODEL'], '');
+    assert.equal(r?.env['ANTHROPIC_DEFAULT_HAIKU_MODEL'], '');
+    assert.equal(r?.env['ANTHROPIC_DEFAULT_OPUS_MODEL'], '');
+    const off = resolvePreset(storeWith({ primaryModel: 'a' }), 'x');
+    assert.equal(off?.env['ANTHROPIC_DEFAULT_SONNET_MODEL'], 'a');
+  });
+
   test('key is managed so stale values are cleared on apply', () => {
     assert.ok(MANAGED_ENV_KEYS.has('CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY'));
   });

@@ -311,6 +311,7 @@ export function renderProviderDrawer(): string {
         <div id="runtime-models-text"></div>
       </div>
 
+      <div id="model-slots">
       <div class="form-group">
         <div class="label-row">
           <label class="form-label" for="provider-model-sonnet">Sonnet (primary)</label>
@@ -331,6 +332,7 @@ export function renderProviderDrawer(): string {
           <button type="button" class="btn-test" data-test-model="provider-model-opus" data-slot="opus" style="display:none">Test</button>
         </div>
         <select id="provider-model-opus"></select>
+      </div>
       </div>
     </div>
 

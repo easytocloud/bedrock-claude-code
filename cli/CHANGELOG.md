@@ -4,6 +4,13 @@ All notable changes to the `@easytocloud/claude-personae` CLI will be documented
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-11-11
+
+Version jumps 0.14.1 → 0.15.0 to stay in lock-step with the extension: this release changes the shared core engine both packages bundle.
+
+### Changed
+- `ccp apply` / `ccp sync`: for a proxy provider with runtime model discovery enabled, `ANTHROPIC_DEFAULT_SONNET/HAIKU/OPUS_MODEL` are now always written empty (runtime selection and pinned models are mutually exclusive), even if pins are still stored in the profile. Run `ccp sync` after upgrading to rewrite affected `settings.json` files.
+
 ## [0.14.1] — 2026-10-31
 
 Bug-fix release, shipped in lock-step with the extension (the credential fix changes the shared core engine). No new features.
