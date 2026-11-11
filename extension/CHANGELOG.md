@@ -4,6 +4,16 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-11-11
+
+Version jumps 0.14.1 → 0.15.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle.
+
+### Changed
+- **"Choose models at runtime" replaces pinned models** — the two are now mutually exclusive. The card is much smaller: the switch is only selectable after **Fetch available models** found `anthropic/`-named models, and the card shows how many match the name filter instead of listing them. Turning it on hides the Sonnet/Haiku/Opus selectors and their Test pills, and writes `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1` with `ANTHROPIC_DEFAULT_SONNET/HAIKU/OPUS_MODEL` empty (the resolver's usual "unset": dropped from global settings, kept in a workspace only to override an inherited global pin). Previously pinned models stay in the provider and return if you switch runtime selection off.
+
+### Removed
+- The "Choose at runtime (/model)" entry in the Sonnet/Haiku/Opus dropdowns and its special Test pill — superseded by hiding the slots.
+
 ## [0.14.1] — 2026-10-31
 
 Bug-fix release, shipped in lock-step with the CLI (the credential fix changes the shared core engine). No new features.
