@@ -4,6 +4,13 @@ All notable changes to this extension will be documented here.
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-11-11
+
+Extension-only patch (UI); the CLI stays at 0.15.0.
+
+### Fixed
+- **Provider cards for runtime model selection** — a proxy provider with "Choose models at runtime" on pins no models, but its card (Building Blocks, scope blocks) showed three `—` placeholders and the preset drawer's provider preview listed empty Haiku/Sonnet/Opus rows. They now show "Runtime model selection".
+
 ## [0.15.0] — 2026-11-11
 
 Version jumps 0.14.1 → 0.15.0 to stay in lock-step with the CLI: this release changes the shared core engine both packages bundle.
