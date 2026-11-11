@@ -102,7 +102,6 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           VSCE_PAT: op://cicd/vsce/credential
-          NPM_TOKEN: op://cicd/npm/credential
 
       - name: Report credential status
         shell: bash
@@ -110,7 +109,6 @@ jobs:
           OP_TOKEN_SET: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN != '' }}
           LOAD_OUTCOME: ${{ steps.creds.outcome }}
           VSCE_PAT: ${{ steps.creds.outputs.VSCE_PAT }}
-          NPM_TOKEN: ${{ steps.creds.outputs.NPM_TOKEN }}
         run: |
           fail=0
           if [ "$OP_TOKEN_SET" != "true" ]; then
@@ -134,7 +132,7 @@ jobs:
 
           # Indirect expansion, not eval: eval would re-interpret the secret
           # value as shell code.
-          for name in VSCE_PAT NPM_TOKEN; do
+          for name in VSCE_PAT; do
             value="${!name}"
             if [ -z "$value" ]; then
               if [ "$LOAD_OUTCOME" = "success" ]; then
@@ -175,6 +173,13 @@ jobs:
     if: needs.plan.outputs.dry_run != 'true'
     runs-on: ubuntu-latest
     environment: release
+    # id-token: the npm CLI exchanges this job's OIDC identity for a short-lived
+    # publish credential (npm trusted publishing) -- there is no npm token.
+    # Job-level permissions replace the workflow-level ones, so contents: write
+    # (for `gh release create`) is repeated here.
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v5
 
@@ -191,8 +196,9 @@ jobs:
       # a version, so a failing test must stop the release, not follow it.
       - run: npm test
 
-      # Pull publishing credentials from 1Password. Only the service-account
-      # token lives in GitHub secrets; the PAT and npm token stay in the vault.
+      # Pull the Marketplace PAT from 1Password. Only the service-account
+      # token lives in GitHub secrets; the PAT stays in the vault. npm needs
+      # no secret at all (trusted publishing, see Publish CLI).
       - uses: 1password/load-secrets-action@v2
         id: op
         with:
@@ -200,7 +206,6 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           VSCE_PAT: op://cicd/vsce/credential
-          NPM_TOKEN: op://cicd/npm/credential
 
       # The job-level `if` already excludes dry runs, so these steps only need
       # to select the artifact.
@@ -212,13 +217,14 @@ jobs:
         # All runtime deps are esbuild-bundled, so the VSIX needs none of it.
         run: npx vsce publish --no-dependencies --pat "$VSCE_PAT"
 
-      # NODE_AUTH_TOKEN is assigned from the shell, not a ${{ env.* }}
-      # expression: workflow expressions are evaluated before the 1Password
-      # step runs, so an expression here would resolve to an empty string.
+      # Trusted publishing (OIDC): configured per package on npmjs.com for
+      # easytocloud/bedrock-claude-code, release.yml, environment `release`.
+      # Requires npm >= 11.5.1; Node 22 ships an older npm.
       - name: Publish CLI
         if: needs.plan.outputs.cli == 'true'
         run: |
-          export NODE_AUTH_TOKEN="$NPM_TOKEN"
+          npm install -g npm@^11.5.1
+          npm --version
           npm publish -w @easytocloud/claude-personae --access public
 
       - name: Create GitHub release
