@@ -195,11 +195,17 @@ function renderChip(
 }
 
 function renderProviderChip(p: ProviderProfile, iconBase: string): string {
+  // Mirrors the chip in media/webview.js: runtime selection pins no models.
+  const modelItems = p.type === 'proxy' && p.runtimeModelDiscovery
+    ? [{ text: 'Runtime model selection', spacer: true }]
+    : [
+        { text: p.smallFastModel || '—', spacer: true },
+        { text: p.primaryModel || '—' },
+        { text: p.opusModel || '—' },
+      ];
   return renderChip('orange', 'edit-provider', p.id, p.name, [
     { text: providerTypeLabel(p) },
-    { text: p.smallFastModel || '—', spacer: true },
-    { text: p.primaryModel || '—' },
-    { text: p.opusModel || '—' },
+    ...modelItems,
   ], providerTileHtml(chipForProvider(p), iconBase));
 }
 

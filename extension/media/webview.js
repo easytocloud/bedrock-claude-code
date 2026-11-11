@@ -372,6 +372,13 @@ console.log('[WEBVIEW] Script loaded');
     return p.type;
   }
 
+  // Proxy providers with runtime model selection pin no models; cards say so
+  // instead of showing three empty dashes.
+  const RUNTIME_MODELS_TEXT = 'Runtime model selection';
+  function usesRuntimeModels(p) {
+    return !!(p && p.type === 'proxy' && p.runtimeModelDiscovery);
+  }
+
   function modelDisplayLabel(provider, haiku, sonnet, opus) {
     if (provider.type === 'anthropic') { return [haiku, sonnet, opus]; }
     return [provider.smallFastModel || '—', provider.primaryModel || '—', provider.opusModel || '—'];
@@ -472,12 +479,11 @@ console.log('[WEBVIEW] Script loaded');
 
   function renderProviderChipHtml(p) {
     const [haiku, sonnet, opus] = modelDisplayLabel(p, 'Haiku', 'Sonnet', 'Opus');
-    return renderChipHtml('orange', 'edit-provider', p.id, p.name, [
-      { text: providerTypeLabel(p) },
-      { text: haiku, spacer: true },
-      { text: sonnet },
-      { text: opus },
-    ], providerTileHtml(p));
+    const modelItems = usesRuntimeModels(p)
+      ? [{ text: RUNTIME_MODELS_TEXT, spacer: true }]
+      : [{ text: haiku, spacer: true }, { text: sonnet }, { text: opus }];
+    return renderChipHtml('orange', 'edit-provider', p.id, p.name,
+      [{ text: providerTypeLabel(p) }].concat(modelItems), providerTileHtml(p));
   }
 
   function renderMcpGroupChipHtml(g) {
@@ -645,6 +651,10 @@ console.log('[WEBVIEW] Script loaded');
 
     preview.style.display = '';
     const [haiku, sonnet, opus] = modelDisplayLabel(provider, 'Haiku', 'Sonnet', 'Opus');
+    if (usesRuntimeModels(provider)) {
+      preview.innerHTML = `<div class="provider-preview-row"><span class="provider-preview-label">Models:</span> ${RUNTIME_MODELS_TEXT}</div>`;
+      return;
+    }
     preview.innerHTML = `
       <div class="provider-preview-row"><span class="provider-preview-label">Sonnet:</span> ${escHtml(sonnet)}</div>
       <div class="provider-preview-row"><span class="provider-preview-label">Haiku:</span> ${escHtml(haiku)}</div>
