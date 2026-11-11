@@ -22,7 +22,6 @@
     "lint": "npm run lint -w bedrock-claude-code --if-present",
     "package:extension": "npm run package -w bedrock-claude-code",
     "publish:extension": "npm run publish -w bedrock-claude-code",
-    "publish:cli": "npm publish -w @easytocloud/claude-personae --access public",
     "test": "npm run test --workspaces --if-present"
   }
 }

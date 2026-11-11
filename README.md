@@ -107,17 +107,43 @@ the publish job is skipped. Use this after changing release credentials.
 
 ### Credentials
 
-Publishing credentials live in **1Password**, not in GitHub. Only the service
-account token is a GitHub secret:
+The **Marketplace token** lives in **1Password**, not in GitHub. Only the
+service account token is a GitHub secret:
 
 | Where | What |
 |---|---|
 | GitHub org secret `OP_SERVICE_ACCOUNT_TOKEN` | 1Password service account, read access to the `cicd` vault. Must be scoped to include public repositories. |
 | `op://cicd/vsce/credential` | Azure DevOps PAT for `vsce publish`. PATs expire — max one year. |
-| `op://cicd/npm/credential` | npm automation token for `npm publish`. |
 
-Rotating either credential needs no workflow change: update the item in
-1Password and the next run picks it up.
+Rotating the PAT needs no workflow change: update the item in 1Password and
+the next run picks it up.
+
+**npm uses no token.** The CLI is published with npm
+[trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC): the
+publish job has `id-token: write`, upgrades npm to ≥ 11.5.1, and runs
+`npm publish`, which also attaches a provenance attestation. (npm is
+deprecating 2FA-bypass tokens, so a stored token would stop working.) This
+relies on a Trusted Publisher configured on the
+`@easytocloud/claude-personae` package at npmjs.com:
+
+| Field | Value |
+|---|---|
+| Repository | `easytocloud/bedrock-claude-code` |
+| Workflow | `release.yml` |
+| Environment | `release` |
+| Allowed actions | **`npm publish`** (`stage publish` alone fails with `E403 OIDC permission denied`) |
+
+A new npm version can take a few minutes to appear in the registry after the
+workflow reports success.
+
+### Recovering a partial release
+
+A tag can publish one artifact and fail on the other (the extension and CLI
+steps run in sequence). Registries refuse republishing a version, so don't
+re-tag the same artifact. Fix the cause, then either re-run only the failed
+steps (`gh run rerun <id> --failed`) or, if the workflow itself had to change,
+push a single-artifact tag (e.g. `cli-v0.15.0`) on a commit that contains the
+fix — the old tag still points at the old workflow.
 
 The `release` [environment](https://github.com/easytocloud/bedrock-claude-code/settings/environments)
 restricts deployments to `v*`, `ext-v*`, and `cli-v*` tags, so publishing
