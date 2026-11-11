@@ -847,7 +847,6 @@ console.log('[WEBVIEW] Script loaded');
       runtimeModelsToggle.classList.toggle('on', !!(provider && provider.runtimeModelDiscovery));
     }
     updateRuntimeModelsBox();
-    refreshProxySlots();
 
     // Max context tokens
     const maxContextInput = document.getElementById('provider-max-context-tokens');
@@ -1263,19 +1262,6 @@ console.log('[WEBVIEW] Script loaded');
     const btn = document.querySelector('[data-action="fetch-proxy-models"]');
     if (btn) btn.classList.add('btn-loading');
     vscode.postMessage({ type: 'fetchLocalModels', baseUrl: url, apiKey: key });
-  }
-
-  // Rebuild the proxy slot dropdowns from the values currently in the form,
-  // so toggling runtime mode adds/removes the "choose at runtime" entry
-  // without discarding unsaved selections.
-  function refreshProxySlots() {
-    const providerSel = document.getElementById('provider-select');
-    if (effectiveProviderType(providerSel ? providerSel.value : '') !== 'proxy') return;
-    rebuildModelSelects('proxy', {
-      primaryModel: getModelValue('provider-model-sonnet'),
-      smallFastModel: getModelValue('provider-model-haiku'),
-      opusModel: getModelValue('provider-model-opus'),
-    });
   }
 
   // Claude Code's gateway model discovery only keeps IDs starting with
